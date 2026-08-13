@@ -1,0 +1,6 @@
+# Nexus-Finance
+Aplicativo educacional sobre financas
+
+# Data: 07/08/2026 by.VN
+No dia 07/08/2026 (hoje) eu mandei pela primeira vez meu projeto Nexus Finance nao alterei nada no codigo so mandei no vs code depois eu importei para o github...
+# #Nota: isso ta incrivel... 

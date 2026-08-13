@@ -1,0 +1,78 @@
+/* As fontes são carregadas via <link> no index.html: o @import aqui só era
+   descoberto depois do CSS baixar, atrasando o primeiro texto na tela. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  background: #070B16;
+  color: #F4F6FA;
+  font-family: 'Inter', system-ui, sans-serif;
+  overscroll-behavior-y: none;
+}
+
+body {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  position: relative;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #1C2740;
+  border-radius: 4px;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Focus visibility for accessibility */
+:focus-visible {
+  outline: 2px solid #00D4FF;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, #00D4FF 0%, #3B82F6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.card-surface {
+  background: #0E1526;
+  border: 1px solid #1C2740;
+}
+
+.flip-card {
+  perspective: 1200px;
+}
+.flip-card-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+.flip-card-face {
+  backface-visibility: hidden;
+}
+.flip-card-back {
+  transform: rotateY(180deg);
+}

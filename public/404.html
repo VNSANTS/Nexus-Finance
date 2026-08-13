@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Nexus Finance</title>
+    <script>
+      // GitHub Pages não sabe lidar com rotas de SPA (React Router). Quando
+      // alguém acessa ou recarrega uma rota interna direto (ex: /aprender),
+      // o Pages serve este arquivo 404.html. Aqui a gente guarda o caminho
+      // pedido e redireciona pra raiz, onde o React Router assume de novo
+      // e mostra a rota certa.
+      var caminho = location.pathname.replace('/Nexus-Finance', '') + location.search + location.hash
+      sessionStorage.setItem('redirecionarPara', caminho)
+      location.replace('/Nexus-Finance/')
+    </script>
+  </head>
+  <body></body>
+</html>
