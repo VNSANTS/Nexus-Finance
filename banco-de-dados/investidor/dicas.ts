@@ -153,3 +153,92 @@ export const RELATORIO_SEMANA = {
       'Mede o tempo médio ponderado para receber o retorno de um investimento — quanto maior a duration, mais sensível o ativo é a mudanças na taxa de juros.',
   },
 }
+
+/**
+ * ===================================================================
+ * ÁREA AVANÇADA — para quem já domina o básico
+ * ===================================================================
+ * Checklists e frameworks rápidos, sem a introdução didática dos
+ * módulos normais — direto ao ponto, para consulta e revisão rápida.
+ * Cada item pode citar um módulo relacionado (ex: 'roic-vs-wacc') para
+ * quem quiser aprofundar.
+ * ===================================================================
+ */
+export interface ChecklistAvancado {
+  id: string
+  titulo: string
+  cor: string
+  iconName: string
+  itens: string[]
+  moduloRelacionado?: string
+}
+
+export const CHECKLISTS_AVANCADOS: ChecklistAvancado[] = [
+  {
+    id: 'valuation-rapido',
+    titulo: 'Valuation Rápido por Múltiplos',
+    cor: '#00D4FF',
+    iconName: 'Calculator',
+    itens: [
+      'P/L (Preço/Lucro): compare com a média histórica da própria empresa, não só com concorrentes',
+      'P/VP (Preço/Valor Patrimonial): mais relevante para bancos e empresas intensivas em ativos',
+      'EV/EBITDA: neutraliza diferenças de estrutura de capital entre empresas — melhor para comparar dívida alta com dívida baixa',
+      'Dividend Yield sozinho não basta: sempre cruze com o payout ratio (% do lucro distribuído) para saber se é sustentável',
+      'Múltiplo baixo não significa barato — pode ser desconto por risco real do negócio, não ineficiência de mercado',
+    ],
+    moduloRelacionado: 'analise-indicadores',
+  },
+  {
+    id: 'roic-wacc-investidor',
+    titulo: 'ROIC vs. WACC — Aplicado à Análise de Ações',
+    cor: '#22C55E',
+    iconName: 'Scale',
+    itens: [
+      'Uma empresa com ROIC consistentemente acima do WACC por vários anos tem vantagem competitiva real (moat)',
+      'ROIC caindo ano após ano, mesmo com lucro crescendo, é sinal de alerta — o crescimento pode estar vindo de capital cada vez menos eficiente',
+      'Compare o ROIC da empresa com o de concorrentes diretos do mesmo setor, não com a média do mercado inteiro',
+      'Setores intensivos em capital (energia, telecom) naturalmente têm ROIC mais baixo que setores de serviço — ajuste a expectativa',
+    ],
+    moduloRelacionado: 'roic-vs-wacc',
+  },
+  {
+    id: 'sinais-alerta-balanco',
+    titulo: 'Sinais de Alerta num Balanço',
+    cor: '#EF4444',
+    iconName: 'ShieldAlert',
+    itens: [
+      'Dívida líquida crescendo mais rápido que o EBITDA, trimestre após trimestre',
+      'Contas a receber crescendo muito mais rápido que a receita — pode indicar dificuldade real de recebimento (CCC piorando)',
+      'Troca frequente de auditoria independente ou de diretoria financeira, sem explicação clara',
+      'Lucro líquido positivo, mas fluxo de caixa operacional negativo por vários trimestres seguidos',
+      'Ativos intangíveis (ágio, marcas) representando uma fatia cada vez maior do ativo total, sem justificativa de aquisição recente',
+    ],
+    moduloRelacionado: 'dre',
+  },
+  {
+    id: 'ccc-investidor',
+    titulo: 'CCC como Sinal de Qualidade Operacional',
+    cor: '#F97316',
+    iconName: 'Hourglass',
+    itens: [
+      'Empresas com CCC negativo ou muito baixo (varejo forte, marketplaces) financiam o próprio crescimento com o caixa do cliente',
+      'CCC piorando ao longo dos trimestres, mesmo com receita crescendo, é sinal de que o crescimento está consumindo caixa, não gerando',
+      'Compare o CCC da empresa com os concorrentes diretos — a métrica isolada importa menos que a posição relativa no setor',
+    ],
+    moduloRelacionado: 'ccc',
+  },
+  {
+    id: 'checklist-pre-compra',
+    titulo: 'Checklist Rápido Antes de Comprar uma Ação',
+    cor: '#8B5CF6',
+    iconName: 'ListOrdered',
+    itens: [
+      'Li os últimos dois releases de resultado, não só o resumo de terceiros',
+      'Sei o ROIC da empresa e comparei com o WACC estimado do setor',
+      'Verifiquei a tendência do CCC nos últimos 4-8 trimestres',
+      'Entendo a tese em uma frase — se não consigo resumir por que estou comprando, ainda não estou pronto',
+      'Defini o que me faria vender essa posição, antes de comprar, não depois',
+    ],
+  },
+]
+

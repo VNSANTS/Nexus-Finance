@@ -95,6 +95,42 @@ export const MODULOS: ModuloMeta[] = [
   { id: 'documentarios', trilhaId: 'cultura-investimentos', numero: 4, titulo: 'Documentários sobre Economia', iconName: 'Film', duracaoMin: 9, temConteudoCompleto: true },
   { id: 'resumos-livros', trilhaId: 'cultura-investimentos', numero: 5, titulo: 'Resumos de Livros Financeiros', iconName: 'BookMarked', duracaoMin: 11, temConteudoCompleto: true },
   { id: 'relatorios-investimentos', trilhaId: 'cultura-investimentos', numero: 6, titulo: 'Relatórios de Investimentos', iconName: 'FileBarChart', duracaoMin: 12, temConteudoCompleto: true },
+
+  // Trilha 11 — Geração de Receita
+  { id: 'introducao-geracao-de-receita', trilhaId: 'geracao-de-receita', numero: 1, titulo: 'Introdução: Geração de Receita', iconName: 'Rocket', duracaoMin: 8, temConteudoCompleto: true },
+  { id: 'fases-da-receita', trilhaId: 'geracao-de-receita', numero: 2, titulo: 'As Quatro Fases da Receita', iconName: 'Layers', duracaoMin: 10, temConteudoCompleto: true },
+  { id: 'ltv-cac', trilhaId: 'geracao-de-receita', numero: 3, titulo: 'LTV/CAC: A Régua que Decide se Vale a Pena Crescer', iconName: 'Scale', duracaoMin: 12, temConteudoCompleto: true },
+  { id: 'icp', trilhaId: 'geracao-de-receita', numero: 4, titulo: 'ICP: O Perfil de Cliente Ideal', iconName: 'Target', duracaoMin: 10, temConteudoCompleto: true },
+  { id: 'funil-de-conversao', trilhaId: 'geracao-de-receita', numero: 5, titulo: 'Funil de Conversão: Onde o Dinheiro Vaza', iconName: 'Filter', duracaoMin: 11, temConteudoCompleto: true },
+  { id: 'cross-sell-up-sell-nrr', trilhaId: 'geracao-de-receita', numero: 6, titulo: 'Cross-sell, Up-sell e NRR', iconName: 'PackagePlus', duracaoMin: 11, temConteudoCompleto: true },
+  { id: 'priorizacao-de-canais', trilhaId: 'geracao-de-receita', numero: 7, titulo: 'Priorização de Canais e o Coeficiente Viral', iconName: 'Radar', duracaoMin: 12, temConteudoCompleto: true },
+
+  // Trilha 12 — Cultura Organizacional
+  { id: 'introducao-cultura-organizacional', trilhaId: 'cultura-organizacional', numero: 1, titulo: 'Introdução: Cultura Organizacional', iconName: 'Users', duracaoMin: 8, temConteudoCompleto: true },
+  { id: 'informed-captain', trilhaId: 'cultura-organizacional', numero: 2, titulo: 'Informed Captain', iconName: 'Anchor', duracaoMin: 10, temConteudoCompleto: true },
+  { id: 'keeper-test', trilhaId: 'cultura-organizacional', numero: 3, titulo: 'Keeper Test', iconName: 'UserCheck', duracaoMin: 10, temConteudoCompleto: true },
+  { id: 'estrutura-e-contratacao', trilhaId: 'cultura-organizacional', numero: 4, titulo: 'Estrutura e Contratação', iconName: 'Handshake', duracaoMin: 11, temConteudoCompleto: true },
+  { id: 'disagree-and-commit', trilhaId: 'cultura-organizacional', numero: 5, titulo: 'Disagree and Commit', iconName: 'Handshake', duracaoMin: 10, temConteudoCompleto: true },
+  { id: 'conversas-1-1', trilhaId: 'cultura-organizacional', numero: 6, titulo: 'Conversas 1:1', iconName: 'MessageSquare', duracaoMin: 10, temConteudoCompleto: true },
+  { id: 'okrs', trilhaId: 'cultura-organizacional', numero: 7, titulo: 'OKRs', iconName: 'Target', duracaoMin: 12, temConteudoCompleto: true },
+
+  // Trilha 13 — Eficiência Operacional
+  { id: 'introducao-eficiencia-operacional', trilhaId: 'eficiencia-operacional', numero: 1, titulo: 'Introdução: Eficiência Operacional', iconName: 'Settings2', duracaoMin: 8, temConteudoCompleto: true },
+  { id: 'oito-desperdicios', trilhaId: 'eficiencia-operacional', numero: 2, titulo: 'Os Oito Desperdícios (Muda)', iconName: 'Trash2', duracaoMin: 12, temConteudoCompleto: true },
+  { id: 'vsm', trilhaId: 'eficiencia-operacional', numero: 3, titulo: 'VSM: Mapeamento do Fluxo de Valor', iconName: 'Workflow', duracaoMin: 12, temConteudoCompleto: true },
+  { id: 'kaizen-pdca', trilhaId: 'eficiencia-operacional', numero: 4, titulo: 'Kaizen e PDCA', iconName: 'RefreshCw', duracaoMin: 11, temConteudoCompleto: true },
+  { id: 'oee', trilhaId: 'eficiencia-operacional', numero: 5, titulo: 'OEE: A Métrica que Mede Eficiência Real', iconName: 'Gauge', duracaoMin: 12, temConteudoCompleto: true },
+  { id: 'pessoas-processos-tecnologia', trilhaId: 'eficiencia-operacional', numero: 6, titulo: 'A Ordem Certa: Pessoas, Processos, Tecnologia', iconName: 'ListOrdered', duracaoMin: 11, temConteudoCompleto: true },
+  { id: 'alavancagem-corte-custo', trilhaId: 'eficiencia-operacional', numero: 7, titulo: 'Alavancagem de Corte de Custo', iconName: 'Scissors', duracaoMin: 11, temConteudoCompleto: true },
+
+  // Trilha 14 — Gestão Financeira de Negócios
+  { id: 'introducao-gestao-financeira-negocios', trilhaId: 'gestao-financeira-negocios', numero: 1, titulo: 'Introdução: Gestão Financeira de Negócios', iconName: 'LineChart', duracaoMin: 8, temConteudoCompleto: true },
+  { id: 'custo-vs-investimento', trilhaId: 'gestao-financeira-negocios', numero: 2, titulo: 'Custo vs. Investimento', iconName: 'ArrowLeftRight', duracaoMin: 10, temConteudoCompleto: true },
+  { id: 'dre', trilhaId: 'gestao-financeira-negocios', numero: 3, titulo: 'DRE: O Demonstrativo que Conta a Verdade', iconName: 'FileBarChart', duracaoMin: 12, temConteudoCompleto: true },
+  { id: 'orcamento-base-zero', trilhaId: 'gestao-financeira-negocios', numero: 4, titulo: 'Orçamento Base Zero', iconName: 'CalendarClock', duracaoMin: 11, temConteudoCompleto: true },
+  { id: 'ccc', trilhaId: 'gestao-financeira-negocios', numero: 5, titulo: 'CCC: O Tempo que o Dinheiro Fica Preso', iconName: 'Hourglass', duracaoMin: 12, temConteudoCompleto: true },
+  { id: 'roic-vs-wacc', trilhaId: 'gestao-financeira-negocios', numero: 6, titulo: 'ROIC vs. WACC: A Régua dos Investidores', iconName: 'Scale', duracaoMin: 13, temConteudoCompleto: true },
+  { id: 'forecast-cenarios', trilhaId: 'gestao-financeira-negocios', numero: 7, titulo: 'Forecast em Cenários', iconName: 'GitBranch', duracaoMin: 12, temConteudoCompleto: true },
 ]
 
 export function getModulosByTrilha(trilhaId: string): ModuloMeta[] {

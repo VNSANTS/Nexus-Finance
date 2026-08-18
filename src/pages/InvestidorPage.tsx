@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BarChart3, ChevronLeft, Newspaper } from 'lucide-react'
+import { BarChart3, ChevronLeft, Newspaper, Zap, ExternalLink } from 'lucide-react'
 import { getIcon } from '@/components/Icon'
 import DonutChart from '@/components/DonutChart'
-import { DICAS_POR_CLASSE, CARTEIRAS_RECOMENDADAS, RELATORIO_SEMANA } from '@banco-de-dados/investidor/dicas'
+import { DICAS_POR_CLASSE, CARTEIRAS_RECOMENDADAS, RELATORIO_SEMANA, CHECKLISTS_AVANCADOS } from '@banco-de-dados/investidor/dicas'
 
 export default function InvestidorPage() {
   const navigate = useNavigate()
-  const [secao, setSecao] = useState<'dicas' | 'carteiras' | 'relatorio'>('dicas')
+  const [secao, setSecao] = useState<'dicas' | 'carteiras' | 'relatorio' | 'avancado'>('dicas')
   const [classeExpandida, setClasseExpandida] = useState<string | null>(null)
+  const [checklistExpandido, setChecklistExpandido] = useState<string | null>(null)
 
   return (
     <div className="px-4 pt-5 pb-28">
@@ -24,6 +25,7 @@ export default function InvestidorPage() {
         <SubTab label="Dicas por classe" active={secao === 'dicas'} onClick={() => setSecao('dicas')} />
         <SubTab label="Carteiras" active={secao === 'carteiras'} onClick={() => setSecao('carteiras')} />
         <SubTab label="Relatório" active={secao === 'relatorio'} onClick={() => setSecao('relatorio')} />
+        <SubTab label="Avançado" active={secao === 'avancado'} onClick={() => setSecao('avancado')} />
       </div>
 
       {secao === 'dicas' && (
@@ -130,6 +132,58 @@ export default function InvestidorPage() {
           <div className="p-3.5 rounded-2xl border border-dashed border-border text-center">
             <p className="text-[11.5px] text-slate-500">Relatórios anteriores aparecerão aqui conforme forem publicados</p>
           </div>
+        </div>
+      )}
+
+      {secao === 'avancado' && (
+        <div className="flex flex-col gap-2.5">
+          <div className="flex items-center gap-1.5 px-1 mb-1">
+            <Zap size={13} className="text-accent-gold" />
+            <p className="text-[11px] text-slate-500">Referência rápida — direto ao ponto, sem introdução didática</p>
+          </div>
+          {CHECKLISTS_AVANCADOS.map((c) => {
+            const aberto = checklistExpandido === c.id
+            const Icon = getIcon(c.iconName, BarChart3)
+            return (
+              <div key={c.id} className="rounded-[18px] card-surface overflow-hidden">
+                <button
+                  onClick={() => setChecklistExpandido(aberto ? null : c.id)}
+                  className="w-full flex items-center gap-3 p-3.5 text-left"
+                >
+                  <div className="w-[38px] h-[38px] rounded-xl flex items-center justify-center shrink-0" style={{ background: `${c.cor}1A` }}>
+                    <Icon size={18} style={{ color: c.cor }} />
+                  </div>
+                  <span className="text-[13px] font-bold text-white flex-1 leading-snug">{c.titulo}</span>
+                  <motion.span animate={{ rotate: aberto ? 90 : 0 }} style={{ color: c.cor }} className="text-sm shrink-0">
+                    ▸
+                  </motion.span>
+                </button>
+                <AnimatePresence>
+                  {aberto && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden">
+                      <div className="px-3.5 pb-4 flex flex-col gap-2">
+                        {c.itens.map((item, i) => (
+                          <div key={i} className="flex gap-2 items-start">
+                            <span className="w-1 h-1 rounded-full mt-1.5 shrink-0" style={{ background: c.cor }} />
+                            <p className="text-[11.5px] text-slate-300 leading-relaxed">{item}</p>
+                          </div>
+                        ))}
+                        {c.moduloRelacionado && (
+                          <button
+                            onClick={() => navigate(`/modulo/${c.moduloRelacionado}`)}
+                            className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold"
+                            style={{ color: c.cor }}
+                          >
+                            <ExternalLink size={12} /> Ver módulo completo
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )
+          })}
         </div>
       )}
 

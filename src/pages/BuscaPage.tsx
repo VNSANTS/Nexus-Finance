@@ -18,7 +18,7 @@ const CALCULADORAS_BUSCA = [
 ]
 
 const PAGINAS_APP = [
-  { nome: 'Aprender', desc: '66 módulos em 10 trilhas', destino: '/aprender' },
+  { nome: 'Aprender', desc: `${MODULOS.length} módulos em ${TRILHAS.length} trilhas`, destino: '/aprender' },
   { nome: 'Mercado ao vivo', desc: 'Cotações, ranking, watchlist', destino: '/mercado' },
   { nome: 'Biblioteca', desc: 'Resumos de livros e glossário', destino: '/biblioteca' },
   { nome: 'Carteira', desc: 'Simulador de perfis e ferramentas', destino: '/carteira' },

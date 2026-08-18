@@ -5,6 +5,7 @@ import {
   ChevronLeft, ChevronRight, Calculator, TrendingDown, PiggyBank, Flag, Percent, Milestone,
   Home, ShieldAlert, CreditCard, Landmark, ArrowLeftRight, ReceiptText, Hourglass,
   BarChart3, PiggyBank as PiggyBankIcon, Coins, Scale, CalendarClock,
+  FileBarChart, Gauge, Scissors, Filter, Radar,
 } from 'lucide-react'
 import SliderInput from '@/components/SliderInput'
 import { useUserProgress } from '@/hooks/useUserProgress'
@@ -31,6 +32,14 @@ const CALCULADORAS = [
   { id: 'dividend-yield-oncost', nome: 'Dividend Yield / Yield on Cost', desc: 'Rendimento sobre preço atual e sobre preço pago', Icon: Coins, cor: '#22C55E' },
   { id: 'custo-oportunidade', nome: 'Custo de Oportunidade', desc: 'O que você deixa de ganhar ao escolher uma opção', Icon: ArrowLeftRight, cor: '#EF4444' },
   { id: 'reserva-objetivo-curto', nome: 'Reserva para Objetivo de Curto Prazo', desc: 'Quanto guardar por mês para uma meta próxima', Icon: CalendarClock, cor: '#3B82F6' },
+  { id: 'ltv-cac-calc', nome: 'LTV/CAC', desc: 'A régua que decide se vale a pena crescer', Icon: Scale, cor: '#EC4899' },
+  { id: 'funil-conversao-calc', nome: 'Funil de Conversão', desc: 'Onde o dinheiro vaza no seu processo de vendas', Icon: Filter, cor: '#3B82F6' },
+  { id: 'k-factor-calc', nome: 'k-factor (Coeficiente Viral)', desc: 'Quantos clientes cada cliente traz sozinho', Icon: Radar, cor: '#22C55E' },
+  { id: 'dre-calc', nome: 'DRE Simplificado', desc: 'Da receita bruta ao lucro líquido, camada por camada', Icon: FileBarChart, cor: '#8B5CF6' },
+  { id: 'ccc-calc', nome: 'CCC — Ciclo de Conversão de Caixa', desc: 'Quanto tempo seu dinheiro fica preso no ciclo', Icon: Hourglass, cor: '#F97316' },
+  { id: 'roic-wacc-calc', nome: 'ROIC vs. WACC', desc: 'Esse investimento cria ou destrói valor?', Icon: Scale, cor: '#00D4FF' },
+  { id: 'oee-calc', nome: 'OEE — Eficiência Real', desc: 'Disponibilidade, performance e qualidade combinadas', Icon: Gauge, cor: '#FFC93C' },
+  { id: 'alavancagem-custo-calc', nome: 'Alavancagem de Corte de Custo', desc: 'Qual corte tem o maior efeito no lucro', Icon: Scissors, cor: '#EF4444' },
 ]
 
 export default function FerramentasPage() {
@@ -53,7 +62,7 @@ export default function FerramentasPage() {
         <ChevronLeft size={16} /> Carteira
       </button>
       <h1 className="text-xl font-display font-extrabold text-white">Ferramentas</h1>
-      <p className="text-xs text-slate-500 mt-1 mb-4">21 calculadoras para planejar sua vida financeira</p>
+      <p className="text-xs text-slate-500 mt-1 mb-4">29 calculadoras para planejar sua vida financeira e seus negócios</p>
 
       <div className="flex flex-col gap-2.5">
         {CALCULADORAS.map((c) => (
@@ -163,6 +172,22 @@ function CalculadoraRouter({ id, onBack }: { id: string; onBack: () => void }) {
       return <CalcCustoOportunidade onBack={onBack} />
     case 'reserva-objetivo-curto':
       return <CalcReservaObjetivoCurto onBack={onBack} />
+    case 'ltv-cac-calc':
+      return <CalcLtvCac onBack={onBack} />
+    case 'funil-conversao-calc':
+      return <CalcFunilConversao onBack={onBack} />
+    case 'k-factor-calc':
+      return <CalcKFactor onBack={onBack} />
+    case 'dre-calc':
+      return <CalcDreSimplificado onBack={onBack} />
+    case 'ccc-calc':
+      return <CalcCCC onBack={onBack} />
+    case 'roic-wacc-calc':
+      return <CalcRoicWacc onBack={onBack} />
+    case 'oee-calc':
+      return <CalcOEE onBack={onBack} />
+    case 'alavancagem-custo-calc':
+      return <CalcAlavancagemCorteCusto onBack={onBack} />
     default:
       return null
   }
@@ -824,6 +849,279 @@ function CalcReservaObjetivoCurto({ onBack }: { onBack: () => void }) {
       </div>
       <ResultCard label="Aporte mensal necessário" value={fmt(aporteMensal)} sub={`Para juntar ${fmt(valorObjetivo)} em ${prazoMeses} meses`} color="#3B82F6" />
       <ResultCard label="Rendimento gerado no período" value={fmt(rendimentoGerado)} sub={`De ${fmt(totalAportado)} aportados, chega a ${fmt(valorObjetivo)}`} color="#22C55E" />
+    </CalcShell>
+  )
+}
+
+// 15. LTV/CAC — trilha Geração de Receita
+function CalcLtvCac({ onBack }: { onBack: () => void }) {
+  const [gastoAquisicao, setGastoAquisicao] = useState(10000)
+  const [clientesNovos, setClientesNovos] = useState(50)
+  const [receitaMensalPorCliente, setReceitaMensalPorCliente] = useState(100)
+  const [margemBruta, setMargemBruta] = useState(70)
+  const [churnMensal, setChurnMensal] = useState(5)
+
+  const cac = clientesNovos > 0 ? gastoAquisicao / clientesNovos : 0
+  const ltv = churnMensal > 0 ? (receitaMensalPorCliente * (margemBruta / 100)) / (churnMensal / 100) : 0
+  const relacao = cac > 0 ? ltv / cac : 0
+
+  let statusCor = '#EF4444'
+  let statusTexto = 'Aquisição cara demais — revise o CAC antes de escalar'
+  if (relacao >= 5) {
+    statusCor = '#22C55E'
+    statusTexto = 'Possível subinvestimento — pode acelerar aquisição sem risco'
+  } else if (relacao >= 3) {
+    statusCor = '#22C55E'
+    statusTexto = 'Saudável — dentro ou acima do benchmark de mercado (3:1)'
+  } else if (relacao >= 2) {
+    statusCor = '#FFC93C'
+    statusTexto = 'Zona de atenção — sustentável, mas com pouca margem'
+  }
+
+  return (
+    <CalcShell onBack={onBack} icon={Scale} iconColor="#EC4899" titulo="LTV/CAC" subtitulo="A régua que decide se vale a pena crescer">
+      <div className="flex flex-col gap-4 mb-5">
+        <SliderInput label="Gasto de marketing e vendas no período" value={gastoAquisicao} onChange={setGastoAquisicao} min={100} max={1000000} step={100} prefix="R$ " />
+        <SliderInput label="Clientes novos conquistados no período" value={clientesNovos} onChange={setClientesNovos} min={1} max={10000} step={1} />
+        <SliderInput label="Receita média mensal por cliente" value={receitaMensalPorCliente} onChange={setReceitaMensalPorCliente} min={1} max={1000000} step={10} prefix="R$ " />
+        <SliderInput label="Margem bruta" value={margemBruta} onChange={setMargemBruta} min={1} max={100} step={1} suffix="%" />
+        <SliderInput label="Taxa de churn mensal" value={churnMensal} onChange={setChurnMensal} min={0.1} max={100} step={0.1} suffix="%" decimals={1} />
+      </div>
+      <ResultCard label="CAC — Custo de Aquisição de Cliente" value={fmt(cac)} color="#3B82F6" />
+      <ResultCard label="LTV — Valor do Cliente ao Longo do Tempo" value={fmt(ltv)} color="#22C55E" />
+      <ResultCard label={`Relação LTV/CAC: ${relacao.toFixed(1)}:1`} value={statusTexto} color={statusCor} />
+    </CalcShell>
+  )
+}
+
+// 16. Funil de Conversão — trilha Geração de Receita
+function CalcFunilConversao({ onBack }: { onBack: () => void }) {
+  const [visitantes, setVisitantes] = useState(1000)
+  const [leads, setLeads] = useState(200)
+  const [oportunidades, setOportunidades] = useState(40)
+  const [vendas, setVendas] = useState(8)
+
+  const taxaVisitanteLead = visitantes > 0 ? (leads / visitantes) * 100 : 0
+  const taxaLeadOportunidade = leads > 0 ? (oportunidades / leads) * 100 : 0
+  const taxaOportunidadeVenda = oportunidades > 0 ? (vendas / oportunidades) * 100 : 0
+  const taxas = [
+    { nome: 'Visitante → Lead', valor: taxaVisitanteLead },
+    { nome: 'Lead → Oportunidade', valor: taxaLeadOportunidade },
+    { nome: 'Oportunidade → Venda', valor: taxaOportunidadeVenda },
+  ]
+  const gargalo = taxas.reduce((menor, atual) => (atual.valor < menor.valor ? atual : menor), taxas[0])
+
+  return (
+    <CalcShell onBack={onBack} icon={Filter} iconColor="#3B82F6" titulo="Funil de Conversão" subtitulo="Onde o dinheiro vaza no seu processo de vendas">
+      <div className="flex flex-col gap-4 mb-5">
+        <SliderInput label="Visitantes" value={visitantes} onChange={setVisitantes} min={1} max={1000000} step={10} />
+        <SliderInput label="Leads" value={leads} onChange={setLeads} min={0} max={1000000} step={5} />
+        <SliderInput label="Oportunidades" value={oportunidades} onChange={setOportunidades} min={0} max={1000000} step={1} />
+        <SliderInput label="Vendas" value={vendas} onChange={setVendas} min={0} max={1000000} step={1} />
+      </div>
+      <ResultCard label="Visitante → Lead" value={`${taxaVisitanteLead.toFixed(1)}%`} color="#3B82F6" />
+      <ResultCard label="Lead → Oportunidade" value={`${taxaLeadOportunidade.toFixed(1)}%`} color="#8B5CF6" />
+      <ResultCard label="Oportunidade → Venda" value={`${taxaOportunidadeVenda.toFixed(1)}%`} color="#22C55E" />
+      <ResultCard label="Maior gargalo do funil" value={gargalo.nome} sub={`Taxa de ${gargalo.valor.toFixed(1)}% — priorize resolver aqui antes de investir em mais topo de funil`} color="#EF4444" />
+    </CalcShell>
+  )
+}
+
+// 17. k-factor — trilha Geração de Receita
+function CalcKFactor({ onBack }: { onBack: () => void }) {
+  const [convitesPorCliente, setConvitesPorCliente] = useState(4)
+  const [taxaConversaoConvite, setTaxaConversaoConvite] = useState(15)
+
+  const kFactor = convitesPorCliente * (taxaConversaoConvite / 100)
+  const cresceSozinho = kFactor >= 1
+
+  return (
+    <CalcShell onBack={onBack} icon={Radar} iconColor="#22C55E" titulo="k-factor (Coeficiente Viral)" subtitulo="Quantos clientes cada cliente traz sozinho">
+      <div className="flex flex-col gap-4 mb-5">
+        <SliderInput label="Convites médios por cliente" value={convitesPorCliente} onChange={setConvitesPorCliente} min={0} max={1000} step={0.5} decimals={1} />
+        <SliderInput label="Taxa de conversão dos convites" value={taxaConversaoConvite} onChange={setTaxaConversaoConvite} min={0} max={1000} step={1} suffix="%" />
+      </div>
+      <ResultCard
+        label="k-factor"
+        value={kFactor.toFixed(2)}
+        sub={cresceSozinho ? 'Acima de 1,0 — crescimento exponencial e autossustentado' : 'Abaixo de 1,0 — reduz dependência de outros canais, mas não substitui'}
+        color={cresceSozinho ? '#22C55E' : '#FFC93C'}
+      />
+    </CalcShell>
+  )
+}
+
+// 18. DRE Simplificado — trilha Gestão Financeira de Negócios
+function CalcDreSimplificado({ onBack }: { onBack: () => void }) {
+  const [receitaBruta, setReceitaBruta] = useState(100000)
+  const [impostosDevolucoes, setImpostosDevolucoes] = useState(8000)
+  const [custoDireto, setCustoDireto] = useState(30000)
+  const [despesasOperacionais, setDespesasOperacionais] = useState(35000)
+  const [despesasFinanceiras, setDespesasFinanceiras] = useState(5000)
+  const [impostosLucro, setImpostosLucro] = useState(4000)
+
+  const receitaLiquida = receitaBruta - impostosDevolucoes
+  const lucroBruto = receitaLiquida - custoDireto
+  const margemBruta = receitaLiquida > 0 ? (lucroBruto / receitaLiquida) * 100 : 0
+  const ebitda = lucroBruto - despesasOperacionais
+  const lucroLiquido = ebitda - despesasFinanceiras - impostosLucro
+  const margemLiquida = receitaBruta > 0 ? (lucroLiquido / receitaBruta) * 100 : 0
+
+  return (
+    <CalcShell onBack={onBack} icon={FileBarChart} iconColor="#8B5CF6" titulo="DRE Simplificado" subtitulo="Da receita bruta ao lucro líquido, camada por camada">
+      <div className="flex flex-col gap-4 mb-5">
+        <SliderInput label="Receita bruta" value={receitaBruta} onChange={setReceitaBruta} min={0} max={1000000} step={1000} prefix="R$ " />
+        <SliderInput label="Impostos sobre venda e devoluções" value={impostosDevolucoes} onChange={setImpostosDevolucoes} min={0} max={1000000} step={500} prefix="R$ " />
+        <SliderInput label="Custo direto do produto/serviço" value={custoDireto} onChange={setCustoDireto} min={0} max={1000000} step={500} prefix="R$ " />
+        <SliderInput label="Despesas operacionais" value={despesasOperacionais} onChange={setDespesasOperacionais} min={0} max={1000000} step={500} prefix="R$ " />
+        <SliderInput label="Despesas financeiras (juros)" value={despesasFinanceiras} onChange={setDespesasFinanceiras} min={0} max={1000000} step={100} prefix="R$ " />
+        <SliderInput label="Impostos sobre o lucro" value={impostosLucro} onChange={setImpostosLucro} min={0} max={1000000} step={100} prefix="R$ " />
+      </div>
+      <div className="rounded-2xl overflow-hidden border border-border mb-4">
+        <div className="flex justify-between px-3.5 py-2.5 bg-bg-card">
+          <span className="text-xs text-slate-300">Receita Líquida</span>
+          <span className="text-xs font-bold text-white">{fmt(receitaLiquida)}</span>
+        </div>
+        <div className="flex justify-between px-3.5 py-2.5 bg-bg-card/50">
+          <span className="text-xs text-slate-300">Lucro Bruto (margem {margemBruta.toFixed(1)}%)</span>
+          <span className="text-xs font-bold text-white">{fmt(lucroBruto)}</span>
+        </div>
+        <div className="flex justify-between px-3.5 py-2.5 bg-bg-card">
+          <span className="text-xs text-slate-300">EBITDA</span>
+          <span className="text-xs font-bold text-white">{fmt(ebitda)}</span>
+        </div>
+      </div>
+      <ResultCard label={`Lucro Líquido (margem ${margemLiquida.toFixed(1)}%)`} value={fmt(lucroLiquido)} color={lucroLiquido >= 0 ? '#22C55E' : '#EF4444'} />
+    </CalcShell>
+  )
+}
+
+// 19. CCC — trilha Gestão Financeira de Negócios
+function CalcCCC({ onBack }: { onBack: () => void }) {
+  const [prazoEstoque, setPrazoEstoque] = useState(60)
+  const [prazoRecebimento, setPrazoRecebimento] = useState(35)
+  const [prazoPagamento, setPrazoPagamento] = useState(30)
+
+  const ccc = prazoEstoque + prazoRecebimento - prazoPagamento
+
+  return (
+    <CalcShell onBack={onBack} icon={Hourglass} iconColor="#F97316" titulo="CCC — Ciclo de Conversão de Caixa" subtitulo="Quanto tempo seu dinheiro fica preso no ciclo operacional">
+      <div className="flex flex-col gap-4 mb-5">
+        <SliderInput label="Prazo médio de estoque" value={prazoEstoque} onChange={setPrazoEstoque} min={0} max={1000} step={1} suffix=" dias" />
+        <SliderInput label="Prazo médio de recebimento" value={prazoRecebimento} onChange={setPrazoRecebimento} min={0} max={1000} step={1} suffix=" dias" />
+        <SliderInput label="Prazo médio de pagamento a fornecedores" value={prazoPagamento} onChange={setPrazoPagamento} min={0} max={1000} step={1} suffix=" dias" />
+      </div>
+      <ResultCard
+        label="Ciclo de Conversão de Caixa"
+        value={`${ccc} dias`}
+        sub={ccc <= 0 ? 'Excelente — o dinheiro do cliente chega antes de você precisar pagar o fornecedor' : 'Tempo que seu caixa fica sequestrado entre pagar e receber'}
+        color={ccc <= 0 ? '#22C55E' : ccc <= 30 ? '#FFC93C' : '#EF4444'}
+      />
+    </CalcShell>
+  )
+}
+
+// 20. ROIC vs. WACC — trilha Gestão Financeira de Negócios
+function CalcRoicWacc({ onBack }: { onBack: () => void }) {
+  const [lucroOperacional, setLucroOperacional] = useState(45000)
+  const [capitalInvestido, setCapitalInvestido] = useState(500000)
+  const [custoDivida, setCustoDivida] = useState(14)
+  const [custoCapitalProprio, setCustoCapitalProprio] = useState(18)
+  const [percentualDivida, setPercentualDivida] = useState(40)
+
+  const roic = capitalInvestido > 0 ? (lucroOperacional / capitalInvestido) * 100 : 0
+  const wacc = (percentualDivida / 100) * custoDivida + ((100 - percentualDivida) / 100) * custoCapitalProprio
+  const criaValor = roic > wacc
+
+  return (
+    <CalcShell onBack={onBack} icon={Scale} iconColor="#00D4FF" titulo="ROIC vs. WACC" subtitulo="Esse investimento cria ou destrói valor?">
+      <div className="flex flex-col gap-4 mb-5">
+        <SliderInput label="Lucro operacional gerado" value={lucroOperacional} onChange={setLucroOperacional} min={0} max={1000000} step={1000} prefix="R$ " />
+        <SliderInput label="Capital total investido" value={capitalInvestido} onChange={setCapitalInvestido} min={1} max={1000000} step={1000} prefix="R$ " />
+        <SliderInput label="Custo da dívida" value={custoDivida} onChange={setCustoDivida} min={0} max={1000} step={0.5} suffix="% a.a." decimals={1} />
+        <SliderInput label="Custo do capital próprio exigido" value={custoCapitalProprio} onChange={setCustoCapitalProprio} min={0} max={1000} step={0.5} suffix="% a.a." decimals={1} />
+        <SliderInput label="% da estrutura em dívida (o resto é capital próprio)" value={percentualDivida} onChange={setPercentualDivida} min={0} max={100} step={5} suffix="%" />
+      </div>
+      <ResultCard label="ROIC" value={`${roic.toFixed(1)}%`} color="#3B82F6" />
+      <ResultCard label="WACC" value={`${wacc.toFixed(1)}%`} color="#8B5CF6" />
+      <ResultCard
+        label={criaValor ? 'Cria valor' : 'Destrói valor'}
+        value={criaValor ? 'ROIC supera o WACC' : 'ROIC abaixo do WACC, mesmo com lucro positivo'}
+        color={criaValor ? '#22C55E' : '#EF4444'}
+      />
+    </CalcShell>
+  )
+}
+
+// 21. OEE — trilha Eficiência Operacional
+function CalcOEE({ onBack }: { onBack: () => void }) {
+  const [tempoReal, setTempoReal] = useState(7)
+  const [tempoPlanejado, setTempoPlanejado] = useState(8)
+  const [velocidadeReal, setVelocidadeReal] = useState(80)
+  const [velocidadeMaxima, setVelocidadeMaxima] = useState(100)
+  const [unidadesBoas, setUnidadesBoas] = useState(532)
+  const [unidadesTotais, setUnidadesTotais] = useState(560)
+
+  const disponibilidade = tempoPlanejado > 0 ? (tempoReal / tempoPlanejado) * 100 : 0
+  const performance = velocidadeMaxima > 0 ? (velocidadeReal / velocidadeMaxima) * 100 : 0
+  const qualidade = unidadesTotais > 0 ? (unidadesBoas / unidadesTotais) * 100 : 0
+  const oee = (disponibilidade / 100) * (performance / 100) * (qualidade / 100) * 100
+
+  return (
+    <CalcShell onBack={onBack} icon={Gauge} iconColor="#FFC93C" titulo="OEE — Eficiência Real" subtitulo="Disponibilidade, performance e qualidade combinadas">
+      <div className="flex flex-col gap-4 mb-5">
+        <SliderInput label="Tempo real de operação" value={tempoReal} onChange={setTempoReal} min={0} max={1000} step={0.5} suffix=" horas" decimals={1} />
+        <SliderInput label="Tempo total planejado" value={tempoPlanejado} onChange={setTempoPlanejado} min={0.1} max={1000} step={0.5} suffix=" horas" decimals={1} />
+        <SliderInput label="Velocidade real de produção" value={velocidadeReal} onChange={setVelocidadeReal} min={0} max={1000000} step={1} suffix=" un/h" />
+        <SliderInput label="Velocidade máxima teórica" value={velocidadeMaxima} onChange={setVelocidadeMaxima} min={1} max={1000000} step={1} suffix=" un/h" />
+        <SliderInput label="Unidades boas produzidas" value={unidadesBoas} onChange={setUnidadesBoas} min={0} max={1000000} step={1} />
+        <SliderInput label="Total de unidades produzidas" value={unidadesTotais} onChange={setUnidadesTotais} min={1} max={1000000} step={1} />
+      </div>
+      <ResultCard label="Disponibilidade" value={`${disponibilidade.toFixed(1)}%`} color="#3B82F6" />
+      <ResultCard label="Performance" value={`${performance.toFixed(1)}%`} color="#FFC93C" />
+      <ResultCard label="Qualidade" value={`${qualidade.toFixed(1)}%`} color="#22C55E" />
+      <ResultCard
+        label="OEE final"
+        value={`${oee.toFixed(1)}%`}
+        sub={oee >= 85 ? 'Excelente — nível de classe mundial' : 'Abaixo do benchmark de excelência (85%) — há espaço de melhoria'}
+        color={oee >= 85 ? '#22C55E' : oee >= 60 ? '#FFC93C' : '#EF4444'}
+      />
+    </CalcShell>
+  )
+}
+
+// 22. Alavancagem de Corte de Custo — trilha Eficiência Operacional
+function CalcAlavancagemCorteCusto({ onBack }: { onBack: () => void }) {
+  const [corteA, setCorteA] = useState(300)
+  const [recorrenteA, setRecorrenteA] = useState(true)
+  const [corteB, setCorteB] = useState(3000)
+  const [recorrenteB, setRecorrenteB] = useState(false)
+
+  const efeitoAnualA = recorrenteA ? corteA * 12 : corteA
+  const efeitoAnualB = recorrenteB ? corteB * 12 : corteB
+  const melhorOpcao = efeitoAnualA >= efeitoAnualB ? 'A' : 'B'
+
+  return (
+    <CalcShell onBack={onBack} icon={Scissors} iconColor="#EF4444" titulo="Alavancagem de Corte de Custo" subtitulo="Qual corte tem o maior efeito no lucro">
+      <div className="flex flex-col gap-4 mb-5">
+        <SliderInput label="Corte A — valor" value={corteA} onChange={setCorteA} min={0} max={1000000} step={50} prefix="R$ " />
+        <button
+          onClick={() => setRecorrenteA((r) => !r)}
+          className={`h-10 rounded-xl text-xs font-semibold border ${recorrenteA ? 'bg-accent-cyan/10 border-accent-cyan/40 text-accent-cyan' : 'card-surface text-slate-400'}`}
+        >
+          {recorrenteA ? 'Corte A é recorrente (mensal)' : 'Corte A é único (pontual)'}
+        </button>
+        <SliderInput label="Corte B — valor" value={corteB} onChange={setCorteB} min={0} max={1000000} step={50} prefix="R$ " />
+        <button
+          onClick={() => setRecorrenteB((r) => !r)}
+          className={`h-10 rounded-xl text-xs font-semibold border ${recorrenteB ? 'bg-accent-cyan/10 border-accent-cyan/40 text-accent-cyan' : 'card-surface text-slate-400'}`}
+        >
+          {recorrenteB ? 'Corte B é recorrente (mensal)' : 'Corte B é único (pontual)'}
+        </button>
+      </div>
+      <ResultCard label="Efeito anualizado — Corte A" value={fmt(efeitoAnualA)} color="#3B82F6" />
+      <ResultCard label="Efeito anualizado — Corte B" value={fmt(efeitoAnualB)} color="#8B5CF6" />
+      <ResultCard label={`Maior alavancagem: Corte ${melhorOpcao}`} value={fmt(Math.max(efeitoAnualA, efeitoAnualB))} sub="Priorize este corte primeiro" color="#22C55E" />
     </CalcShell>
   )
 }

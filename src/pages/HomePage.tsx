@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Flame, ChevronRight, RotateCw, Zap, Lock, Radar } from 'lucide-react'
+import { Search, Flame, ChevronRight, RotateCw, Zap, Lock, Radar, Briefcase } from 'lucide-react'
 import ProgressRing from '@/components/ProgressRing'
 import TrilhaCard from '@/components/TrilhaCard'
 import NexusLogo from '@/components/NexusLogo'
@@ -69,7 +69,7 @@ const FRASES_MOTIVADORAS = [
   { texto: 'Quem sabe o próprio número (quanto precisa, até quando, a que taxa) já está à frente de quase todo mundo que só sabe o próprio salário.', fonte: 'Nexus Finance' },
 ]
 
-const MODULOS_PARA_DESAFIO = 3 // precisa de banco de perguntas suficiente para misturar; 66 módulos completos hoje, então isso libera rápido
+const MODULOS_PARA_DESAFIO = 3 // precisa de banco de perguntas suficiente para misturar; 94 módulos completos hoje, então isso libera rápido
 
 function getSaudacao() {
   const hora = new Date().getHours()
@@ -219,6 +219,23 @@ export default function HomePage() {
           <p className="text-[11.5px] text-slate-400 mt-0.5">Teses, carteiras recomendadas e relatórios</p>
         </div>
         <ChevronRight size={17} className="text-accent-purple" />
+      </motion.button>
+
+      {/* Gestão de Negócios — atalho para as 4 trilhas do Lucro em Dobro */}
+      <motion.button
+        whileTap={{ scale: 0.98 }}
+        onClick={() => navigate('/aprender?trilha=geracao-de-receita')}
+        className="flex items-center gap-3 w-full p-3.5 rounded-[18px] text-left"
+        style={{ background: 'linear-gradient(135deg, #22C55E14, #FFC93C14)', border: '1px solid #22C55E44' }}
+      >
+        <div className="w-10 h-10 rounded-xl bg-accent-green/20 flex items-center justify-center shrink-0">
+          <Briefcase size={19} className="text-accent-green" />
+        </div>
+        <div className="flex-1">
+          <p className="text-[13.5px] font-bold text-white">Gestão de Negócios</p>
+          <p className="text-[11.5px] text-slate-400 mt-0.5">Receita, Cultura, Eficiência e Financeiro — 28 módulos</p>
+        </div>
+        <ChevronRight size={17} className="text-accent-green" />
       </motion.button>
 
       {/* Trilhas */}

@@ -46,7 +46,7 @@ export default function AprenderPage() {
     <div className="px-4 pt-5 pb-28 flex flex-col gap-5">
       <div>
         <h1 className="text-xl font-display font-extrabold text-white">Aprender</h1>
-        <p className="text-xs text-slate-500 mt-0.5">66 módulos em 10 trilhas — do zero ao avançado</p>
+        <p className="text-xs text-slate-500 mt-0.5">{MODULOS.length} módulos em {TRILHAS.length} trilhas — do zero ao avançado</p>
       </div>
 
       {/* Busca */}
