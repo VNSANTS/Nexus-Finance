@@ -54,8 +54,8 @@ export default defineConfig({
         ],
       },
       manifest: {
-        id: '/',
-        scope: '/',
+        id: '/Nexus-Finance/',
+        scope: '/Nexus-Finance/',
         name: 'Nexus Finance',
         short_name: 'Nexus',
         description: 'Do seu primeiro real ao seu primeiro milhão — aprenda, acompanhe e invista.',
@@ -63,7 +63,7 @@ export default defineConfig({
         background_color: '#070B16',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        start_url: '/Nexus-Finance/',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
