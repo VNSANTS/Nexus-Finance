@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { GestaoFinanceiraProvider, useGestaoFinanceira } from './GestaoFinanceiraContext'
 import GfBottomNav from './components/GfBottomNav'
 import GfPrivacyOverlay from './components/GfPrivacyOverlay'
+import GfBloqueioOverlay from './components/GfBloqueioOverlay'
 import GfPrimeiroAcesso from './pages/GfPrimeiroAcesso'
 
 const GfHomePage = lazy(() => import('./pages/GfHomePage'))
@@ -23,6 +24,7 @@ const GfNotificacoesPage = lazy(() => import('./pages/GfNotificacoesPage'))
 const GfNotificacoesConfigPage = lazy(() => import('./pages/GfNotificacoesConfigPage'))
 const GfMaisPage = lazy(() => import('./pages/GfMaisPage'))
 const GfFamiliaPerfisPage = lazy(() => import('./pages/GfFamiliaPerfisPage'))
+const GfSegurancaPage = lazy(() => import('./pages/GfSegurancaPage'))
 const GfPrivacidadePage = lazy(() => import('./pages/GfPrivacidadePage'))
 const GfDadosBackupPage = lazy(() => import('./pages/GfDadosBackupPage'))
 const GfSobrePage = lazy(() => import('./pages/GfSobrePage'))
@@ -80,6 +82,7 @@ function GestaoFinanceiraConteudo() {
             <Route path="notificacoes/configurar" element={<GfNotificacoesConfigPage />} />
             <Route path="mais" element={<GfMaisPage />} />
             <Route path="familia-perfis" element={<GfFamiliaPerfisPage />} />
+            <Route path="seguranca" element={<GfSegurancaPage />} />
             <Route path="privacidade" element={<GfPrivacidadePage />} />
             <Route path="dados-backup" element={<GfDadosBackupPage />} />
             <Route path="sobre" element={<GfSobrePage />} />
@@ -88,6 +91,7 @@ function GestaoFinanceiraConteudo() {
       </div>
       <GfBottomNav />
       <GfPrivacyOverlay />
+      <GfBloqueioOverlay />
     </>
   )
 }

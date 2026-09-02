@@ -1,10 +1,61 @@
-# Handoff — Acessibilidade implementada + bug real do botão radial corrigido
+# Handoff — Tela de Segurança (bloqueio por PIN) implementada
 
 Contexto: o Vinícius roda várias sessões Claude em paralelo neste projeto
 porque é grande demais pra uma sessão só. Se você é uma dessas sessões:
 leia este arquivo inteiro antes de mexer em qualquer coisa, e ao terminar
 seu pedaço, **atualize este mesmo arquivo** para a próxima sessão
 continuar de onde você parou.
+
+## O que esta sessão fez: tela de Segurança (menu Mais → Segurança)
+
+Implementei o item "Segurança", que existia só como placeholder ("em
+breve") desde a entrega de Família e perfis. Escopo: bloqueio por PIN de
+verdade (4 ou 6 dígitos, hash PBKDF2-SHA256 + salt via Web Crypto nativa,
+nunca texto puro, nenhuma lib nova adicionada). Detalhes completos no
+`README-ATUALIZACAO.md` desta entrega — resumindo aqui:
+
+- `seguranca.ts` (novo): hash/verificação de PIN.
+- `GfTecladoPin.tsx` (novo): teclado numérico reutilizável.
+- `GfBloqueioOverlay.tsx` (novo): a trava de verdade — cobre a Gestão
+  Financeira inteira até acertar o PIN, com bloqueio de 30s depois de 5
+  tentativas erradas e fluxo "Esqueci meu PIN" (remove a trava, não apaga
+  dados).
+- `GfSegurancaPage.tsx` (novo): tela de configuração — ativar/alterar/
+  desativar PIN, bloquear ao abrir o app, bloquear ao voltar de outro
+  app com tolerância configurável.
+- `types.ts`, `GestaoFinanceiraContext.tsx`, `GestaoFinanceiraShell.tsx`,
+  `GfMaisPage.tsx`: integração (estado, reducer, rota, item de menu).
+
+**Documentado como não implementado nesta tela mesma** (não fingido):
+biometria (WebAuthn precisaria de servidor pra funcionar direito) e
+"sessões" (não existe conceito disso num app 100% local por aparelho).
+
+**Pendência que herdei e não peguei**: esta tela ainda não verifica
+`permissoes.gerenciarMembros` — qualquer perfil de Família e perfis pode
+mexer no PIN por enquanto. Mesma pendência já existia pras outras 19
+telas (documentada na entrega de Família e perfis) — não resolvida aqui
+de propósito, pra não misturar duas mudanças grandes na mesma leva.
+
+## ⚠️ Verificação não rodada nesta sessão (sem internet)
+
+Mesma situação já registrada nas sessões anteriores deste handoff: sem
+acesso à rede (`npm install` deu 403), não rodei `tsc --noEmit` nem
+`npm run build` reais. Compensei rodando o parser do esbuild (disponível
+no ambiente via dependência de outra ferramenta) contra os 8 arquivos
+tocados — todos passaram sem erro de sintaxe — e revisão manual cruzando
+nomes de campo/exports entre arquivos. Detalhes e o que checar primeiro
+se aparecer erro de tipo: ver seção equivalente no `README-ATUALIZACAO.md`
+desta entrega (ícones novos do `lucide-react` — `Fingerprint`, `KeyRound`,
+`Laptop`, `Delete` — são o ponto mais provável de erro, não confirmados
+contra a versão instalada no projeto sem rede).
+
+**Se você é a próxima sessão com internet: rode a verificação de 3 passos
+ANTES de continuar pra qualquer pendência nova** (comando no fim deste
+arquivo).
+
+---
+
+# Handoff anterior — Acessibilidade implementada + bug real do botão radial corrigido
 
 ## Bug real do botão radial ("analógico") — corrigido nesta sessão
 
