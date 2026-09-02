@@ -46,16 +46,16 @@ export const OPCOES_TEMPO_AUTO_BLOQUEIO: { valor: TempoAutoBloqueio; label: stri
 const ITERACOES_PBKDF2 = 100_000
 const TAMANHO_HASH_BITS = 256
 
-function paraHex(buffer: ArrayBuffer): string {
+function paraHex(buffer: ArrayBufferLike): string {
   return Array.from(new Uint8Array(buffer))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
 }
 
-function hexParaBytes(hex: string): Uint8Array<ArrayBuffer> {
-  const bytes = new Uint8Array(new ArrayBuffer(hex.length / 2))
+function hexParaBytes(hex: string): BufferSource {
+  const bytes = new Uint8Array(hex.length / 2)
   for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16)
-  return bytes
+  return bytes as BufferSource
 }
 
 export function pinValido(pin: string, tamanho: TamanhoPin): boolean {

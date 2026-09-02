@@ -155,6 +155,27 @@ export interface PreferenciasPrivacidade {
   permitirFotoMetas: boolean
 }
 
+// Preferências da tela "Segurança" (menu Mais → Segurança). Bloqueio por
+// PIN local — ver comentário completo em seguranca.ts sobre o que isso
+// protege de verdade (acesso à tela) e o que não protege (não é
+// criptografia dos dados). O PIN nunca fica salvo em texto puro: só o hash
+// (pinHash) e o salt (pinSalt) usados pra conferir uma tentativa, gerados
+// em seguranca.ts via Web Crypto (PBKDF2-SHA256).
+export type TamanhoPin = 4 | 6
+// Minutos de tolerância antes de voltar a exigir o PIN ao retornar de outro
+// app/aba. 0 = imediato (pede sempre que a tela recupera o foco).
+export type TempoAutoBloqueio = 0 | 1 | 5 | 15
+
+export interface PreferenciasSeguranca {
+  pinAtivo: boolean
+  pinHash: string | null
+  pinSalt: string | null
+  pinTamanho: TamanhoPin | null
+  bloquearAoAbrirApp: boolean
+  bloquearAoTrocarDeApp: boolean
+  tempoAutoBloqueio: TempoAutoBloqueio
+}
+
 // Família e perfis (menu Mais → Família e perfis). Como a Gestão Financeira
 // inteira é local (sem servidor, sem conta na nuvem — ver comentário no topo
 // deste arquivo), "família" aqui não é multiusuário de verdade: é um jeito
@@ -218,4 +239,7 @@ export interface GestaoFinanceiraState {
   // existir recebem um membro "Eu" (administrador) automaticamente.
   membros: Membro[]
   membroAtivoId: string | null
+  // Fallback no reducer/estadoInicial — estados salvos antes desta tela
+  // existir recebem o padrão (PIN desativado) sem quebrar nada.
+  preferenciasSeguranca: PreferenciasSeguranca
 }
