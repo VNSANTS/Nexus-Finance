@@ -48,7 +48,7 @@ export function defaultProgress(): UserProgress {
     onboardingDone: false,
     riskProfile: null,
     itensRevisao: [],
-    perfilPessoal: { nome: 'Investidor', emoji: null, cor: '#00D4FF', fotoUrl: null, fotoAjuste: null },
+    perfilPessoal: { nome: 'Investidor', emoji: null, cor: '#00D4FF', fotoUrl: null, fotoAjuste: null, bio: '' },
     historicoXpRecente: [],
     sequenciaAcertosAtual: 0,
     maiorSequenciaAcertos: 0,
@@ -59,6 +59,26 @@ export function defaultProgress(): UserProgress {
     ultimoDesafioData: null,
     perguntasDesafioUsadas: [],
     itensRevisadosTotal: 0,
+    preferenciasNotificacoesAprender: {
+      ativas: true,
+      notificacaoNavegador: false,
+      vibrar: true,
+      lembreteStreak: {
+        ativa: true,
+        horario: '19:00',
+        frequencia: 'diaria',
+        diasPersonalizados: [1, 2, 3, 4, 5], // seg-sex, só usado se frequencia === 'personalizada'
+        apenasSeAindaNaoEstudouHoje: true,
+      },
+      desafioDiario: { ativa: true, horario: '08:00' },
+      revisao: { ativa: true, minimoItens: 3 },
+      conquistas: { ativa: true },
+      moduloParado: { ativa: true, diasInatividade: 5 },
+      motivacional: { ativa: true, frequencia: 'semanal' },
+      estiloExibicao: 'detalhado',
+      som: { ativo: true, volume: 70, estilo: 'classico' },
+      naoPerturbe: { ativo: true, inicio: '22:00', fim: '08:00' },
+    },
   }
 }
 
@@ -110,6 +130,26 @@ function lerLocal(): UserProgress {
       merged.abasConcluidas && typeof merged.abasConcluidas === 'object' ? merged.abasConcluidas : {}
     merged.quizScores = merged.quizScores && typeof merged.quizScores === 'object' ? merged.quizScores : {}
     merged.perfilPessoal = { ...base.perfilPessoal, ...(merged.perfilPessoal ?? {}) }
+    // Blindagem da Central de Notificações do Aprender — estados salvos antes
+    // desta tela existir (ou em versão antiga dela) recebem o padrão
+    // automaticamente. Merge por sub-objeto (não só top-level) porque cada
+    // categoria pode ter ganhado campos novos sem o usuário ter salvo de novo.
+    {
+      const p = base.preferenciasNotificacoesAprender
+      const s = (merged.preferenciasNotificacoesAprender ?? {}) as Partial<UserProgress['preferenciasNotificacoesAprender']>
+      merged.preferenciasNotificacoesAprender = {
+        ...p,
+        ...s,
+        lembreteStreak: { ...p.lembreteStreak, ...(s.lembreteStreak ?? {}) },
+        desafioDiario: { ...p.desafioDiario, ...(s.desafioDiario ?? {}) },
+        revisao: { ...p.revisao, ...(s.revisao ?? {}) },
+        conquistas: { ...p.conquistas, ...(s.conquistas ?? {}) },
+        moduloParado: { ...p.moduloParado, ...(s.moduloParado ?? {}) },
+        motivacional: { ...p.motivacional, ...(s.motivacional ?? {}) },
+        som: { ...p.som, ...(s.som ?? {}) },
+        naoPerturbe: { ...p.naoPerturbe, ...(s.naoPerturbe ?? {}) },
+      }
+    }
     // Blindagem dos campos de rastreamento de conquistas — progresso salvo antes
     // dessa mudança não tem nenhum destes, então caem no default (tudo zerado).
     merged.livrosAbertos = Array.isArray(merged.livrosAbertos) ? merged.livrosAbertos : []
