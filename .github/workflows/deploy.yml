@@ -1,0 +1,56 @@
+name: Deploy Nexus Finance no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # npm install (não npm ci) de propósito: assim, se o package.json ganhar
+      # uma dependência nova e o package-lock.json ainda não tiver sido
+      # regenerado, o build corrige isso sozinho em vez de falhar.
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Checar tipos (TypeScript)
+        run: ./node_modules/.bin/tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Preparar artefato do Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
