@@ -5,7 +5,6 @@ import Onboarding from '@/components/Onboarding'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import HomePage from '@/pages/HomePage'
 import { useUserProgress } from '@/hooks/useUserProgress'
-import { useAgendadorNotificacoesAprender } from '@/lib/notificacoesAprender'
 import GfTransicao from '@/gestao-financeira/components/GfTransicao'
 
 // A Home entra no bundle inicial (é a primeira tela). O resto é carregado ao
@@ -23,7 +22,6 @@ const InvestidorPage = lazy(() => import('@/pages/InvestidorPage'))
 const RevisaoPage = lazy(() => import('@/pages/RevisaoPage'))
 const BuscaPage = lazy(() => import('@/pages/BuscaPage'))
 const DesafioDiarioPage = lazy(() => import('@/pages/DesafioDiarioPage'))
-const NotificacoesConfigPage = lazy(() => import('@/pages/NotificacoesConfigPage'))
 const GestaoFinanceiraShell = lazy(() => import('@/gestao-financeira/GestaoFinanceiraShell'))
 
 function TelaCarregando() {
@@ -97,7 +95,6 @@ function AppRotas() {
             <Route path="/revisao" element={<RevisaoPage />} />
             <Route path="/busca" element={<BuscaPage />} />
             <Route path="/desafio-diario" element={<DesafioDiarioPage />} />
-            <Route path="/notificacoes" element={<NotificacoesConfigPage />} />
             <Route path="/gestao-financeira/*" element={<GestaoFinanceiraShell />} />
             <Route path="*" element={<NaoEncontrada />} />
           </Routes>
@@ -111,11 +108,6 @@ export default function App() {
   const { progress, setOnboardingDone } = useUserProgress()
   const location = useLocation()
   const dentroDeGf = location.pathname.startsWith('/gestao-financeira')
-
-  // Roda em segundo plano (checagem a cada 60s + ao voltar o foco) enquanto
-  // o app estiver aberto — ver src/lib/notificacoesAprender.ts para o motor
-  // e a ressalva sobre agendamento fora do app (sem Service Worker próprio).
-  useAgendadorNotificacoesAprender(progress, progress.preferenciasNotificacoesAprender)
 
   if (!progress.onboardingDone) {
     return (

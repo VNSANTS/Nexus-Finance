@@ -1,9 +1,8 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useReducer, useRef } from 'react'
 import type { ReactNode } from 'react'
-import type { Cartao, Categoria, Conta, Divida, GestaoFinanceiraState, Membro, Meta, OrcamentoCategoria, PreferenciasNotificacoes, PreferenciasPrivacidade, PreferenciasSeguranca, Transacao } from './types'
+import type { Cartao, Categoria, Conta, Divida, GestaoFinanceiraState, Membro, Meta, OrcamentoCategoria, PreferenciasNotificacoes, PreferenciasPrivacidade, Transacao } from './types'
 import { CATEGORIAS_PADRAO } from './categoriasPadrao'
 import { novoMembroPrincipal, permissoesAtivas } from './permissoes'
-import { PREFERENCIAS_SEGURANCA_PADRAO } from './seguranca'
 import type { PermissoesMembro } from './types'
 
 // Estado 100% isolado do useUserProgress: chave própria no localStorage,
@@ -56,7 +55,6 @@ function estadoInicial(): GestaoFinanceiraState {
       ocultarAoTrocarDeApp: false,
       permitirFotoMetas: true,
     },
-    preferenciasSeguranca: { ...PREFERENCIAS_SEGURANCA_PADRAO },
   }
 }
 
@@ -104,7 +102,6 @@ type Acao =
   | { tipo: 'DEFINIR_PREFERENCIAS_NOTIFICACOES'; payload: Partial<PreferenciasNotificacoes> }
   | { tipo: 'RESTAURAR_PREFERENCIAS_NOTIFICACOES' }
   | { tipo: 'DEFINIR_PREFERENCIAS_PRIVACIDADE'; payload: Partial<PreferenciasPrivacidade> }
-  | { tipo: 'DEFINIR_PREFERENCIAS_SEGURANCA'; payload: Partial<PreferenciasSeguranca> }
   | { tipo: 'ADICIONAR_MEMBRO'; payload: Membro }
   | { tipo: 'EDITAR_MEMBRO'; payload: Membro }
   | { tipo: 'EXCLUIR_MEMBRO'; payload: { id: string } }
@@ -176,8 +173,6 @@ function reducer(estado: GestaoFinanceiraState, acao: Acao): GestaoFinanceiraSta
       return { ...estado, preferenciasNotificacoes: estadoInicial().preferenciasNotificacoes }
     case 'DEFINIR_PREFERENCIAS_PRIVACIDADE':
       return { ...estado, preferenciasPrivacidade: { ...estado.preferenciasPrivacidade, ...acao.payload } }
-    case 'DEFINIR_PREFERENCIAS_SEGURANCA':
-      return { ...estado, preferenciasSeguranca: { ...estado.preferenciasSeguranca, ...acao.payload } }
 
     case 'ADICIONAR_MEMBRO':
       return { ...estado, membros: [...estado.membros, acao.payload] }
@@ -217,7 +212,6 @@ function reducer(estado: GestaoFinanceiraState, acao: Acao): GestaoFinanceiraSta
         preferenciasPrivacidade: estado.preferenciasPrivacidade,
         membros: estado.membros,
         membroAtivoId: estado.membroAtivoId,
-        preferenciasSeguranca: estado.preferenciasSeguranca,
       }
     case 'RESTAURAR_BACKUP':
       // Mesma lógica de carregarEstado(): funde com estadoInicial() pra
@@ -281,7 +275,6 @@ interface GestaoFinanceiraContextValue {
   definirPreferenciasNotificacoes: (prefs: Partial<PreferenciasNotificacoes>) => void
   restaurarPreferenciasNotificacoes: () => void
   definirPreferenciasPrivacidade: (prefs: Partial<PreferenciasPrivacidade>) => void
-  definirPreferenciasSeguranca: (prefs: Partial<PreferenciasSeguranca>) => void
   adicionarMembro: (m: Membro) => void
   editarMembro: (m: Membro) => void
   excluirMembro: (id: string) => void
@@ -355,10 +348,6 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
     (prefs: Partial<PreferenciasPrivacidade>) => dispatch({ tipo: 'DEFINIR_PREFERENCIAS_PRIVACIDADE', payload: prefs }),
     [],
   )
-  const definirPreferenciasSeguranca = useCallback(
-    (prefs: Partial<PreferenciasSeguranca>) => dispatch({ tipo: 'DEFINIR_PREFERENCIAS_SEGURANCA', payload: prefs }),
-    [],
-  )
   const adicionarMembro = useCallback((m: Membro) => dispatch({ tipo: 'ADICIONAR_MEMBRO', payload: m }), [])
   const editarMembro = useCallback((m: Membro) => dispatch({ tipo: 'EDITAR_MEMBRO', payload: m }), [])
   const excluirMembro = useCallback((id: string) => dispatch({ tipo: 'EXCLUIR_MEMBRO', payload: { id } }), [])
@@ -400,7 +389,6 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
     definirPreferenciasNotificacoes,
     restaurarPreferenciasNotificacoes,
     definirPreferenciasPrivacidade,
-    definirPreferenciasSeguranca,
     adicionarMembro,
     editarMembro,
     excluirMembro,

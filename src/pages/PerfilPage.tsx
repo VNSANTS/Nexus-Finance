@@ -1,26 +1,7 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import {
-  ArrowUpRight,
-  Bell,
-  Calendar,
-  Check,
-  CheckCircle2,
-  ChevronRight,
-  Download,
-  Edit3,
-  Flame,
-  GraduationCap,
-  Lock,
-  LogOut,
-  Pencil,
-  Share2,
-  Smile,
-  Star,
-  Trophy,
-  type LucideIcon,
-} from 'lucide-react'
+import { ArrowUpRight, Bell, Calendar, CheckCircle2, ChevronRight, Download, Edit3, Flame, GraduationCap, Lock, LogOut, Share2, Smile, Star, type LucideIcon } from 'lucide-react'
 import { getIcon } from '@/components/Icon'
 import ProgressRing from '@/components/ProgressRing'
 import Avatar from '@/components/Avatar'
@@ -31,28 +12,8 @@ import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
 import { ARTES_BADGE } from '@/assets/badges'
 import type { BadgeStats, AjusteFoto, PerfilPessoal } from '@/types'
 
-// Emojis agrupados por "personalidade de investidor" — antes era uma lista
-// solta de 8 bichos. Agora cada grupo tem um sentido temático, o que ajuda
-// a escolha e dá contexto (em vez de ser só decoração aleatória).
-const GRUPOS_EMOJI: { label: string; itens: string[] }[] = [
-  { label: 'Perfil', itens: ['🐂', '🐻', '🦁', '🦊', '🐺', '🦉', '🐢', '🐙', '🦅', '🐝'] },
-  { label: 'Símbolos', itens: ['💎', '🚀', '⚡', '🎯', '🔥', '🌟', '♟️', '🧭'] },
-  { label: 'Rostos', itens: ['😎', '🤓', '🧐', '😊', '🙂', '😄'] },
-]
-const AVATAR_EMOJIS = GRUPOS_EMOJI.flatMap((g) => g.itens)
-
-const AVATAR_CORES = [
-  { hex: '#00D4FF', nome: 'Cyan' },
-  { hex: '#FFC93C', nome: 'Ouro' },
-  { hex: '#22C55E', nome: 'Verde' },
-  { hex: '#EC4899', nome: 'Rosa' },
-  { hex: '#8B5CF6', nome: 'Roxo' },
-  { hex: '#3B82F6', nome: 'Azul' },
-  { hex: '#F97316', nome: 'Laranja' },
-  { hex: '#14B8A6', nome: 'Teal' },
-]
-
-const MAX_BIO = 60
+const AVATAR_EMOJIS = ['🐂', '🦁', '🦊', '🐺', '🦉', '🐢', '🐙', '🦅']
+const AVATAR_CORES = ['#00D4FF', '#FFC93C', '#22C55E', '#EC4899', '#8B5CF6', '#3B82F6']
 
 export default function PerfilPage() {
   const navigate = useNavigate()
@@ -84,27 +45,34 @@ export default function PerfilPage() {
 
   const [editandoPerfil, setEditandoPerfil] = useState(false)
   const [badgeCompartilhando, setBadgeCompartilhando] = useState<(typeof BADGES)[number] | null>(null)
+  const [notificacoes, setNotificacoes] = useState(false)
   const [confirmandoReset, setConfirmandoReset] = useState(false)
   const [exportado, setExportado] = useState(false)
+  const [avisoNotificacao, setAvisoNotificacao] = useState(false)
 
   const hoje = new Date().getDate()
   const diasAtivos = Array.from({ length: progress.streak }, (_, i) => hoje - i).filter((d) => d > 0)
 
-  // Resumo rápido mostrado no ConfigRow — agora a configuração de verdade
-  // mora na Central de Notificações (/notificacoes), não mais aqui.
-  const prefsNotificacoes = progress.preferenciasNotificacoesAprender
-  const categoriasNotificacao = [
-    prefsNotificacoes.lembreteStreak.ativa,
-    prefsNotificacoes.desafioDiario.ativa,
-    prefsNotificacoes.revisao.ativa,
-    prefsNotificacoes.conquistas.ativa,
-    prefsNotificacoes.moduloParado.ativa,
-    prefsNotificacoes.motivacional.ativa,
-  ]
-  const categoriasAtivas = categoriasNotificacao.filter(Boolean).length
-  const resumoNotificacoes = !prefsNotificacoes.ativas
-    ? 'Desativadas'
-    : `${categoriasAtivas} de ${categoriasNotificacao.length} ativadas`
+  async function handleToggleNotificacoes(ligar: boolean) {
+    if (!ligar) {
+      setNotificacoes(false)
+      return
+    }
+    if (!('Notification' in window)) {
+      setAvisoNotificacao(true)
+      setTimeout(() => setAvisoNotificacao(false), 3500)
+      return
+    }
+    const permissao = await Notification.requestPermission()
+    if (permissao === 'granted') {
+      setNotificacoes(true)
+      new Notification('Nexus Finance', { body: 'Notificações ativadas! Vamos te lembrar de manter sua sequência de estudos.' })
+    } else {
+      setNotificacoes(false)
+      setAvisoNotificacao(true)
+      setTimeout(() => setAvisoNotificacao(false), 3500)
+    }
+  }
 
   function handleExportar() {
     const dados = {
@@ -130,62 +98,27 @@ export default function PerfilPage() {
     setTimeout(() => setExportado(false), 2500)
   }
 
-  const corPerfil = progress.perfilPessoal.cor
-  const totalBadges = BADGES.filter((b) => b.condicao(statsUsuario)).length
-
   return (
-    <div className="pb-28 relative">
-      {/* Capa com gradiente na cor do perfil — dá profundidade ao topo sem
-          precisar de uma imagem de capa de verdade (mantém tudo local/leve) */}
-      <div
-        className="h-[132px] w-full relative overflow-hidden"
-        style={{ background: `linear-gradient(160deg, ${corPerfil}2E 0%, #070B16 78%)` }}
-      >
-        <div
-          className="absolute -top-10 -right-14 w-[180px] h-[180px] rounded-full blur-3xl opacity-40"
-          style={{ background: corPerfil }}
-        />
-        <div className="px-4 pt-5">
-          <h1 className="text-xl font-display font-extrabold text-white">Perfil</h1>
-          <p className="text-xs text-slate-400 mt-1">Seu progresso, conquistas e configurações</p>
-        </div>
-      </div>
+    <div className="px-4 pt-5 pb-28 relative">
+      <h1 className="text-xl font-display font-extrabold text-white">Perfil</h1>
+      <p className="text-xs text-slate-500 mt-1 mb-4.5">Seu progresso, conquistas e configurações</p>
 
-      <div className="px-4">
-        {/* Avatar + nome + bio, sobrepondo a capa */}
-        <button onClick={() => setEditandoPerfil(true)} className="flex items-end gap-3.5 -mt-8 mb-6 w-full text-left">
-          <div className="relative shrink-0">
-            <Avatar
-              nome={progress.perfilPessoal.nome}
-              emoji={progress.perfilPessoal.emoji}
-              cor={corPerfil}
-              fotoUrl={progress.perfilPessoal.fotoUrl}
-              fotoAjuste={progress.perfilPessoal.fotoAjuste}
-              size={72}
-              editavel
-            />
-          </div>
-          <div className="flex-1 min-w-0 pb-1">
-            <div className="flex items-center gap-1.5">
-              <p className="text-base font-display font-bold text-white truncate">{progress.perfilPessoal.nome}</p>
-              <span
-                className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
-                style={{ background: `${corPerfil}22`, color: corPerfil }}
-              >
-                Nv. {levelInfo.level}
-              </span>
-            </div>
-            <p className="text-[11.5px] text-slate-400 mt-0.5 truncate">
-              {progress.perfilPessoal.bio || 'Toque para adicionar uma bio'}
-            </p>
-          </div>
-          <div
-            className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mb-1"
-            style={{ background: `${corPerfil}1A`, border: `1px solid ${corPerfil}44` }}
-          >
-            <Pencil size={12} style={{ color: corPerfil }} />
-          </div>
-        </button>
+      {/* Avatar + nome */}
+      <button onClick={() => setEditandoPerfil(true)} className="flex items-center gap-3.5 mb-6 w-full text-left">
+        <Avatar
+          nome={progress.perfilPessoal.nome}
+          emoji={progress.perfilPessoal.emoji}
+          cor={progress.perfilPessoal.cor}
+          fotoUrl={progress.perfilPessoal.fotoUrl}
+          fotoAjuste={progress.perfilPessoal.fotoAjuste}
+          size={58}
+          editavel
+        />
+        <div className="flex-1 min-w-0">
+          <p className="text-base font-display font-bold text-white">{progress.perfilPessoal.nome}</p>
+          <p className="text-[11.5px] text-accent-cyan font-semibold mt-0.5">Toque para editar</p>
+        </div>
+      </button>
 
       {/* Continuar de onde parei */}
       {modulosCompletos === 0 && (
@@ -217,9 +150,9 @@ export default function PerfilPage() {
           <p className="text-[11.5px] text-slate-400 mt-0.5">{progress.xp} XP total</p>
         </div>
         <div className="flex gap-5 mt-1.5">
-          <Stat value={progress.streak} label="dias seguidos" icon={Flame} />
-          <Stat value={modulosCompletos} label="módulos" icon={GraduationCap} />
-          <Stat value={totalBadges} label="badges" icon={Trophy} />
+          <Stat value={progress.streak} label="dias seguidos" />
+          <Stat value={modulosCompletos} label="módulos" />
+          <Stat value={BADGES.filter((b) => b.condicao(statsUsuario)).length} label="badges" />
         </div>
       </div>
 
@@ -265,14 +198,7 @@ export default function PerfilPage() {
       <div>
         <p className="text-[12.5px] font-bold text-white mb-2.5">Configurações</p>
         <div className="flex flex-col gap-2">
-          <ConfigRow
-            icon={Bell}
-            label="Notificações"
-            cor="#FFC93C"
-            control={<span className="text-[11px] text-slate-500 font-medium">{resumoNotificacoes}</span>}
-            onClick={() => navigate('/notificacoes')}
-            chevron
-          />
+          <ConfigRow icon={Bell} label="Notificações" cor="#FFC93C" control={<Toggle value={notificacoes} onChange={handleToggleNotificacoes} />} />
           <ConfigRow
             icon={exportado ? CheckCircle2 : Download}
             label={exportado ? 'Progresso exportado!' : 'Exportar meu progresso'}
@@ -284,7 +210,24 @@ export default function PerfilPage() {
           <ConfigRow icon={Lock} label="Sair da conta" cor="#475569" desabilitado />
         </div>
       </div>
-      </div>
+
+      {/* Toast de notificação bloqueada */}
+      <AnimatePresence>
+        {avisoNotificacao && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] max-w-[320px] px-4 py-3 rounded-2xl card-surface flex items-center gap-2.5"
+            style={{ borderColor: '#FFC93C44' }}
+          >
+            <Bell size={16} className="text-accent-gold shrink-0" />
+            <p className="text-[11.5px] text-slate-200 leading-snug">
+              Permissão de notificação negada ou indisponível neste navegador. Ative manualmente nas configurações.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal editar perfil */}
       <AnimatePresence>
@@ -295,7 +238,6 @@ export default function PerfilPage() {
             cor={progress.perfilPessoal.cor}
             fotoUrl={progress.perfilPessoal.fotoUrl}
             fotoAjuste={progress.perfilPessoal.fotoAjuste}
-            bio={progress.perfilPessoal.bio ?? ''}
             onSalvar={setPerfilPessoal}
             onFechar={() => setEditandoPerfil(false)}
           />
@@ -445,13 +387,10 @@ function ConquistasCarrossel({
   )
 }
 
-function Stat({ value, label, icon: Icon }: { value: number; label: string; icon?: LucideIcon }) {
+function Stat({ value, label }: { value: number; label: string }) {
   return (
     <div className="text-center">
-      <div className="flex items-center justify-center gap-1">
-        {Icon && <Icon size={12} className="text-slate-500" />}
-        <p className="text-[17px] font-display font-extrabold text-white">{value}</p>
-      </div>
+      <p className="text-[17px] font-display font-extrabold text-white">{value}</p>
       <p className="text-[10px] text-slate-500 mt-0.5">{label}</p>
     </div>
   )
@@ -463,7 +402,6 @@ function EditarPerfilModal({
   cor,
   fotoUrl,
   fotoAjuste,
-  bio,
   onSalvar,
   onFechar,
 }: {
@@ -472,55 +410,20 @@ function EditarPerfilModal({
   cor: string
   fotoUrl: string | null
   fotoAjuste: AjusteFoto | null
-  bio: string
   onSalvar: (p: PerfilPessoal) => void
   onFechar: () => void
 }) {
   const [nomeTemp, setNomeTemp] = useState(nome)
-  const [bioTemp, setBioTemp] = useState(bio)
   const [emojiTemp, setEmojiTemp] = useState(emoji)
   const [corTemp, setCorTemp] = useState(cor)
   const [fotoUrlTemp, setFotoUrlTemp] = useState(fotoUrl)
   const [fotoAjusteTemp, setFotoAjusteTemp] = useState(fotoAjuste)
   const [editorFotoAberto, setEditorFotoAberto] = useState(false)
-  const [erroArquivo, setErroArquivo] = useState<string | null>(null)
-  const [salvando, setSalvando] = useState(false)
   const inputArquivoRef = useRef<HTMLInputElement>(null)
-
-  // Perfil só é considerado "houve mudança" se algo realmente mudou —
-  // usado para desabilitar o botão salvar quando não há nada a salvar.
-  const houveMudanca =
-    nomeTemp.trim() !== nome ||
-    bioTemp !== bio ||
-    emojiTemp !== emoji ||
-    corTemp !== cor ||
-    fotoUrlTemp !== fotoUrl ||
-    fotoAjusteTemp !== fotoAjuste
-
-  // Completude do perfil: dá um retorno visual leve de "quão preenchido"
-  // está — nome sempre conta (é obrigatório na prática), foto ou emoji
-  // escolhido, e bio. Puramente cosmético, não bloqueia nada.
-  const completude = useMemo(() => {
-    let pontos = 1 // nome sempre existe (fallback "Investidor")
-    if (fotoUrlTemp || emojiTemp) pontos++
-    if (bioTemp.trim().length > 0) pontos++
-    return Math.round((pontos / 3) * 100)
-  }, [fotoUrlTemp, emojiTemp, bioTemp])
 
   function aoEscolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
     const arquivo = e.target.files?.[0]
     if (!arquivo) return
-    if (!arquivo.type.startsWith('image/')) {
-      setErroArquivo('Escolha um arquivo de imagem (JPG, PNG, etc.)')
-      e.target.value = ''
-      return
-    }
-    if (arquivo.size > 8 * 1024 * 1024) {
-      setErroArquivo('Imagem muito grande — escolha um arquivo de até 8MB')
-      e.target.value = ''
-      return
-    }
-    setErroArquivo(null)
     const leitor = new FileReader()
     leitor.onload = () => {
       setFotoUrlTemp(leitor.result as string)
@@ -529,21 +432,6 @@ function EditarPerfilModal({
     }
     leitor.readAsDataURL(arquivo)
     e.target.value = '' // permite escolher o mesmo arquivo de novo depois
-  }
-
-  function handleSalvar() {
-    setSalvando(true)
-    onSalvar({
-      nome: nomeTemp.trim() || 'Investidor',
-      emoji: emojiTemp,
-      cor: corTemp,
-      fotoUrl: fotoUrlTemp,
-      fotoAjuste: fotoAjusteTemp,
-      bio: bioTemp.trim(),
-    })
-    // Pequeno delay só para o feedback de "salvo" ser perceptível — a
-    // gravação em si (localStorage) é instantânea.
-    setTimeout(onFechar, 320)
   }
 
   if (editorFotoAberto && fotoUrlTemp) {
@@ -568,179 +456,97 @@ function EditarPerfilModal({
         exit={{ y: 100 }}
         transition={{ type: 'spring', damping: 28, stiffness: 300 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-[380px] bg-bg-card border-t border-border rounded-t-[24px] pt-6 pb-8 max-h-[88vh] overflow-y-auto"
+        className="w-full max-w-[380px] bg-bg-card border-t border-border rounded-t-[24px] p-6 pb-8 max-h-[88vh] overflow-y-auto"
       >
         <div className="w-9 h-1 rounded-full bg-border mx-auto mb-4.5" />
+        <p className="text-[15px] font-bold text-white text-center mb-4.5">Editar perfil</p>
 
-        <div className="px-6">
-          <div className="flex items-center justify-between mb-4.5">
-            <p className="text-[15px] font-bold text-white">Editar perfil</p>
-            <div className="flex items-center gap-1.5">
-              <div className="w-14 h-1.5 rounded-full bg-border overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{ background: corTemp }}
-                  animate={{ width: `${completude}%` }}
-                  transition={{ type: 'spring', damping: 22, stiffness: 200 }}
-                />
-              </div>
-              <span className="text-[10px] text-slate-500 font-semibold w-7 text-right">{completude}%</span>
-            </div>
-          </div>
-
-          {/* Preview do avatar, maior e com destaque */}
-          <div className="flex flex-col items-center gap-3 mb-6">
-            <motion.div
-              key={fotoUrlTemp ? 'foto' : `${emojiTemp}-${corTemp}`}
-              initial={{ scale: 0.9, opacity: 0.6 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', damping: 18, stiffness: 300 }}
-            >
-              <Avatar nome={nomeTemp} emoji={emojiTemp} cor={corTemp} fotoUrl={fotoUrlTemp} fotoAjuste={fotoAjusteTemp} size={88} />
-            </motion.div>
-            <div className="flex items-center gap-4">
-              <button onClick={() => inputArquivoRef.current?.click()} className="text-[12px] text-accent-cyan font-semibold">
-                {fotoUrlTemp ? 'Trocar foto' : 'Adicionar foto'}
-              </button>
-              {fotoUrlTemp && (
-                <>
-                  <button onClick={() => setEditorFotoAberto(true)} className="text-[12px] text-accent-cyan font-semibold">
-                    Ajustar
-                  </button>
-                  <button
-                    onClick={() => {
-                      setFotoUrlTemp(null)
-                      setFotoAjusteTemp(null)
-                    }}
-                    className="text-[12px] text-accent-red font-semibold"
-                  >
-                    Remover
-                  </button>
-                </>
-              )}
-            </div>
-            <input ref={inputArquivoRef} type="file" accept="image/*" onChange={aoEscolherArquivo} className="hidden" />
-            <AnimatePresence>
-              {erroArquivo && (
-                <motion.p
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="text-[11px] text-accent-red text-center"
+        <div className="flex flex-col items-center gap-2.5 mb-5">
+          <Avatar nome={nomeTemp} emoji={emojiTemp} cor={corTemp} fotoUrl={fotoUrlTemp} fotoAjuste={fotoAjusteTemp} size={80} />
+          <div className="flex items-center gap-4">
+            <button onClick={() => inputArquivoRef.current?.click()} className="text-[12px] text-accent-cyan font-semibold">
+              {fotoUrlTemp ? 'Trocar foto' : 'Adicionar foto'}
+            </button>
+            {fotoUrlTemp && (
+              <>
+                <button onClick={() => setEditorFotoAberto(true)} className="text-[12px] text-accent-cyan font-semibold">
+                  Ajustar
+                </button>
+                <button
+                  onClick={() => {
+                    setFotoUrlTemp(null)
+                    setFotoAjusteTemp(null)
+                  }}
+                  className="text-[12px] text-accent-red font-semibold"
                 >
-                  {erroArquivo}
-                </motion.p>
-              )}
-            </AnimatePresence>
+                  Remover
+                </button>
+              </>
+            )}
           </div>
+          <input ref={inputArquivoRef} type="file" accept="image/*" onChange={aoEscolherArquivo} className="hidden" />
+        </div>
 
-          {/* Nome */}
-          <div className="mb-4.5">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11.5px] font-semibold text-slate-400">Nome</p>
-              <span className="text-[10px] text-slate-500">{nomeTemp.length}/30</span>
-            </div>
-            <input
-              type="text"
-              value={nomeTemp}
-              onChange={(e) => setNomeTemp(e.target.value)}
-              placeholder="Seu nome"
-              maxLength={30}
-              className="w-full h-11 rounded-2xl bg-bg border border-border text-white text-[13px] px-3.5 outline-none focus:border-[var(--cor-foco)] transition-colors"
-              style={{ ['--cor-foco' as string]: corTemp }}
-            />
-          </div>
+        <p className="text-[11.5px] font-semibold text-slate-400 mb-2">Nome</p>
+        <input
+          type="text"
+          value={nomeTemp}
+          onChange={(e) => setNomeTemp(e.target.value)}
+          placeholder="Seu nome"
+          maxLength={30}
+          className="w-full h-11 rounded-2xl bg-bg border border-border text-white text-[13px] px-3.5 mb-4.5 outline-none"
+        />
 
-          {/* Bio */}
-          <div className="mb-5">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11.5px] font-semibold text-slate-400">Bio</p>
-              <span className="text-[10px] text-slate-500">
-                {bioTemp.length}/{MAX_BIO}
-              </span>
-            </div>
-            <input
-              type="text"
-              value={bioTemp}
-              onChange={(e) => setBioTemp(e.target.value.slice(0, MAX_BIO))}
-              placeholder="Ex: Rumo à independência financeira"
-              maxLength={MAX_BIO}
-              className="w-full h-11 rounded-2xl bg-bg border border-border text-white text-[13px] px-3.5 outline-none focus:border-[var(--cor-foco)] transition-colors"
-              style={{ ['--cor-foco' as string]: corTemp }}
-            />
-          </div>
-
-          {!fotoUrlTemp && (
-            <div className="mb-5">
-              <p className="text-[11.5px] font-semibold text-slate-400 mb-2.5">Avatar</p>
-              <div className="flex flex-col gap-3">
-                {GRUPOS_EMOJI.map((grupo) => (
-                  <div key={grupo.label}>
-                    <p className="text-[10px] text-slate-500 mb-1.5">{grupo.label}</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {grupo.label === 'Perfil' && (
-                        <button
-                          onClick={() => setEmojiTemp(null)}
-                          className="w-[36px] h-[36px] rounded-full flex items-center justify-center"
-                          style={{ background: !emojiTemp ? `${corTemp}33` : '#070B16', border: `1.5px solid ${!emojiTemp ? corTemp : '#1C2740'}` }}
-                        >
-                          <Smile size={15} style={{ color: !emojiTemp ? corTemp : '#64748B' }} />
-                        </button>
-                      )}
-                      {grupo.itens.map((e) => (
-                        <motion.button
-                          key={e}
-                          whileTap={{ scale: 0.85 }}
-                          onClick={() => setEmojiTemp(e)}
-                          className="w-[36px] h-[36px] rounded-full flex items-center justify-center text-[15px]"
-                          style={{ background: emojiTemp === e ? `${corTemp}33` : '#070B16', border: `1.5px solid ${emojiTemp === e ? corTemp : '#1C2740'}` }}
-                        >
-                          {e}
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="mb-6">
-            <p className="text-[11.5px] font-semibold text-slate-400 mb-2.5">Cor</p>
-            <div className="flex gap-2.5 flex-wrap">
-              {AVATAR_CORES.map((c) => (
-                <button key={c.hex} onClick={() => setCorTemp(c.hex)} className="flex flex-col items-center gap-1" aria-label={c.nome}>
-                  <div
-                    className="w-[32px] h-[32px] rounded-full flex items-center justify-center"
-                    style={{ background: c.hex, border: corTemp === c.hex ? '2.5px solid #fff' : '2.5px solid transparent' }}
-                  >
-                    {corTemp === c.hex && <Check size={14} className="text-bg" strokeWidth={3} />}
-                  </div>
+        {!fotoUrlTemp && (
+          <>
+            <p className="text-[11.5px] font-semibold text-slate-400 mb-2">Avatar</p>
+            <div className="flex gap-2 mb-4.5 flex-wrap">
+              <button
+                onClick={() => setEmojiTemp(null)}
+                className="w-[38px] h-[38px] rounded-full flex items-center justify-center"
+                style={{ background: !emojiTemp ? `${corTemp}33` : '#070B16', border: `1.5px solid ${!emojiTemp ? corTemp : '#1C2740'}` }}
+              >
+                <Smile size={16} style={{ color: !emojiTemp ? corTemp : '#64748B' }} />
+              </button>
+              {AVATAR_EMOJIS.map((e) => (
+                <button
+                  key={e}
+                  onClick={() => setEmojiTemp(e)}
+                  className="w-[38px] h-[38px] rounded-full flex items-center justify-center text-base"
+                  style={{ background: emojiTemp === e ? `${corTemp}33` : '#070B16', border: `1.5px solid ${emojiTemp === e ? corTemp : '#1C2740'}` }}
+                >
+                  {e}
                 </button>
               ))}
             </div>
-          </div>
+          </>
+        )}
 
-          <div className="flex gap-2.5">
-            <button onClick={onFechar} className="flex-1 h-[46px] rounded-2xl border border-border text-slate-300 text-[13px] font-semibold">
-              Cancelar
-            </button>
-            <motion.button
-              whileTap={houveMudanca ? { scale: 0.97 } : undefined}
-              onClick={handleSalvar}
-              disabled={!houveMudanca || salvando}
-              className="flex-1 h-[46px] rounded-2xl text-bg text-[13px] font-bold flex items-center justify-center gap-1.5"
-              style={{ background: corTemp, opacity: !houveMudanca ? 0.45 : 1 }}
-            >
-              {salvando ? (
-                <>
-                  <Check size={15} /> Salvo!
-                </>
-              ) : (
-                'Salvar'
-              )}
-            </motion.button>
-          </div>
+        <p className="text-[11.5px] font-semibold text-slate-400 mb-2">Cor</p>
+        <div className="flex gap-2 mb-5.5">
+          {AVATAR_CORES.map((c) => (
+            <button
+              key={c}
+              onClick={() => setCorTemp(c)}
+              className="w-[30px] h-[30px] rounded-full"
+              style={{ background: c, border: corTemp === c ? '2.5px solid #fff' : '2.5px solid transparent' }}
+            />
+          ))}
+        </div>
+
+        <div className="flex gap-2.5">
+          <button onClick={onFechar} className="flex-1 h-[46px] rounded-2xl border border-border text-slate-300 text-[13px] font-semibold">
+            Cancelar
+          </button>
+          <button
+            onClick={() => {
+              onSalvar({ nome: nomeTemp.trim() || 'Investidor', emoji: emojiTemp, cor: corTemp, fotoUrl: fotoUrlTemp, fotoAjuste: fotoAjusteTemp })
+              onFechar()
+            }}
+            className="flex-1 h-[46px] rounded-2xl bg-accent-cyan text-bg text-[13px] font-bold"
+          >
+            Salvar
+          </button>
         </div>
       </motion.div>
     </motion.div>
@@ -887,5 +693,20 @@ function ConfigRow({
       {control}
       {chevron && <ChevronRight size={16} className="text-slate-500" />}
     </button>
+  )
+}
+
+function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation()
+        onChange(!value)
+      }}
+      className="w-10 h-[22px] rounded-full relative cursor-pointer shrink-0"
+      style={{ background: value ? '#00D4FF' : '#1C2740' }}
+    >
+      <motion.div animate={{ x: value ? 20 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }} className="w-[18px] h-[18px] rounded-full bg-white absolute top-0.5" />
+    </div>
   )
 }

@@ -47,13 +47,12 @@ function rotuloDia(dataStr: string): string {
 // Relatórios, então os números batem entre as duas telas.
 export default function GfMovimentacoesPage() {
   const navigate = useNavigate()
-  const { estado, permissoes } = useGestaoFinanceira()
+  const { estado } = useGestaoFinanceira()
 
   const [periodo, setPeriodo] = useState<PeriodoRelatorio>(periodosPreDefinidos()[0])
   const [categoriaFiltro, setCategoriaFiltro] = useState<string | 'todas'>('todas')
   const [contaFiltro, setContaFiltro] = useState<string | 'todas'>('todas')
   const [busca, setBusca] = useState('')
-  const v = (n: number) => (permissoes.verSaldos ? formatMoeda(n, estado) : '••••••')
   const [ordenacao, setOrdenacao] = useState<Ordenacao>('recentes')
   const [sheetAberto, setSheetAberto] = useState<'periodo' | 'categoria' | 'conta' | null>(null)
   const [gruposAlternados, setGruposAlternados] = useState<Set<string>>(new Set())
@@ -187,7 +186,7 @@ export default function GfMovimentacoesPage() {
                   <span className="text-[12px] text-accent-cyan font-semibold capitalize">{rotuloDia(g.data)}</span>
                   <div className="flex items-center gap-2">
                     <span className={`text-[12.5px] font-bold ${g.total >= 0 ? 'text-accent-green' : 'text-accent-red'}`}>
-                      {g.total >= 0 ? '+' : '-'} {v(Math.abs(g.total))}
+                      {g.total >= 0 ? '+' : '-'} {formatMoeda(Math.abs(g.total), estado)}
                     </span>
                     {aberto ? <ChevronUp size={15} className="text-slate-500" /> : <ChevronDown size={15} className="text-slate-500" />}
                   </div>
@@ -294,14 +293,13 @@ function CardResumo({
   percentual?: boolean
   inverterCorVariacao?: boolean
 }) {
-  const { estado, permissoes } = useGestaoFinanceira()
+  const { estado } = useGestaoFinanceira()
   const positivo = variacao != null ? (inverterCorVariacao ? variacao <= 0 : variacao >= 0) : null
-  const v = (n: number) => (permissoes.verSaldos ? formatMoeda(n, estado) : '••••••')
   return (
     <div className="card-surface rounded-2xl p-3.5">
       <p className="text-[11px] text-slate-500 font-medium mb-1">{label}</p>
       <p className="text-[16px] font-display font-extrabold" style={{ color: cor }}>
-        {valor == null ? '—' : percentual ? `${valor.toFixed(1)}%` : v(valor)}
+        {valor == null ? '—' : percentual ? `${valor.toFixed(1)}%` : formatMoeda(valor, estado)}
       </p>
       {variacao != null && (
         <p className={`text-[10.5px] font-semibold mt-0.5 ${positivo ? 'text-accent-green' : 'text-accent-red'}`}>
@@ -313,13 +311,11 @@ function CardResumo({
 }
 
 function LinhaMovimentacao({ t, onClick, estado }: { t: Transacao; onClick: () => void; estado: GestaoFinanceiraState }) {
-  const { permissoes } = useGestaoFinanceira()
   const cat = estado.categorias.find((c) => c.id === t.categoriaId)
   const conta = estado.contas.find((c) => c.id === t.contaId)
   const Icone = cat ? iconePorNome(cat.icone) : ListFilter
   const cor = t.tipo === 'transferencia' ? '#8B5CF6' : cat?.cor ?? '#64748B'
   const positivo = t.tipo === 'receita'
-  const v = (n: number) => (permissoes.verSaldos ? formatMoeda(n, estado) : '••••••')
   return (
     <button onClick={onClick} className="w-full flex items-center gap-3 px-3.5 py-3 text-left">
       <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${cor}22` }}>
@@ -333,7 +329,7 @@ function LinhaMovimentacao({ t, onClick, estado }: { t: Transacao; onClick: () =
       </div>
       <div className="text-right shrink-0">
         <p className={`text-[12.5px] font-bold ${positivo ? 'text-accent-green' : t.tipo === 'despesa' ? 'text-accent-red' : 'text-[#8B5CF6]'}`}>
-          {positivo ? '+' : t.tipo === 'despesa' ? '-' : ''} {v(t.valor)}
+          {positivo ? '+' : t.tipo === 'despesa' ? '-' : ''} {formatMoeda(t.valor, estado)}
         </p>
         <p className="text-[10px] text-slate-600">{t.hora}</p>
       </div>

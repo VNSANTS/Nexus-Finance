@@ -42,7 +42,6 @@ export default function GfLancamentosPage({ novoAberto }: Props) {
   const formaInicial: FormaPagamento | undefined = formaParam && FORMAS_VALIDAS.includes(formaParam as FormaPagamento) ? (formaParam as FormaPagamento) : undefined
 
   const [formularioAberto, setFormularioAberto] = useState(Boolean(novoAberto))
-  const v = (n: number) => (permissoes.verSaldos ? formatMoeda(n, estado) : '••••••')
 
   useEffect(() => {
     // Perfil sem permissão de lançar (ex.: Visualizador) não abre o
@@ -179,7 +178,7 @@ export default function GfLancamentosPage({ novoAberto }: Props) {
                   </p>
                 </div>
                 <span className={`text-[13px] font-bold shrink-0 ${positivo ? 'text-accent-green' : t.tipo === 'despesa' ? 'text-accent-red' : 'text-[#8B5CF6]'}`}>
-                  {positivo ? '+' : t.tipo === 'despesa' ? '-' : ''} {v(t.valor)}
+                  {positivo ? '+' : t.tipo === 'despesa' ? '-' : ''} {formatMoeda(t.valor, estado)}
                 </span>
                 {permissoes.excluir && (
                   <button

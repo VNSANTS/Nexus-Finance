@@ -16,58 +16,6 @@ export interface PerfilPessoal {
   // (base64) — sem upload para servidor, tudo fica local no localStorage.
   fotoUrl: string | null
   fotoAjuste: AjusteFoto | null
-  // Frase curta opcional que aparece embaixo do nome no perfil (ex: "Rumo à
-  // independência financeira"). Campo novo — opcional para não quebrar
-  // perfis salvos antes dele existir.
-  bio?: string
-}
-
-// Preferências da Central de Notificações do lado "Aprender" — mesmo nível
-// de granularidade que já existe na Gestão Financeira
-// (gestao-financeira/types.ts), mas com categorias específicas de
-// aprendizado/gamificação em vez de finanças. Ver src/lib/notificacoesAprender.ts
-// para o motor que calcula, a partir destas preferências + UserProgress,
-// quais notificações devem disparar.
-export type EstiloSomNotificacaoAprender = 'suave' | 'classico' | 'alerta' | 'nenhum'
-export type FrequenciaLembrete = 'diaria' | 'dias_uteis' | 'personalizada'
-
-export interface PreferenciasNotificacoesAprender {
-  ativas: boolean
-  notificacaoNavegador: boolean
-  vibrar: boolean
-
-  // Lembrete de sequência (streak) — o principal caso de uso hoje
-  lembreteStreak: {
-    ativa: boolean
-    horario: string // "HH:MM", ex: "19:00"
-    frequencia: FrequenciaLembrete
-    diasPersonalizados: number[] // 0=domingo..6=sábado, usado se frequencia === 'personalizada'
-    // Só notifica se o usuário ainda não estudou nada hoje (evita notificação
-    // redundante se a sequência do dia já foi garantida)
-    apenasSeAindaNaoEstudouHoje: boolean
-  }
-
-  // Novo desafio diário disponível
-  desafioDiario: { ativa: boolean; horario: string }
-
-  // Lembretes de revisão espaçada (spaced repetition) vencendo
-  revisao: { ativa: boolean; minimoItens: number } // só notifica se houver >= N itens vencidos
-
-  // Badges e conquistas desbloqueadas
-  conquistas: { ativa: boolean }
-
-  // Sugestão de conteúdo baseada em progresso parado (ex: módulo iniciado e
-  // não terminado há X dias)
-  moduloParado: { ativa: boolean; diasInatividade: number }
-
-  // Motivacional (frases aleatórias do banco frasesMotivadoras, cadência)
-  motivacional: { ativa: boolean; frequencia: 'diaria' | 'semanal' }
-
-  estiloExibicao: 'compacto' | 'detalhado'
-  som: { ativo: boolean; volume: number; estilo: EstiloSomNotificacaoAprender }
-
-  // Não perturbe: silencia tudo num intervalo (ex: 22h-8h)
-  naoPerturbe: { ativo: boolean; inicio: string; fim: string }
 }
 
 export interface UserProgress {
@@ -86,9 +34,6 @@ export interface UserProgress {
   riskProfile: 'conservador' | 'moderado' | 'agressivo' | null
   itensRevisao: ItemRevisao[]
   perfilPessoal: PerfilPessoal
-  // Fallback em defaultProgress()/progressStore.ts — estados salvos antes
-  // desta tela existir recebem o padrão automaticamente.
-  preferenciasNotificacoesAprender: PreferenciasNotificacoesAprender
   historicoXpRecente: { xp: number; timestamp: number }[] // usado para anti-grinding
 
   // --- Rastreamento real para conquistas (antes ficavam fixas em 0) ---
