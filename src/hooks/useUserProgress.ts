@@ -286,6 +286,26 @@ function useProgressStore() {
     [update]
   )
 
+  // Merge raso no nível de topo (mesmo padrão de definirPreferenciasNotificacoes
+  // na Gestão Financeira) — quem chama já manda o sub-objeto de categoria
+  // inteiro quando muda algo dentro dele, ex: { lembreteStreak: { ...prefs.lembreteStreak, horario: '20:00' } }.
+  const definirPreferenciasNotificacoes = useCallback(
+    (patch: Partial<UserProgress['preferenciasNotificacoesAprender']>) => {
+      update((prev) => ({
+        ...prev,
+        preferenciasNotificacoesAprender: { ...prev.preferenciasNotificacoesAprender, ...patch },
+      }))
+    },
+    [update]
+  )
+
+  const restaurarPreferenciasNotificacoes = useCallback(() => {
+    update((prev) => ({
+      ...prev,
+      preferenciasNotificacoesAprender: defaultProgress().preferenciasNotificacoesAprender,
+    }))
+  }, [update])
+
   // Revisão espaçada. O id precisa incluir o módulo: antes era só `q-${indice}`,
   // então a pergunta 1 de Tesouro Direto e a pergunta 1 de Opções colidiam e a
   // segunda nunca entrava na lista de revisão.
@@ -495,6 +515,8 @@ function useProgressStore() {
     setOnboardingDone,
     addGoal,
     setPerfilPessoal,
+    definirPreferenciasNotificacoes,
+    restaurarPreferenciasNotificacoes,
     marcarFlashcardErrado,
     marcarFlashcardAcertado,
     marcarQuizErrado,

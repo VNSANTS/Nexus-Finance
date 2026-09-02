@@ -84,34 +84,27 @@ export default function PerfilPage() {
 
   const [editandoPerfil, setEditandoPerfil] = useState(false)
   const [badgeCompartilhando, setBadgeCompartilhando] = useState<(typeof BADGES)[number] | null>(null)
-  const [notificacoes, setNotificacoes] = useState(false)
   const [confirmandoReset, setConfirmandoReset] = useState(false)
   const [exportado, setExportado] = useState(false)
-  const [avisoNotificacao, setAvisoNotificacao] = useState(false)
 
   const hoje = new Date().getDate()
   const diasAtivos = Array.from({ length: progress.streak }, (_, i) => hoje - i).filter((d) => d > 0)
 
-  async function handleToggleNotificacoes(ligar: boolean) {
-    if (!ligar) {
-      setNotificacoes(false)
-      return
-    }
-    if (!('Notification' in window)) {
-      setAvisoNotificacao(true)
-      setTimeout(() => setAvisoNotificacao(false), 3500)
-      return
-    }
-    const permissao = await Notification.requestPermission()
-    if (permissao === 'granted') {
-      setNotificacoes(true)
-      new Notification('Nexus Finance', { body: 'Notificações ativadas! Vamos te lembrar de manter sua sequência de estudos.' })
-    } else {
-      setNotificacoes(false)
-      setAvisoNotificacao(true)
-      setTimeout(() => setAvisoNotificacao(false), 3500)
-    }
-  }
+  // Resumo rápido mostrado no ConfigRow — agora a configuração de verdade
+  // mora na Central de Notificações (/notificacoes), não mais aqui.
+  const prefsNotificacoes = progress.preferenciasNotificacoesAprender
+  const categoriasNotificacao = [
+    prefsNotificacoes.lembreteStreak.ativa,
+    prefsNotificacoes.desafioDiario.ativa,
+    prefsNotificacoes.revisao.ativa,
+    prefsNotificacoes.conquistas.ativa,
+    prefsNotificacoes.moduloParado.ativa,
+    prefsNotificacoes.motivacional.ativa,
+  ]
+  const categoriasAtivas = categoriasNotificacao.filter(Boolean).length
+  const resumoNotificacoes = !prefsNotificacoes.ativas
+    ? 'Desativadas'
+    : `${categoriasAtivas} de ${categoriasNotificacao.length} ativadas`
 
   function handleExportar() {
     const dados = {
@@ -272,7 +265,14 @@ export default function PerfilPage() {
       <div>
         <p className="text-[12.5px] font-bold text-white mb-2.5">Configurações</p>
         <div className="flex flex-col gap-2">
-          <ConfigRow icon={Bell} label="Notificações" cor="#FFC93C" control={<Toggle value={notificacoes} onChange={handleToggleNotificacoes} />} />
+          <ConfigRow
+            icon={Bell}
+            label="Notificações"
+            cor="#FFC93C"
+            control={<span className="text-[11px] text-slate-500 font-medium">{resumoNotificacoes}</span>}
+            onClick={() => navigate('/notificacoes')}
+            chevron
+          />
           <ConfigRow
             icon={exportado ? CheckCircle2 : Download}
             label={exportado ? 'Progresso exportado!' : 'Exportar meu progresso'}
@@ -285,24 +285,6 @@ export default function PerfilPage() {
         </div>
       </div>
       </div>
-
-      {/* Toast de notificação bloqueada */}
-      <AnimatePresence>
-        {avisoNotificacao && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] max-w-[320px] px-4 py-3 rounded-2xl card-surface flex items-center gap-2.5"
-            style={{ borderColor: '#FFC93C44' }}
-          >
-            <Bell size={16} className="text-accent-gold shrink-0" />
-            <p className="text-[11.5px] text-slate-200 leading-snug">
-              Permissão de notificação negada ou indisponível neste navegador. Ative manualmente nas configurações.
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Modal editar perfil */}
       <AnimatePresence>
@@ -905,20 +887,5 @@ function ConfigRow({
       {control}
       {chevron && <ChevronRight size={16} className="text-slate-500" />}
     </button>
-  )
-}
-
-function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation()
-        onChange(!value)
-      }}
-      className="w-10 h-[22px] rounded-full relative cursor-pointer shrink-0"
-      style={{ background: value ? '#00D4FF' : '#1C2740' }}
-    >
-      <motion.div animate={{ x: value ? 20 : 2 }} transition={{ type: 'spring', stiffness: 500, damping: 30 }} className="w-[18px] h-[18px] rounded-full bg-white absolute top-0.5" />
-    </div>
   )
 }
