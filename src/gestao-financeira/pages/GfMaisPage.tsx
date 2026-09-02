@@ -33,12 +33,12 @@ const ITENS = [
   { label: 'Notificações', desc: 'Lembretes e alertas', Icon: Bell, cor: '#FFC93C', to: '/gestao-financeira/notificacoes' },
   { label: 'Nexus AI', desc: 'Assistente financeiro', Icon: Bot, cor: '#8B5CF6', to: null },
   { label: 'Família e perfis', desc: 'Gestão compartilhada', Icon: Users, cor: '#EC4899', to: '/gestao-financeira/familia-perfis' },
-  { label: 'Segurança', desc: 'PIN, biometria, sessões', Icon: ShieldCheck, cor: '#22C55E', to: null },
+  { label: 'Segurança', desc: 'PIN, biometria, sessões', Icon: ShieldCheck, cor: '#22C55E', to: '/gestao-financeira/seguranca' },
   { label: 'Privacidade', desc: 'Ocultar valores e seus dados', Icon: Lock, cor: '#00D4FF', to: '/gestao-financeira/privacidade' },
   { label: 'Dados e backup', desc: 'Exportar, importar, restaurar', Icon: Database, cor: '#3B82F6', to: '/gestao-financeira/dados-backup' },
   { label: 'Acessibilidade', desc: 'Texto, contraste, leitura de tela', Icon: Accessibility, cor: '#FFC93C', to: '/gestao-financeira/acessibilidade' },
   { label: 'Configurações gerais', desc: 'Aparência, moeda, idioma', Icon: Settings, cor: '#64748B', to: '/gestao-financeira/configuracoes-gerais' },
-  { label: 'Sobre', desc: 'Versão, ajuda e suporte', Icon: Info, cor: '#64748B', to: null },
+  { label: 'Sobre', desc: 'Versão, ajuda e suporte', Icon: Info, cor: '#64748B', to: '/gestao-financeira/sobre' },
 ]
 
 export default function GfMaisPage() {
