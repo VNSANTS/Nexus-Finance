@@ -16,6 +16,10 @@ export interface PerfilPessoal {
   // (base64) — sem upload para servidor, tudo fica local no localStorage.
   fotoUrl: string | null
   fotoAjuste: AjusteFoto | null
+  // Frase curta opcional que aparece embaixo do nome no perfil (ex: "Rumo à
+  // independência financeira"). Campo novo — opcional para não quebrar
+  // perfis salvos antes dele existir.
+  bio?: string
 }
 
 export interface UserProgress {

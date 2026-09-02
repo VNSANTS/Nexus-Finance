@@ -48,7 +48,7 @@ export function defaultProgress(): UserProgress {
     onboardingDone: false,
     riskProfile: null,
     itensRevisao: [],
-    perfilPessoal: { nome: 'Investidor', emoji: null, cor: '#00D4FF', fotoUrl: null, fotoAjuste: null },
+    perfilPessoal: { nome: 'Investidor', emoji: null, cor: '#00D4FF', fotoUrl: null, fotoAjuste: null, bio: '' },
     historicoXpRecente: [],
     sequenciaAcertosAtual: 0,
     maiorSequenciaAcertos: 0,
