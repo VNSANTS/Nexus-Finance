@@ -25,6 +25,7 @@ const GfMaisPage = lazy(() => import('./pages/GfMaisPage'))
 const GfFamiliaPerfisPage = lazy(() => import('./pages/GfFamiliaPerfisPage'))
 const GfPrivacidadePage = lazy(() => import('./pages/GfPrivacidadePage'))
 const GfDadosBackupPage = lazy(() => import('./pages/GfDadosBackupPage'))
+const GfSobrePage = lazy(() => import('./pages/GfSobrePage'))
 
 function GfCarregando() {
   return (
@@ -81,6 +82,7 @@ function GestaoFinanceiraConteudo() {
             <Route path="familia-perfis" element={<GfFamiliaPerfisPage />} />
             <Route path="privacidade" element={<GfPrivacidadePage />} />
             <Route path="dados-backup" element={<GfDadosBackupPage />} />
+            <Route path="sobre" element={<GfSobrePage />} />
           </Routes>
         </Suspense>
       </div>

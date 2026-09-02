@@ -37,6 +37,7 @@ export default function GfDetalheMovimentacaoPage() {
   const cat = t ? estado.categorias.find((c) => c.id === t.categoriaId) : null
   const conta = t ? estado.contas.find((c) => c.id === t.contaId) : null
   const cartao = t?.cartaoId ? estado.cartoes.find((c) => c.id === t.cartaoId) : null
+  const v = (n: number) => (permissoes.verSaldos ? formatMoeda(n, estado) : '••••••')
 
   const totalNaCategoriaEsteMes = useMemo(() => {
     if (!t || !cat) return 0
@@ -86,7 +87,7 @@ export default function GfDetalheMovimentacaoPage() {
           </div>
           <div className="text-right shrink-0">
             <p className={`text-[16px] font-display font-extrabold ${positivo ? 'text-accent-green' : t.tipo === 'despesa' ? 'text-accent-red' : 'text-[#8B5CF6]'}`}>
-              {positivo ? '+' : t.tipo === 'despesa' ? '-' : ''} {formatMoeda(t.valor, estado)}
+              {positivo ? '+' : t.tipo === 'despesa' ? '-' : ''} {v(t.valor)}
             </p>
             <span
               className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
@@ -121,7 +122,7 @@ export default function GfDetalheMovimentacaoPage() {
           <Campo icone={FileText} label="Descrição" valor={t.descricao || '—'} />
           <Campo icone={Landmark} label="Conta" valor={conta?.nome ?? '—'} />
           <Campo icone={CreditCardIcon} label="Forma de pagamento" valor={LABEL_FORMA[t.formaPagamento] ?? t.formaPagamento} />
-          <Campo icone={DollarSign} label="Valor" valor={formatMoeda(t.valor, estado)} />
+          <Campo icone={DollarSign} label="Valor" valor={v(t.valor)} />
           <Campo
             icone={CircleDot}
             label="Status"
@@ -149,7 +150,7 @@ export default function GfDetalheMovimentacaoPage() {
               <PieChart size={13} className="text-accent-cyan" />
               <p className="text-[10.5px] text-slate-500">Total na categoria (este mês)</p>
             </div>
-            <p className="text-[14px] font-bold text-white">{formatMoeda(totalNaCategoriaEsteMes, estado)}</p>
+            <p className="text-[14px] font-bold text-white">{v(totalNaCategoriaEsteMes)}</p>
           </div>
         </div>
       </div>

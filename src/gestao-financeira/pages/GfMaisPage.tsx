@@ -38,7 +38,7 @@ const ITENS = [
   { label: 'Dados e backup', desc: 'Exportar, importar, restaurar', Icon: Database, cor: '#3B82F6', to: '/gestao-financeira/dados-backup' },
   { label: 'Acessibilidade', desc: 'Texto, contraste, leitura de tela', Icon: Accessibility, cor: '#FFC93C', to: '/gestao-financeira/acessibilidade' },
   { label: 'Configurações gerais', desc: 'Aparência, moeda, idioma', Icon: Settings, cor: '#64748B', to: '/gestao-financeira/configuracoes-gerais' },
-  { label: 'Sobre', desc: 'Versão, ajuda e suporte', Icon: Info, cor: '#64748B', to: null },
+  { label: 'Sobre', desc: 'Versão, ajuda e suporte', Icon: Info, cor: '#64748B', to: '/gestao-financeira/sobre' },
 ]
 
 export default function GfMaisPage() {

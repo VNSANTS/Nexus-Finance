@@ -14,11 +14,14 @@ import { iconePorNome } from '../iconMap'
 // com os números financeiros da pessoa. Usa os mesmos dados de sempre
 // (transações + categorias), sem nenhuma fonte nova.
 export default function GfRetrospectivaPage() {
-  const { estado } = useGestaoFinanceira()
+  const { estado, permissoes } = useGestaoFinanceira()
   const [ano, setAno] = useState(new Date().getFullYear())
   const [exportando, setExportando] = useState<'pdf' | 'imagem' | null>(null)
 
   const retro = useMemo(() => retrospectivaAnual(estado.transacoes, estado.categorias, ano), [estado.transacoes, estado.categorias, ano])
+  // Sem "ver saldos" os valores ficam sempre mascarados — inclusive na
+  // exportação em PDF/imagem, já que ela é um "print" desta mesma tela.
+  const v = (n: number) => (permissoes.verSaldos ? formatMoeda(n, estado) : '••••••')
 
   const anoAtual = new Date().getFullYear()
   const CategoriaIcone = retro.categoriaTop ? iconePorNome(retro.categoriaTop.categoria.icone) : Sparkles
@@ -91,10 +94,10 @@ export default function GfRetrospectivaPage() {
             <div className="card-surface rounded-[24px] p-5 text-center bg-gradient-to-b from-[#8B5CF6]/10 to-transparent">
               <p className="text-[12px] text-slate-400 mb-1">Em {ano}, você economizou</p>
               <p className={`text-[32px] font-display font-extrabold ${retro.totalEconomizado >= 0 ? 'text-[#8B5CF6]' : 'text-accent-red'}`}>
-                {formatMoeda(retro.totalEconomizado, estado)}
+                {v(retro.totalEconomizado)}
               </p>
               <p className="text-[11px] text-slate-500 mt-1">
-                em média {formatMoeda(retro.mediaEconomiaMensal, estado)} por mês, ao longo de {retro.mesesComDados} {retro.mesesComDados === 1 ? 'mês' : 'meses'}
+                em média {v(retro.mediaEconomiaMensal)} por mês, ao longo de {retro.mesesComDados} {retro.mesesComDados === 1 ? 'mês' : 'meses'}
               </p>
             </div>
           </div>
@@ -106,14 +109,14 @@ export default function GfRetrospectivaPage() {
                 <TrendingUp size={13} className="text-accent-green" />
                 <p className="text-[11px] text-slate-500 font-medium">Total recebido</p>
               </div>
-              <p className="text-[16px] font-display font-extrabold text-accent-green">{formatMoeda(retro.totalReceitas, estado)}</p>
+              <p className="text-[16px] font-display font-extrabold text-accent-green">{v(retro.totalReceitas)}</p>
             </div>
             <div className="card-surface rounded-2xl p-3.5">
               <div className="flex items-center gap-1.5 mb-1">
                 <TrendingDown size={13} className="text-accent-red" />
                 <p className="text-[11px] text-slate-500 font-medium">Total gasto</p>
               </div>
-              <p className="text-[16px] font-display font-extrabold text-accent-red">{formatMoeda(retro.totalDespesas, estado)}</p>
+              <p className="text-[16px] font-display font-extrabold text-accent-red">{v(retro.totalDespesas)}</p>
             </div>
           </div>
 
@@ -127,7 +130,7 @@ export default function GfRetrospectivaPage() {
               {retro.melhorMes ? (
                 <>
                   <p className="text-[14px] font-bold text-white capitalize">{retro.melhorMes.label}</p>
-                  <p className="text-[11px] text-accent-green mt-0.5">{formatMoeda(retro.melhorMes.receitas - retro.melhorMes.despesas, estado)}</p>
+                  <p className="text-[11px] text-accent-green mt-0.5">{v(retro.melhorMes.receitas - retro.melhorMes.despesas)}</p>
                 </>
               ) : (
                 <p className="text-[12px] text-slate-500">—</p>
@@ -141,7 +144,7 @@ export default function GfRetrospectivaPage() {
               {retro.piorMes ? (
                 <>
                   <p className="text-[14px] font-bold text-white capitalize">{retro.piorMes.label}</p>
-                  <p className="text-[11px] text-accent-red mt-0.5">{formatMoeda(retro.piorMes.receitas - retro.piorMes.despesas, estado)}</p>
+                  <p className="text-[11px] text-accent-red mt-0.5">{v(retro.piorMes.receitas - retro.piorMes.despesas)}</p>
                 </>
               ) : (
                 <p className="text-[12px] text-slate-500">—</p>
@@ -160,7 +163,7 @@ export default function GfRetrospectivaPage() {
                   <p className="text-[11px] text-slate-500">Categoria onde mais gastou</p>
                   <p className="text-[15px] font-bold text-white truncate">{retro.categoriaTop.categoria.nome}</p>
                 </div>
-                <p className="text-[15px] font-display font-extrabold text-white shrink-0">{formatMoeda(retro.categoriaTop.total, estado)}</p>
+                <p className="text-[15px] font-display font-extrabold text-white shrink-0">{v(retro.categoriaTop.total)}</p>
               </div>
             </div>
           )}
@@ -176,7 +179,7 @@ export default function GfRetrospectivaPage() {
                   <p className="text-[11px] text-slate-500">Maior gasto único do ano</p>
                   <p className="text-[13px] font-semibold text-white truncate">{retro.maiorGastoUnico.descricao || '(sem descrição)'}</p>
                 </div>
-                <p className="text-[15px] font-display font-extrabold text-white shrink-0">{formatMoeda(retro.maiorGastoUnico.valor, estado)}</p>
+                <p className="text-[15px] font-display font-extrabold text-white shrink-0">{v(retro.maiorGastoUnico.valor)}</p>
               </div>
             </div>
           )}
