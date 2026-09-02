@@ -41,7 +41,7 @@ const DENSIDADES: { id: Densidade; label: string; desc: string }[] = [
 // gastos, tipos de transação personalizados, regras financeiras) pertence
 // às telas de Orçamento/Notificações/Categorias, não a esta.
 export default function GfConfiguracoesGeraisPage() {
-  const { estado, definirMoeda, definirConfigFinanceira } = useGestaoFinanceira()
+  const { estado, permissoes, definirMoeda, definirConfigFinanceira } = useGestaoFinanceira()
   const tema = useTheme()
   const [secaoAberta, setSecaoAberta] = useState<'aparencia' | 'idioma-moeda' | 'periodo'>('aparencia')
 
@@ -91,6 +91,7 @@ export default function GfConfiguracoesGeraisPage() {
             definirMoeda={definirMoeda}
             definirConfigFinanceira={definirConfigFinanceira}
             exemploFormatado={exemploFormatado}
+            podeEditar={permissoes.editar}
           />
         </Secao>
 
@@ -101,7 +102,7 @@ export default function GfConfiguracoesGeraisPage() {
           aberta={secaoAberta === 'periodo'}
           onClick={() => setSecaoAberta('periodo')}
         >
-          <BlocoPeriodo estado={estado} definirConfigFinanceira={definirConfigFinanceira} />
+          <BlocoPeriodo estado={estado} definirConfigFinanceira={definirConfigFinanceira} podeEditar={permissoes.editar} />
         </Secao>
       </div>
 
@@ -274,12 +275,22 @@ interface BlocoProps {
   definirMoeda: ReturnType<typeof useGestaoFinanceira>['definirMoeda']
   definirConfigFinanceira: ReturnType<typeof useGestaoFinanceira>['definirConfigFinanceira']
   exemploFormatado: string
+  podeEditar: boolean
 }
 
-function BlocoIdiomaMoeda({ estado, definirMoeda, definirConfigFinanceira, exemploFormatado }: BlocoProps) {
+function BlocoIdiomaMoeda({ estado, definirMoeda, definirConfigFinanceira, exemploFormatado, podeEditar }: BlocoProps) {
+  // Moeda, idioma e formato afetam os dados de toda a família — quem não
+  // tem "editar" ainda vê os valores atuais (transparência), só não
+  // consegue alterá-los.
+  const desabilitado = podeEditar ? '' : 'opacity-50 pointer-events-none select-none'
   return (
     <>
-      <div>
+      {!podeEditar && (
+        <p className="text-[11px] text-slate-500 leading-relaxed -mt-1">
+          Seu perfil não tem permissão para alterar essas configurações — só um administrador ou um perfil com edição pode.
+        </p>
+      )}
+      <div className={desabilitado}>
         <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Idioma</p>
         <div className="flex flex-col gap-2">
           {IDIOMAS.map((i) => (
@@ -305,7 +316,7 @@ function BlocoIdiomaMoeda({ estado, definirMoeda, definirConfigFinanceira, exemp
         )}
       </div>
 
-      <div>
+      <div className={desabilitado}>
         <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Moeda padrão</p>
         <div className="grid grid-cols-2 gap-2">
           {MOEDAS.map((m) => (
@@ -323,7 +334,7 @@ function BlocoIdiomaMoeda({ estado, definirMoeda, definirConfigFinanceira, exemp
         </div>
       </div>
 
-      <div>
+      <div className={desabilitado}>
         <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Formato do valor</p>
         <div className="flex flex-col gap-2">
           <button
@@ -353,7 +364,7 @@ function BlocoIdiomaMoeda({ estado, definirMoeda, definirConfigFinanceira, exemp
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className={`grid grid-cols-2 gap-2 ${desabilitado}`}>
         <div>
           <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Casas decimais</p>
           <div className="flex gap-2">
@@ -371,7 +382,7 @@ function BlocoIdiomaMoeda({ estado, definirMoeda, definirConfigFinanceira, exemp
         </div>
       </div>
 
-      <div>
+      <div className={desabilitado}>
         <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Separador de milhares</p>
         <div className="grid grid-cols-4 gap-2">
           <ChipOpcao label="." ativo={estado.separadorMilhares === '.'} onClick={() => definirConfigFinanceira({ separadorMilhares: '.' })} />
@@ -389,10 +400,16 @@ function BlocoIdiomaMoeda({ estado, definirMoeda, definirConfigFinanceira, exemp
   )
 }
 
-function BlocoPeriodo({ estado, definirConfigFinanceira }: Omit<BlocoProps, 'definirMoeda' | 'exemploFormatado'>) {
+function BlocoPeriodo({ estado, definirConfigFinanceira, podeEditar }: Omit<BlocoProps, 'definirMoeda' | 'exemploFormatado'>) {
+  const desabilitado = podeEditar ? '' : 'opacity-50 pointer-events-none select-none'
   return (
     <>
-      <div>
+      {!podeEditar && (
+        <p className="text-[11px] text-slate-500 leading-relaxed -mt-1">
+          Seu perfil não tem permissão para alterar essas configurações — só um administrador ou um perfil com edição pode.
+        </p>
+      )}
+      <div className={desabilitado}>
         <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Primeiro dia do mês financeiro</p>
         <p className="text-[10.5px] text-slate-500 mb-2 leading-relaxed">
           Útil se seu salário cai num dia diferente do dia 1 — os relatórios mensais passam a considerar esse dia como início do período.
@@ -410,7 +427,7 @@ function BlocoPeriodo({ estado, definirConfigFinanceira }: Omit<BlocoProps, 'def
         />
       </div>
 
-      <div>
+      <div className={desabilitado}>
         <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Semana começa em</p>
         <div className="flex gap-2">
           <ChipOpcao label="Domingo" ativo={estado.semanaComecaEm === 'domingo'} onClick={() => definirConfigFinanceira({ semanaComecaEm: 'domingo' })} />
@@ -418,7 +435,7 @@ function BlocoPeriodo({ estado, definirConfigFinanceira }: Omit<BlocoProps, 'def
         </div>
       </div>
 
-      <div>
+      <div className={desabilitado}>
         <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Formato de data</p>
         <div className="flex flex-col gap-2">
           {(['DD/MM/AAAA', 'MM/DD/AAAA', 'AAAA-MM-DD'] as const).map((f) => (

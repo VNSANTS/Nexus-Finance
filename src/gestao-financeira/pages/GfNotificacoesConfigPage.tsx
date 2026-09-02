@@ -32,10 +32,15 @@ import type { AgruparNotificacoesPor, EstiloExibicaoNotificacao, EstiloSomNotifi
 // incluindo notificação nativa do navegador (mesmo padrão já usado em
 // PerfilPage para o lembrete de sequência de estudos).
 export default function GfNotificacoesConfigPage() {
-  const { estado, definirPreferenciasNotificacoes, restaurarPreferenciasNotificacoes } = useGestaoFinanceira()
+  const { estado, permissoes, definirPreferenciasNotificacoes, restaurarPreferenciasNotificacoes } = useGestaoFinanceira()
   const prefs = estado.preferenciasNotificacoes
   const [secaoAberta, setSecaoAberta] = useState<'geral' | 'categorias' | 'estilo' | 'som'>('geral')
   const [avisoPermissao, setAvisoPermissao] = useState<string | null>(null)
+  // Assim como moeda e período financeiro, estas preferências são
+  // compartilhadas (o mesmo estado.preferenciasNotificacoes vale pra
+  // qualquer perfil ativo neste dispositivo) — quem não tem "editar" ainda
+  // vê a configuração atual, só não pode mudar.
+  const podeEditar = permissoes.editar
 
   async function ativarNotificacaoNavegador() {
     if (!('Notification' in window)) {
@@ -70,7 +75,15 @@ export default function GfNotificacoesConfigPage() {
         </div>
       )}
 
-      <div className="px-4 mt-4 flex flex-col gap-3">
+      {!podeEditar && (
+        <div className="mx-4 mt-3">
+          <p className="text-[11px] text-slate-500 leading-relaxed">
+            Seu perfil não tem permissão para alterar as notificações — configuração compartilhada por todos os perfis deste dispositivo. Só um administrador ou um perfil com edição pode mudar.
+          </p>
+        </div>
+      )}
+
+      <div className={`px-4 mt-4 flex flex-col gap-3 ${podeEditar ? '' : 'opacity-50 pointer-events-none select-none'}`}>
         <Secao
           titulo="Geral"
           desc="Ligar tudo, notificação do navegador e vibração"
@@ -333,7 +346,7 @@ export default function GfNotificacoesConfigPage() {
         </Secao>
       </div>
 
-      <div className="px-4 mt-3">
+      <div className={`px-4 mt-3 ${podeEditar ? '' : 'opacity-50 pointer-events-none select-none'}`}>
         <button
           onClick={() => {
             if (window.confirm('Restaurar as configurações de notificação para o padrão?')) restaurarPreferenciasNotificacoes()
