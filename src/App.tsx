@@ -27,6 +27,7 @@ const DesafioDiarioPage = lazy(() => import('@/pages/DesafioDiarioPage'))
 const NotificacoesConfigPage = lazy(() => import('@/pages/NotificacoesConfigPage'))
 const PersonalizacaoPage = lazy(() => import('@/pages/PersonalizacaoPage'))
 const GestaoFinanceiraShell = lazy(() => import('@/gestao-financeira/GestaoFinanceiraShell'))
+const AdminUsuariosPage = lazy(() => import('@/admin/AdminUsuariosPage'))
 
 function TelaCarregando() {
   return (
@@ -102,6 +103,7 @@ function AppRotas() {
             <Route path="/notificacoes" element={<NotificacoesConfigPage />} />
             <Route path="/personalizacao" element={<PersonalizacaoPage />} />
             <Route path="/gestao-financeira/*" element={<GestaoFinanceiraShell />} />
+            <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
             <Route path="*" element={<NaoEncontrada />} />
           </Routes>
         </Suspense>
