@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { HexColorPicker } from 'react-colorful'
+import { HexAlphaColorPicker } from 'react-colorful'
 import { Check, Sliders, X } from 'lucide-react'
 
 // Componente de seleção de cor compartilhado entre o app principal e a
@@ -26,13 +26,37 @@ export interface SeletorCorProps {
   onChange: (hex: string) => void
 }
 
+// Fundo em xadrez atrás das amostras de cor — é o jeito padrão de indicar
+// visualmente que uma cor tem opacidade (canal alpha < 255).
+const ESTILO_XADREZ: React.CSSProperties = {
+  backgroundImage:
+    'conic-gradient(#64748B 90deg, transparent 90deg 180deg, #64748B 180deg 270deg, transparent 270deg)',
+  backgroundSize: '8px 8px',
+  backgroundColor: '#1E293B',
+}
+
+// Amostra de cor com xadrez por trás, pra opacidade ficar visível mesmo em
+// cores bem transparentes (sem isso, uma cor a 10% de opacidade pareceria
+// só "quase preto" contra o fundo escuro do app).
+function AmostraCor({ cor, className = '' }: { cor: string; className?: string }) {
+  return (
+    <span className={`relative block overflow-hidden ${className}`}>
+      <span className="absolute inset-0" style={ESTILO_XADREZ} />
+      <span className="absolute inset-0" style={{ background: cor }} />
+    </span>
+  )
+}
+
 const PRESETS: string[] = [
   '#070B16', '#0A0E1A', '#0E1526', '#0F172A', '#111827', '#1C2740',
   '#000000', '#18181B', '#1E293B', '#16213E', '#1A1A2E', '#292524',
   '#374151', '#4B5563', '#94A3B8', '#E2E8F0', '#F1F5F9', '#FFFFFF',
 ]
 
-const HEX_VALIDO = /^#([0-9a-fA-F]{6})$/
+// Aceita tanto #RRGGBB (opaco) quanto #RRGGBBAA (com canal de opacidade) —
+// os presets e o campo hex continuam funcionando com 6 dígitos normalmente,
+// o 8º dígito só aparece quando o usuário mexe no slider de opacidade.
+const HEX_VALIDO = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
 
 function normalizarHex(valor: string): string | null {
   const v = valor.trim()
@@ -42,13 +66,23 @@ function normalizarHex(valor: string): string | null {
 
 function hexParaRgb(hex: string): { r: number; g: number; b: number } {
   const seguro = HEX_VALIDO.test(hex) ? hex : '#000000'
-  const num = parseInt(seguro.slice(1), 16)
+  const num = parseInt(seguro.slice(1, 7), 16)
   return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 }
 }
 
-function rgbParaHex(r: number, g: number, b: number): string {
+// Opacidade em 0–255 (byte alpha do hex). Hex sem canal alpha = opaco (255).
+function hexParaAlpha(hex: string): number {
+  if (!HEX_VALIDO.test(hex) || hex.length < 9) return 255
+  return parseInt(hex.slice(7, 9), 16)
+}
+
+function rgbaParaHex(r: number, g: number, b: number, a: number): string {
   const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(Number.isFinite(n) ? n : 0)))
-  return `#${[clamp(r), clamp(g), clamp(b)].map((n) => n.toString(16).padStart(2, '0')).join('')}`.toUpperCase()
+  const canais = [clamp(r), clamp(g), clamp(b)]
+  // Só grava o 8º dígito (alpha) quando a cor não é totalmente opaca, pra
+  // manter compatibilidade com quem já espera #RRGGBB puro.
+  if (clamp(a) < 255) canais.push(clamp(a))
+  return `#${canais.map((n) => n.toString(16).padStart(2, '0')).join('')}`.toUpperCase()
 }
 
 // Decide se o "check" de seleção nos presets fica preto ou branco, conforme
@@ -83,10 +117,11 @@ export default function SeletorCor({ label, valor, onChange }: SeletorCorProps) 
         <button
           type="button"
           onClick={() => setPresetsAbertos((v) => !v)}
-          className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-border"
-          style={{ background: corValida }}
+          className="w-8 h-8 rounded-lg shrink-0 border border-border overflow-hidden"
           aria-label="Presets de cor"
-        />
+        >
+          <AmostraCor cor={corValida} className="w-full h-full" />
+        </button>
         <input
           type="text"
           value={hexDigitado}
@@ -155,6 +190,9 @@ export function ModalAvancado({
 }) {
   const [hexDigitado, setHexDigitado] = useState(valor)
   const [rgbDigitado, setRgbDigitado] = useState(hexParaRgb(valor))
+  // Opacidade exibida em % (0–100) pra ficar mais natural que o byte
+  // alpha (0–255) do hex — a conversão acontece só na hora de gravar.
+  const [opacidadeDigitada, setOpacidadeDigitada] = useState(Math.round((hexParaAlpha(valor) / 255) * 100))
 
   // Sincroniza os campos sempre que o valor de fora mudar — inclusive
   // quando o próprio quadrado de saturação/matiz do react-colorful muda o
@@ -162,13 +200,23 @@ export function ModalAvancado({
   useEffect(() => {
     setHexDigitado(valor)
     setRgbDigitado(hexParaRgb(valor))
+    setOpacidadeDigitada(Math.round((hexParaAlpha(valor) / 255) * 100))
   }, [valor])
 
   function aplicarRgb(campo: 'r' | 'g' | 'b', texto: string) {
     const n = texto === '' ? 0 : Number(texto)
     const novo = { ...rgbDigitado, [campo]: n }
     setRgbDigitado(novo)
-    if (!Number.isNaN(n)) onChange(rgbParaHex(novo.r, novo.g, novo.b))
+    if (!Number.isNaN(n)) onChange(rgbaParaHex(novo.r, novo.g, novo.b, (opacidadeDigitada / 100) * 255))
+  }
+
+  function aplicarOpacidade(texto: string) {
+    const pct = texto === '' ? 0 : Number(texto)
+    setOpacidadeDigitada(pct)
+    if (!Number.isNaN(pct)) {
+      const clamped = Math.max(0, Math.min(100, pct))
+      onChange(rgbaParaHex(rgbDigitado.r, rgbDigitado.g, rgbDigitado.b, (clamped / 100) * 255))
+    }
   }
 
   function aplicarHex(texto: string) {
@@ -203,11 +251,11 @@ export function ModalAvancado({
             </div>
 
             <div className="seletor-cor-avancado mb-4">
-              <HexColorPicker color={valor} onChange={(hex) => onChange(hex.toUpperCase())} />
+              <HexAlphaColorPicker color={valor} onChange={(hex) => onChange(hex.toUpperCase())} />
             </div>
 
             <div className="flex items-center gap-2 rounded-xl border border-border card-surface px-2.5 py-2 mb-3">
-              <span className="w-8 h-8 rounded-lg shrink-0 border border-border" style={{ background: valor }} />
+              <AmostraCor cor={valor} className="w-8 h-8 rounded-lg shrink-0 border border-border" />
               <input
                 type="text"
                 value={hexDigitado}
@@ -217,7 +265,7 @@ export function ModalAvancado({
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {(['r', 'g', 'b'] as const).map((campo) => (
                 <div key={campo}>
                   <p className="text-[10.5px] text-slate-500 font-medium mb-1 uppercase">{campo}</p>
@@ -231,6 +279,17 @@ export function ModalAvancado({
                   />
                 </div>
               ))}
+              <div>
+                <p className="text-[10.5px] text-slate-500 font-medium mb-1 uppercase">Opac. %</p>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={opacidadeDigitada}
+                  onChange={(e) => aplicarOpacidade(e.target.value)}
+                  className="w-full rounded-xl border border-border card-surface px-2.5 py-2 text-[13px] font-semibold text-white text-center focus:outline-none"
+                />
+              </div>
             </div>
           </motion.div>
         </motion.div>

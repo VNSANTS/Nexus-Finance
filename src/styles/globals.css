@@ -244,7 +244,8 @@ body {
   border-radius: 14px;
   border-bottom: none;
 }
-.seletor-cor-avancado .react-colorful__hue {
+.seletor-cor-avancado .react-colorful__hue,
+.seletor-cor-avancado .react-colorful__alpha {
   height: 16px;
   border-radius: 8px;
   margin-top: 12px;

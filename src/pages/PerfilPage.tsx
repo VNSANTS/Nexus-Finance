@@ -850,14 +850,14 @@ function CalendarioStreak({ diasAtivos }: { diasAtivos: number[] }) {
       <p className="text-[13px] font-bold text-white mb-3.5">
         {nomesMes[mes]} {ano}
       </p>
-      <div className="grid grid-cols-7 gap-1 mb-1.5">
+      <div className="grid grid-cols-7 gap-2 mb-2">
         {diasSemana.map((d, i) => (
           <div key={i} className="text-center text-[9.5px] text-slate-500 font-semibold">
             {d}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-2">
         {celulas.map((dia, i) => {
           const isHoje = dia === hoje.getDate()
           const isAtivo = dia !== null && diasAtivos.includes(dia)
@@ -867,7 +867,8 @@ function CalendarioStreak({ diasAtivos }: { diasAtivos: number[] }) {
               className="aspect-square rounded-lg flex items-center justify-center text-[10.5px]"
               style={{
                 fontWeight: isAtivo ? 700 : 500,
-                background: isAtivo ? '#00D4FF' : 'transparent',
+                background: isAtivo ? '#00D4FF' : dia ? 'rgba(148, 163, 184, 0.1)' : 'transparent',
+                opacity: isAtivo ? 1 : dia ? 0.85 : 0,
                 color: isAtivo ? '#070B16' : dia ? '#64748B' : 'transparent',
                 border: isHoje && !isAtivo ? '1px solid #00D4FF' : 'none',
               }}
