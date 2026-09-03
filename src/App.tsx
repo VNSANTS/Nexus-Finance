@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import BottomNav from '@/components/BottomNav'
+import FundoPersonalizado from '@/components/FundoPersonalizado'
 import Onboarding from '@/components/Onboarding'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import HomePage from '@/pages/HomePage'
@@ -128,16 +129,22 @@ export default function App() {
   // (`card-surface`), então nenhuma tela fica com texto sobre fundo errado.
   if (!progress.onboardingDone) {
     return (
-      <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
-        <Onboarding onFinalizar={setOnboardingDone} />
-      </div>
+      <>
+        <FundoPersonalizado />
+        <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
+          <Onboarding onFinalizar={setOnboardingDone} />
+        </div>
+      </>
     )
   }
 
   return (
-    <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
-      <AppRotas />
-      {!dentroDeGf && <BottomNav />}
-    </div>
+    <>
+      <FundoPersonalizado />
+      <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
+        <AppRotas />
+        {!dentroDeGf && <BottomNav />}
+      </div>
+    </>
   )
 }

@@ -51,8 +51,6 @@
      componentes/telas ainda podem referenciar o fundo "de tema" puro,
      ex. dentro de modais/inputs que não devem herdar imagem de fundo). */
   --bg-fundo-app: var(--cor-bg);
-  --bg-imagem-url: none;
-  --bg-imagem-opacidade: 0.4;
 }
 
 .tema-claro {
@@ -168,32 +166,6 @@ body {
      Personalização precisa trocar essa classe pra não sobrepor o fundo
      custom escolhido aqui. Documentado em PROXIMA_SESSAO.md. */
   background: var(--bg-fundo-app);
-}
-
-/* Modo imagem: a imagem entra como camada própria atrás do conteúdo, com
-   um overlay semi-transparente (--cor-overlay-leve, já existe e respeita
-   tema claro/escuro) por cima pra manter o texto legível em cima de
-   qualquer foto. Só ativa quando o <html> tem .fundo-tipo-imagem (setada
-   pelo ThemeProvider só quando tipoFundo === 'imagem' E existe uma
-   imagem salva E o AMOLED não está sobrepondo). */
-.fundo-tipo-imagem body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background-image: var(--bg-imagem-url);
-  background-size: cover;
-  background-position: center;
-  opacity: var(--bg-imagem-opacidade);
-  pointer-events: none;
-}
-.fundo-tipo-imagem body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: var(--cor-overlay-leve);
-  pointer-events: none;
 }
 
 ::-webkit-scrollbar {

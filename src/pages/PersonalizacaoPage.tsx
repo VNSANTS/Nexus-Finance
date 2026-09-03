@@ -17,10 +17,13 @@ import {
   Upload,
   Trash2,
   Loader2,
+  Sliders,
 } from 'lucide-react'
 import { useTheme, CORES_PRINCIPAIS } from '@/hooks/useTheme'
 import type { TamanhoFonte, Densidade, IdCorPrincipal, TipoFundo } from '@/hooks/useTheme'
+import type { AjusteFoto } from '@/types'
 import SeletorCor from '@/components/SeletorCor'
+import EditorImagemFundo from '@/components/EditorImagemFundo'
 import { comprimirImagemFundo, ImagemFundoMuitoGrandeError } from '@/utils/comprimirImagemFundo'
 
 // Tela única de Personalização — antes vivia como "BlocoAparencia" dentro de
@@ -78,6 +81,8 @@ export default function PersonalizacaoPage() {
     definirImagemFundoUrl,
     imagemFundoOpacidade,
     definirImagemFundoOpacidade,
+    imagemFundoAjuste,
+    definirImagemFundoAjuste,
   } = tema
 
   return (
@@ -248,6 +253,8 @@ export default function PersonalizacaoPage() {
                 imagemFundoOpacidade={imagemFundoOpacidade}
                 definirImagemFundoUrl={definirImagemFundoUrl}
                 definirImagemFundoOpacidade={definirImagemFundoOpacidade}
+                imagemFundoAjuste={imagemFundoAjuste}
+                definirImagemFundoAjuste={definirImagemFundoAjuste}
               />
             )}
           </div>
@@ -283,15 +290,20 @@ function SeletorImagemFundo({
   imagemFundoOpacidade,
   definirImagemFundoUrl,
   definirImagemFundoOpacidade,
+  imagemFundoAjuste,
+  definirImagemFundoAjuste,
 }: {
   imagemFundoUrl: string | null
   imagemFundoOpacidade: number
   definirImagemFundoUrl: (url: string | null) => void
   definirImagemFundoOpacidade: (v: number) => void
+  imagemFundoAjuste: AjusteFoto | null
+  definirImagemFundoAjuste: (ajuste: AjusteFoto | null) => void
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [carregando, setCarregando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
+  const [editorAberto, setEditorAberto] = useState(false)
 
   async function aoEscolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
     const arquivo = e.target.files?.[0]
@@ -308,6 +320,8 @@ function SeletorImagemFundo({
     try {
       const dataUrl = await comprimirImagemFundo(arquivo)
       definirImagemFundoUrl(dataUrl)
+      definirImagemFundoAjuste(null) // imagem nova começa do ajuste padrão
+      setEditorAberto(true) // abre o editor direto, já que o corte automático pode cortar o que importa
     } catch (err) {
       if (err instanceof ImagemFundoMuitoGrandeError) {
         setErro(err.message)
@@ -319,19 +333,52 @@ function SeletorImagemFundo({
     }
   }
 
+  const ajusteEfetivo: AjusteFoto = imagemFundoAjuste ?? { zoom: 1, deslocX: 0, deslocY: 0, rotacaoGraus: 0 }
+
+  if (editorAberto && imagemFundoUrl) {
+    return (
+      <EditorImagemFundo
+        imagemUrl={imagemFundoUrl}
+        ajusteInicial={imagemFundoAjuste}
+        opacidade={imagemFundoOpacidade}
+        onCancelar={() => setEditorAberto(false)}
+        onSalvar={(ajuste) => {
+          definirImagemFundoAjuste(ajuste)
+          setEditorAberto(false)
+        }}
+      />
+    )
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <input ref={inputRef} type="file" accept="image/*" onChange={aoEscolherArquivo} className="hidden" />
 
       {imagemFundoUrl ? (
         <div className="flex flex-col gap-3">
-          <div
-            className="h-28 rounded-xl border border-border bg-cover bg-center relative overflow-hidden"
-            style={{ backgroundImage: `url(${imagemFundoUrl})` }}
-          >
-            <div className="absolute inset-0 bg-black/10" />
+          <div className="h-28 rounded-xl border border-border relative overflow-hidden">
+            <img
+              src={imagemFundoUrl}
+              alt=""
+              draggable={false}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                opacity: imagemFundoOpacidade / 100,
+                transform: `translate(${ajusteEfetivo.deslocX}%, ${ajusteEfetivo.deslocY}%) scale(${ajusteEfetivo.zoom}) rotate(${ajusteEfetivo.rotacaoGraus}deg)`,
+                transformOrigin: 'center',
+              }}
+            />
+            <div className="absolute inset-0" style={{ background: 'var(--cor-overlay-leve)' }} />
           </div>
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setEditorAberto(true)}
+              className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-border card-surface py-2.5 text-[11.5px] font-semibold text-slate-300"
+            >
+              <Sliders size={14} />
+              Ajustar
+            </button>
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
@@ -339,11 +386,14 @@ function SeletorImagemFundo({
               className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-border card-surface py-2.5 text-[11.5px] font-semibold text-slate-300 disabled:opacity-50"
             >
               {carregando ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-              Trocar imagem
+              Trocar
             </button>
             <button
               type="button"
-              onClick={() => definirImagemFundoUrl(null)}
+              onClick={() => {
+                definirImagemFundoUrl(null)
+                definirImagemFundoAjuste(null)
+              }}
               className="flex items-center justify-center gap-1.5 rounded-xl border border-border card-surface px-3.5 py-2.5 text-[11.5px] font-semibold text-red-400"
               aria-label="Remover imagem"
             >

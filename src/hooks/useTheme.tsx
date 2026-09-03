@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
+import type { AjusteFoto } from '@/types'
 
 // Preferências visuais do app inteiro (tema, cor de destaque, tamanho de
 // fonte, densidade, animações). Fica FORA da Gestão Financeira de propósito
@@ -105,6 +106,7 @@ interface PreferenciasTema {
   degradeFundo: DegradeFundo // usado quando tipoFundo === 'degrade'
   imagemFundoUrl: string | null // data URL (base64), usado quando tipoFundo === 'imagem'
   imagemFundoOpacidade: number // 0–100 — opacidade da imagem; o resto é overlay escuro/claro pra manter texto legível
+  imagemFundoAjuste: AjusteFoto | null // zoom/posição/rotação — ajustado via EditorImagemFundo, null = ajuste padrão (sem transformação)
 }
 
 const PADRAO: PreferenciasTema = {
@@ -132,6 +134,7 @@ const PADRAO: PreferenciasTema = {
   degradeFundo: DEGRADE_PADRAO,
   imagemFundoUrl: null,
   imagemFundoOpacidade: 40,
+  imagemFundoAjuste: null,
 }
 
 function carregar(): PreferenciasTema {
@@ -185,6 +188,7 @@ interface ThemeContextValue extends PreferenciasTema {
   definirDegradeFundo: (d: Partial<DegradeFundo>) => void
   definirImagemFundoUrl: (url: string | null) => void
   definirImagemFundoOpacidade: (v: number) => void
+  definirImagemFundoAjuste: (ajuste: AjusteFoto | null) => void
   restaurarPadroes: () => void
 }
 
@@ -242,7 +246,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const root = document.documentElement
     root.classList.toggle('tema-claro', temaResolvido === 'claro')
     root.classList.toggle('amoled-ativo', amoledEfetivo)
-    root.classList.toggle('fundo-tipo-imagem', prefs.tipoFundo === 'imagem' && !amoledEfetivo && !!prefs.imagemFundoUrl)
     root.classList.toggle('animacoes-desativadas', !prefs.animacoesAtivas)
     root.classList.toggle('alto-contraste', prefs.altoContraste)
     root.classList.toggle('reduzir-transparencias', prefs.reduzirTransparencias)
@@ -260,8 +263,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--escala-interface', String(ESCALA_INTERFACE[prefs.escalaInterface]))
     // ===== Personalização: fundo geral do app =====
     root.style.setProperty('--bg-fundo-app', backgroundFundo)
-    root.style.setProperty('--bg-imagem-url', prefs.imagemFundoUrl ? `url(${prefs.imagemFundoUrl})` : 'none')
-    root.style.setProperty('--bg-imagem-opacidade', String(prefs.imagemFundoOpacidade / 100))
   }, [
     temaResolvido,
     amoledEfetivo,
@@ -323,6 +324,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     (v: number) => setPrefs((p) => ({ ...p, imagemFundoOpacidade: Math.min(Math.max(v, 0), 100) })),
     [],
   )
+  const definirImagemFundoAjuste = useCallback(
+    (ajuste: AjusteFoto | null) => setPrefs((p) => ({ ...p, imagemFundoAjuste: ajuste })),
+    [],
+  )
   const restaurarPadroes = useCallback(() => setPrefs(PADRAO), [])
 
   const value: ThemeContextValue = {
@@ -353,6 +358,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     definirDegradeFundo,
     definirImagemFundoUrl,
     definirImagemFundoOpacidade,
+    definirImagemFundoAjuste,
     restaurarPadroes,
   }
 
