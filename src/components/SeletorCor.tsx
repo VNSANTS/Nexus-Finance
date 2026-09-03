@@ -76,7 +76,7 @@ export default function SeletorCor({ label, valor, onChange }: SeletorCorProps) 
   }
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 min-w-0">
       {label && <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">{label}</p>}
 
       <div className="flex items-center gap-2 rounded-xl border border-border card-surface px-2.5 py-2">

@@ -217,7 +217,7 @@ export default function PersonalizacaoPage() {
 
             {tipoFundo === 'degrade' && (
               <div className="flex flex-col gap-3">
-                <div className="flex gap-3">
+                <div className="flex flex-col gap-3">
                   <SeletorCor label="De" valor={degradeFundo.de} onChange={(hex) => definirDegradeFundo({ de: hex })} />
                   <SeletorCor label="Para" valor={degradeFundo.para} onChange={(hex) => definirDegradeFundo({ para: hex })} />
                 </div>
