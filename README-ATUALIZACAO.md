@@ -1,21 +1,19 @@
-# Atualização — Correção de overflow/travamento nas Calculadoras (Ferramentas)
+# Atualização — Valores grandes agora aparecem resumidos (em vez de sumirem)
 
-## Problema relatado
-Na calculadora de Juros Compostos (e nas demais que usam o mesmo `ResultCard`), ao colocar valores exagerados nos sliders:
-1. Arrastar o slider travava a tela.
-2. Quando o valor resultante era grande demais para caber na tela, ele simplesmente vazava para fora em vez de ser cortado com "...".
+## O que mudou (`src/pages/FerramentasPage.tsx`)
 
-## Causa
-- O `fmt()` sempre formatava o número completo por extenso (`toLocaleString`). Com taxas de juros extremas (até 1000% ao mês) compostas por até 40 anos, o resultado virava uma string com centenas de dígitos.
-- Essa string enorme era renderizada sem nenhum corte (`overflow`/`truncate`), então o navegador precisava desenhar uma caixa de texto imensa (bem mais larga que a tela) a cada novo evento do slider durante o arraste — isso é o que travava a rolagem/tela no celular.
+Antes, valores muito grandes (ex.: resultado da calculadora de Juros Compostos com taxas exageradas)
+eram cortados com "..." e praticamente somem da tela. Agora o `fmt()` resume o número:
 
-## Correção (`src/pages/FerramentasPage.tsx`)
-1. **`fmt()`**: agora trata valores não finitos (`Infinity`/`NaN`) mostrando `R$ —`, e valores acima de 1 quatrilhão (cenário fora de qualquer uso real) são exibidos em notação científica compacta (ex.: `R$ 7,95 × 10^29`) em vez da string gigante. Isso resolve a causa raiz do travamento.
-2. **`ResultCard`** (componente usado por todas as ~30 calculadoras): o valor principal e a linha de "Investido/Juros" agora têm `truncate` (corta com "..." se não couber) + `title` com o valor completo.
-3. **Tabela de histórico por ano** (tela de Juros Compostos, a mesma do print): cada linha agora trunca o valor com "..." em vez de vazar para fora da tela, mantendo o rótulo "Ano X" sempre visível.
+- Abaixo de R$ 1 bilhão: mostra o número completo, como sempre (nenhuma mudança aqui).
+- A partir de R$ 1 bilhão: mostra resumido com o nome da escala — "R$ 1,5 bilhões", "R$ 4,07 octilhões", "R$ 795 octilhões", etc.
+- Além de 1 decilhão (10^33), usa notação científica curta (ex.: "R$ 1,00 × 10^36").
+- Se o cálculo estourar o limite numérico (Infinity), mostra "Valor muito alto" em vez de sumir ou travar.
+
+Isso resolve tanto o "valor sumindo" quanto o travamento ao arrastar os sliders com valores exagerados
+(a causa raiz era formatar/renderizar uma string com centenas de dígitos a cada movimento do slider).
+
+O `truncate` + tooltip continuam como proteção extra, mas na prática o texto resumido já cabe normalmente.
 
 ## Como aplicar
-Substitua o arquivo `src/pages/FerramentasPage.tsx` do seu repositório pelo arquivo anexo (é o único arquivo alterado). Não há mudança em `types.ts` nem em outros contextos — mudança isolada de UI/formatação.
-
-## Observação
-Valores "normais" (até milhões/bilhões, o uso real do app) continuam formatados exatamente como antes — só valores absurdamente exagerados (típicos de teste, como 514% ao mês) passam a usar a notação compacta.
+Substitua o arquivo `src/pages/FerramentasPage.tsx` do seu repositório pelo anexo. Único arquivo alterado.

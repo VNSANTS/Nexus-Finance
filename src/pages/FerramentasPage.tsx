@@ -213,16 +213,45 @@ function CalculadoraRouter({ id, onBack }: { id: string; onBack: () => void }) {
   }
 }
 
+// Nomes das escalas (padrão curto usado no Brasil) para resumir números muito grandes.
+// Índice = quantos "grupos de 3 zeros" acima de mil (10^6 = milhão, 10^9 = bilhão, ...)
+const ESCALAS: string[] = [
+  'milhão', 'bilhão', 'trilhão', 'quatrilhão', 'quintilhão',
+  'sextilhão', 'septilhão', 'octilhão', 'nonilhão', 'decilhão',
+]
+
+function pluralizarEscala(palavra: string) {
+  return palavra.replace(/ão$/, 'ões')
+}
+
 function fmt(v: number) {
   // Valores não-finitos (Infinity/NaN, comuns com taxas/prazos extremos) não têm representação numérica útil
-  if (!isFinite(v)) return 'R$ —'
-  // Acima de 1 quatrilhão o valor deixa de ser um cenário financeiro plausível — mostramos em notação
-  // científica compacta em vez de uma string com centenas de dígitos, que é cara de formatar/renderizar
-  // e é a principal causa do travamento ao arrastar os sliders com valores exagerados.
-  if (Math.abs(v) >= 1e15) {
-    return 'R$ ' + v.toExponential(2).replace('.', ',').replace('e+', ' × 10^').replace('e-', ' × 10^-')
+  if (!isFinite(v)) return 'Valor muito alto'
+
+  const sinal = v < 0 ? '-' : ''
+  const abs = Math.abs(v)
+
+  // Abaixo de 1 bilhão, mostra o número completo normalmente (comportamento de sempre)
+  if (abs < 1e9) {
+    return 'R$ ' + Math.round(v).toLocaleString('pt-BR')
   }
-  return 'R$ ' + Math.round(v).toLocaleString('pt-BR')
+
+  // A partir de 1 bilhão, resume em "X milhões/bilhões/trilhões..." em vez de mostrar
+  // o número inteiro (que não cabe na tela e acaba cortado/sumindo).
+  const grupo = Math.floor((Math.log10(abs) - 6) / 3) // 0 = milhão, 1 = bilhão, ...
+  if (grupo < ESCALAS.length) {
+    const divisor = Math.pow(1000, grupo + 2)
+    const escalado = v / divisor
+    const escaladoAbs = Math.abs(escalado)
+    const casas = escaladoAbs >= 100 ? 0 : escaladoAbs >= 10 ? 1 : 2
+    const numeroStr = escalado.toLocaleString('pt-BR', { maximumFractionDigits: casas, minimumFractionDigits: 0 })
+    const ehUm = escaladoAbs >= 0.995 && escaladoAbs < 1.005
+    const palavra = ehUm ? ESCALAS[grupo] : pluralizarEscala(ESCALAS[grupo])
+    return `R$ ${sinal}${numeroStr} ${palavra}`
+  }
+
+  // Além de 1 decilhão (10^33) não há nome curto de uso comum — usa notação científica
+  return sinal + 'R$ ' + abs.toExponential(2).replace('.', ',').replace('e+', ' × 10^')
 }
 
 function CalcJurosCompostos({ onBack }: { onBack: () => void }) {
