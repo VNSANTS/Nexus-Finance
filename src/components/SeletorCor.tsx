@@ -142,7 +142,7 @@ export default function SeletorCor({ label, valor, onChange }: SeletorCorProps) 
   )
 }
 
-function ModalAvancado({
+export function ModalAvancado({
   aberto,
   onFechar,
   valor,
@@ -184,7 +184,7 @@ function ModalAvancado({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[95] bg-[var(--cor-overlay)] flex items-end justify-center"
+          className="fixed inset-0 z-[110] bg-[var(--cor-overlay)] flex items-end justify-center"
           onClick={onFechar}
         >
           <motion.div

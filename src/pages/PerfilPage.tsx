@@ -16,6 +16,7 @@ import {
   LogOut,
   Palette,
   Pencil,
+  Plus,
   Share2,
   Smile,
   Star,
@@ -26,6 +27,7 @@ import { getIcon } from '@/components/Icon'
 import ProgressRing from '@/components/ProgressRing'
 import Avatar from '@/components/Avatar'
 import EditorFotoPerfil from '@/components/EditorFotoPerfil'
+import { ModalAvancado as SeletorCorAvancado } from '@/components/SeletorCor'
 import { useUserProgress } from '@/hooks/useUserProgress'
 import { BADGES } from '@/data/badges'
 import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
@@ -491,6 +493,7 @@ function EditarPerfilModal({
   const [fotoUrlTemp, setFotoUrlTemp] = useState(fotoUrl)
   const [fotoAjusteTemp, setFotoAjusteTemp] = useState(fotoAjuste)
   const [editorFotoAberto, setEditorFotoAberto] = useState(false)
+  const [corAvancadaAberta, setCorAvancadaAberta] = useState(false)
   const [erroArquivo, setErroArquivo] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
   const inputArquivoRef = useRef<HTMLInputElement>(null)
@@ -726,8 +729,23 @@ function EditarPerfilModal({
                   </div>
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => setCorAvancadaAberta(true)}
+                className="w-[32px] h-[32px] rounded-full flex items-center justify-center border-2 border-dashed border-border"
+                aria-label="Escolher outra cor"
+              >
+                <Plus size={14} className="text-slate-400" />
+              </button>
             </div>
           </div>
+
+          <SeletorCorAvancado
+            aberto={corAvancadaAberta}
+            onFechar={() => setCorAvancadaAberta(false)}
+            valor={corTemp}
+            onChange={setCorTemp}
+          />
 
           <div className="flex gap-2.5">
             <button onClick={onFechar} className="flex-1 h-[46px] rounded-2xl border border-border text-slate-300 text-[13px] font-semibold">
