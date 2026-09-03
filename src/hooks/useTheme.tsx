@@ -60,6 +60,20 @@ const ESCALA_INTERFACE: Record<EscalaInterface, number> = {
   grande: 1.22,
 }
 
+// ===== Personalização — fundo do app (tela /personalizacao) =====
+// Fundo GERAL do app (atrás de tudo), separado da cor de destaque
+// (--accent-primaria) e dos cards (--bg-card, que não muda aqui de
+// propósito — ver nota grande abaixo do useEffect principal).
+export type TipoFundo = 'solido' | 'degrade' | 'imagem'
+
+export interface DegradeFundo {
+  de: string // hex
+  para: string // hex
+  anguloGraus: number // 0–360, direção do gradiente linear
+}
+
+const DEGRADE_PADRAO: DegradeFundo = { de: '#0B1220', para: '#0A0E1A', anguloGraus: 135 }
+
 interface PreferenciasTema {
   modo: ModoTema
   corPrincipal: IdCorPrincipal
@@ -84,6 +98,13 @@ interface PreferenciasTema {
   areaTequeAmpliada: boolean // aumenta a área de toque mínima dos botões
   tempoAcaoAmpliado: boolean // dá mais tempo antes de toasts/confirmações temporárias sumirem
   confirmarAcoesImportantes: boolean
+  // ===== Personalização (Configurações → Personalização) =====
+  amoledAtivo: boolean // só tem efeito com modo/temaResolvido = 'escuro'; força preto puro
+  tipoFundo: TipoFundo
+  corFundoSolido: string // hex, usado quando tipoFundo === 'solido'
+  degradeFundo: DegradeFundo // usado quando tipoFundo === 'degrade'
+  imagemFundoUrl: string | null // data URL (base64), usado quando tipoFundo === 'imagem'
+  imagemFundoOpacidade: number // 0–100 — opacidade da imagem; o resto é overlay escuro/claro pra manter texto legível
 }
 
 const PADRAO: PreferenciasTema = {
@@ -105,6 +126,12 @@ const PADRAO: PreferenciasTema = {
   areaTequeAmpliada: false,
   tempoAcaoAmpliado: false,
   confirmarAcoesImportantes: true,
+  amoledAtivo: false,
+  tipoFundo: 'solido',
+  corFundoSolido: '#0A0E1A',
+  degradeFundo: DEGRADE_PADRAO,
+  imagemFundoUrl: null,
+  imagemFundoOpacidade: 40,
 }
 
 function carregar(): PreferenciasTema {
@@ -112,7 +139,15 @@ function carregar(): PreferenciasTema {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return PADRAO
-    return { ...PADRAO, ...(JSON.parse(raw) as Partial<PreferenciasTema>) }
+    const salvo = JSON.parse(raw) as Partial<PreferenciasTema>
+    // Merge raso normal, exceto degradeFundo: é objeto aninhado, então um
+    // merge raso simples deixaria campos faltando (ex: versão salva antes
+    // de "anguloGraus" existir) como undefined em vez de cair no padrão.
+    return {
+      ...PADRAO,
+      ...salvo,
+      degradeFundo: { ...PADRAO.degradeFundo, ...(salvo.degradeFundo ?? {}) },
+    }
   } catch {
     return PADRAO
   }
@@ -125,6 +160,7 @@ function prefereClaroDoSistema(): boolean {
 
 interface ThemeContextValue extends PreferenciasTema {
   temaResolvido: 'claro' | 'escuro' // 'automatico' já resolvido pro valor real em uso
+  amoledEfetivo: boolean // amoledAtivo && temaResolvido === 'escuro' — já calculado, evita duplicar a regra na UI
   definirModo: (modo: ModoTema) => void
   definirCorPrincipal: (id: IdCorPrincipal) => void
   definirTamanhoFonte: (t: TamanhoFonte) => void
@@ -143,6 +179,12 @@ interface ThemeContextValue extends PreferenciasTema {
   definirAreaTequeAmpliada: (ativo: boolean) => void
   definirTempoAcaoAmpliado: (ativo: boolean) => void
   definirConfirmarAcoesImportantes: (ativo: boolean) => void
+  definirAmoledAtivo: (ativo: boolean) => void
+  definirTipoFundo: (t: TipoFundo) => void
+  definirCorFundoSolido: (hex: string) => void
+  definirDegradeFundo: (d: Partial<DegradeFundo>) => void
+  definirImagemFundoUrl: (url: string | null) => void
+  definirImagemFundoOpacidade: (v: number) => void
   restaurarPadroes: () => void
 }
 
@@ -170,12 +212,37 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     [prefs.corPrincipal],
   )
 
+  // AMOLED só faz sentido com o tema escuro resolvido — em tema claro a
+  // preferência fica salva mas sem efeito visual nenhum (documentado na UI
+  // pela sessão que fizer a tela de Personalização).
+  const amoledEfetivo = prefs.amoledAtivo && temaResolvido === 'escuro'
+
+  // Monta o CSS `background` do fundo geral a partir do tipo escolhido.
+  // AMOLED tem prioridade sobre qualquer fundo custom — preto puro é o
+  // ponto todo do modo AMOLED (economia de bateria em tela OLED), então
+  // ligá-lo sobrepõe sólido/degradê/imagem em vez de combinar com eles.
+  const backgroundFundo = useMemo(() => {
+    if (amoledEfetivo) return '#000000'
+    if (prefs.tipoFundo === 'solido') return prefs.corFundoSolido
+    if (prefs.tipoFundo === 'degrade') {
+      const { de, para, anguloGraus } = prefs.degradeFundo
+      return `linear-gradient(${anguloGraus}deg, ${de}, ${para})`
+    }
+    // 'imagem': a imagem em si vai em --bg-imagem-url (usada via
+    // background-image na globals.css, com overlay por cima pra
+    // legibilidade — ver nota de handoff abaixo). Aqui o `background`
+    // vira só uma cor de fallback enquanto a imagem carrega/se ausente.
+    return prefs.corFundoSolido
+  }, [amoledEfetivo, prefs.tipoFundo, prefs.corFundoSolido, prefs.degradeFundo])
+
   // Aplica tudo direto no <html> via classe + CSS variables inline. Fica no
   // <html> (não num wrapper interno) para cobrir portais (createPortal),
   // como o menu radial e os modais, que renderizam fora da árvore do app.
   useEffect(() => {
     const root = document.documentElement
     root.classList.toggle('tema-claro', temaResolvido === 'claro')
+    root.classList.toggle('amoled-ativo', amoledEfetivo)
+    root.classList.toggle('fundo-tipo-imagem', prefs.tipoFundo === 'imagem' && !amoledEfetivo && !!prefs.imagemFundoUrl)
     root.classList.toggle('animacoes-desativadas', !prefs.animacoesAtivas)
     root.classList.toggle('alto-contraste', prefs.altoContraste)
     root.classList.toggle('reduzir-transparencias', prefs.reduzirTransparencias)
@@ -191,8 +258,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     root.style.setProperty('--escala-linha', String(ESCALA_LINHA[prefs.espacamentoLinha]))
     root.style.setProperty('--espacamento-letra', ESCALA_LETRA[prefs.espacamentoLetra])
     root.style.setProperty('--escala-interface', String(ESCALA_INTERFACE[prefs.escalaInterface]))
+    // ===== Personalização: fundo geral do app =====
+    root.style.setProperty('--bg-fundo-app', backgroundFundo)
+    root.style.setProperty('--bg-imagem-url', prefs.imagemFundoUrl ? `url(${prefs.imagemFundoUrl})` : 'none')
+    root.style.setProperty('--bg-imagem-opacidade', String(prefs.imagemFundoOpacidade / 100))
   }, [
     temaResolvido,
+    amoledEfetivo,
+    backgroundFundo,
     corSelecionada,
     prefs.tamanhoFonte,
     prefs.densidade,
@@ -206,6 +279,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     prefs.espacamentoLinha,
     prefs.espacamentoLetra,
     prefs.escalaInterface,
+    prefs.tipoFundo,
+    prefs.imagemFundoUrl,
+    prefs.imagemFundoOpacidade,
   ])
 
   useEffect(() => {
@@ -235,11 +311,24 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const definirAreaTequeAmpliada = useCallback((ativo: boolean) => setPrefs((p) => ({ ...p, areaTequeAmpliada: ativo })), [])
   const definirTempoAcaoAmpliado = useCallback((ativo: boolean) => setPrefs((p) => ({ ...p, tempoAcaoAmpliado: ativo })), [])
   const definirConfirmarAcoesImportantes = useCallback((ativo: boolean) => setPrefs((p) => ({ ...p, confirmarAcoesImportantes: ativo })), [])
+  const definirAmoledAtivo = useCallback((ativo: boolean) => setPrefs((p) => ({ ...p, amoledAtivo: ativo })), [])
+  const definirTipoFundo = useCallback((t: TipoFundo) => setPrefs((p) => ({ ...p, tipoFundo: t })), [])
+  const definirCorFundoSolido = useCallback((hex: string) => setPrefs((p) => ({ ...p, corFundoSolido: hex })), [])
+  const definirDegradeFundo = useCallback(
+    (d: Partial<DegradeFundo>) => setPrefs((p) => ({ ...p, degradeFundo: { ...p.degradeFundo, ...d } })),
+    [],
+  )
+  const definirImagemFundoUrl = useCallback((url: string | null) => setPrefs((p) => ({ ...p, imagemFundoUrl: url })), [])
+  const definirImagemFundoOpacidade = useCallback(
+    (v: number) => setPrefs((p) => ({ ...p, imagemFundoOpacidade: Math.min(Math.max(v, 0), 100) })),
+    [],
+  )
   const restaurarPadroes = useCallback(() => setPrefs(PADRAO), [])
 
   const value: ThemeContextValue = {
     ...prefs,
     temaResolvido,
+    amoledEfetivo,
     definirModo,
     definirCorPrincipal,
     definirTamanhoFonte,
@@ -258,6 +347,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     definirAreaTequeAmpliada,
     definirTempoAcaoAmpliado,
     definirConfirmarAcoesImportantes,
+    definirAmoledAtivo,
+    definirTipoFundo,
+    definirCorFundoSolido,
+    definirDegradeFundo,
+    definirImagemFundoUrl,
+    definirImagemFundoOpacidade,
     restaurarPadroes,
   }
 

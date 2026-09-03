@@ -1,0 +1,240 @@
+import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { HexColorPicker } from 'react-colorful'
+import { Check, Sliders, X } from 'lucide-react'
+
+// Componente de seleção de cor compartilhado entre o app principal e a
+// Gestão Financeira — por isso mora em src/components (não dentro de
+// gestao-financeira/, que é isolada de propósito). Ver PROXIMA_SESSAO.md,
+// seção "Sessão C", pro pedido original.
+//
+// Duas camadas, como o Vinícius pediu ("presets rápidos + avançado"):
+// 1. Presets rápidos: grade de swatches com paleta própria de tons
+//    escuros/neutros (pensada pra fundo, não pra accent — por isso não
+//    reusa CORES_PRINCIPAIS de useTheme.tsx, que são tons vivos).
+// 2. Avançado: modal com quadrado de saturação/matiz + slider de matiz
+//    (via react-colorful, que já entrega os dois juntos), campos RGB e
+//    campo hex, todos sincronizados entre si e com o preset/hex de fora.
+//
+// Controlado, sem estado de tema embutido: só recebe `valor` (hex) e chama
+// `onChange(hex)` — quem usa decide o que fazer com o hex (ver
+// PersonalizacaoPage.tsx, fundo sólido e "de"/"para" do degradê).
+
+export interface SeletorCorProps {
+  label?: string
+  valor: string
+  onChange: (hex: string) => void
+}
+
+const PRESETS: string[] = [
+  '#070B16', '#0A0E1A', '#0E1526', '#0F172A', '#111827', '#1C2740',
+  '#000000', '#18181B', '#1E293B', '#16213E', '#1A1A2E', '#292524',
+  '#374151', '#4B5563', '#94A3B8', '#E2E8F0', '#F1F5F9', '#FFFFFF',
+]
+
+const HEX_VALIDO = /^#([0-9a-fA-F]{6})$/
+
+function normalizarHex(valor: string): string | null {
+  const v = valor.trim()
+  const comHash = v.startsWith('#') ? v : `#${v}`
+  return HEX_VALIDO.test(comHash) ? comHash.toUpperCase() : null
+}
+
+function hexParaRgb(hex: string): { r: number; g: number; b: number } {
+  const seguro = HEX_VALIDO.test(hex) ? hex : '#000000'
+  const num = parseInt(seguro.slice(1), 16)
+  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 }
+}
+
+function rgbParaHex(r: number, g: number, b: number): string {
+  const clamp = (n: number) => Math.max(0, Math.min(255, Math.round(Number.isFinite(n) ? n : 0)))
+  return `#${[clamp(r), clamp(g), clamp(b)].map((n) => n.toString(16).padStart(2, '0')).join('')}`.toUpperCase()
+}
+
+// Decide se o "check" de seleção nos presets fica preto ou branco, conforme
+// a luminância percebida do swatch — só estética, não tem relação com tema.
+function corDeContraste(hex: string): string {
+  const { r, g, b } = hexParaRgb(hex)
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#000000' : '#FFFFFF'
+}
+
+export default function SeletorCor({ label, valor, onChange }: SeletorCorProps) {
+  const [presetsAbertos, setPresetsAbertos] = useState(false)
+  const [avancadoAberto, setAvancadoAberto] = useState(false)
+  const [hexDigitado, setHexDigitado] = useState(valor)
+
+  // Se o valor mudar por fora (ex: outro campo, ou restaurar padrões),
+  // mantém o campo de texto em sincronia.
+  useEffect(() => setHexDigitado(valor), [valor])
+
+  const corValida = normalizarHex(valor) ?? '#000000'
+
+  function confirmarTexto(texto: string) {
+    const normalizado = normalizarHex(texto)
+    if (normalizado) onChange(normalizado)
+    else setHexDigitado(valor) // inválido: reverte pro último valor válido
+  }
+
+  return (
+    <div className="flex-1">
+      {label && <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">{label}</p>}
+
+      <div className="flex items-center gap-2 rounded-xl border border-border card-surface px-2.5 py-2">
+        <button
+          type="button"
+          onClick={() => setPresetsAbertos((v) => !v)}
+          className="w-8 h-8 rounded-lg overflow-hidden shrink-0 border border-border"
+          style={{ background: corValida }}
+          aria-label="Presets de cor"
+        />
+        <input
+          type="text"
+          value={hexDigitado}
+          onChange={(e) => setHexDigitado(e.target.value)}
+          onBlur={(e) => confirmarTexto(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+          spellCheck={false}
+          className="flex-1 min-w-0 bg-transparent text-[12px] font-semibold text-white uppercase focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={() => setAvancadoAberto(true)}
+          className="text-slate-500 shrink-0"
+          aria-label="Cor avançada"
+        >
+          <Sliders size={15} />
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {presetsAbertos && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="grid grid-cols-6 gap-1.5 pt-2">
+              {PRESETS.map((cor) => (
+                <button
+                  key={cor}
+                  type="button"
+                  onClick={() => {
+                    onChange(cor)
+                    setPresetsAbertos(false)
+                  }}
+                  className="aspect-square rounded-lg border border-border relative"
+                  style={{ background: cor }}
+                  aria-label={`Usar cor ${cor}`}
+                >
+                  {corValida === cor && (
+                    <Check size={12} className="absolute inset-0 m-auto" style={{ color: corDeContraste(cor) }} />
+                  )}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <ModalAvancado aberto={avancadoAberto} onFechar={() => setAvancadoAberto(false)} valor={corValida} onChange={onChange} />
+    </div>
+  )
+}
+
+function ModalAvancado({
+  aberto,
+  onFechar,
+  valor,
+  onChange,
+}: {
+  aberto: boolean
+  onFechar: () => void
+  valor: string
+  onChange: (hex: string) => void
+}) {
+  const [hexDigitado, setHexDigitado] = useState(valor)
+  const [rgbDigitado, setRgbDigitado] = useState(hexParaRgb(valor))
+
+  // Sincroniza os campos sempre que o valor de fora mudar — inclusive
+  // quando o próprio quadrado de saturação/matiz do react-colorful muda o
+  // valor (ele chama onChange, que atualiza `valor` no componente pai).
+  useEffect(() => {
+    setHexDigitado(valor)
+    setRgbDigitado(hexParaRgb(valor))
+  }, [valor])
+
+  function aplicarRgb(campo: 'r' | 'g' | 'b', texto: string) {
+    const n = texto === '' ? 0 : Number(texto)
+    const novo = { ...rgbDigitado, [campo]: n }
+    setRgbDigitado(novo)
+    if (!Number.isNaN(n)) onChange(rgbParaHex(novo.r, novo.g, novo.b))
+  }
+
+  function aplicarHex(texto: string) {
+    setHexDigitado(texto)
+    const normalizado = normalizarHex(texto)
+    if (normalizado) onChange(normalizado)
+  }
+
+  return (
+    <AnimatePresence>
+      {aberto && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[95] bg-[var(--cor-overlay)] flex items-end justify-center"
+          onClick={onFechar}
+        >
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[480px] max-h-[85vh] overflow-y-auto bg-bg rounded-t-[28px] border-t border-border px-5 pt-5 pb-8"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[15px] font-display font-extrabold text-white">Cor avançada</p>
+              <button onClick={onFechar} className="text-slate-500" aria-label="Fechar">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="seletor-cor-avancado mb-4">
+              <HexColorPicker color={valor} onChange={(hex) => onChange(hex.toUpperCase())} />
+            </div>
+
+            <div className="flex items-center gap-2 rounded-xl border border-border card-surface px-2.5 py-2 mb-3">
+              <span className="w-8 h-8 rounded-lg shrink-0 border border-border" style={{ background: valor }} />
+              <input
+                type="text"
+                value={hexDigitado}
+                onChange={(e) => aplicarHex(e.target.value)}
+                spellCheck={false}
+                className="flex-1 min-w-0 bg-transparent text-[13px] font-semibold text-white uppercase focus:outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {(['r', 'g', 'b'] as const).map((campo) => (
+                <div key={campo}>
+                  <p className="text-[10.5px] text-slate-500 font-medium mb-1 uppercase">{campo}</p>
+                  <input
+                    type="number"
+                    min={0}
+                    max={255}
+                    value={rgbDigitado[campo]}
+                    onChange={(e) => aplicarRgb(campo, e.target.value)}
+                    className="w-full rounded-xl border border-border card-surface px-2.5 py-2 text-[13px] font-semibold text-white text-center focus:outline-none"
+                  />
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}

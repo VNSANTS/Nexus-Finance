@@ -14,6 +14,7 @@ import {
   GraduationCap,
   Lock,
   LogOut,
+  Palette,
   Pencil,
   Share2,
   Smile,
@@ -271,6 +272,13 @@ export default function PerfilPage() {
             cor="#FFC93C"
             control={<span className="text-[11px] text-slate-500 font-medium">{resumoNotificacoes}</span>}
             onClick={() => navigate('/notificacoes')}
+            chevron
+          />
+          <ConfigRow
+            icon={Palette}
+            label="Personalização"
+            cor="#00D4FF"
+            onClick={() => navigate('/personalizacao')}
             chevron
           />
           <ConfigRow

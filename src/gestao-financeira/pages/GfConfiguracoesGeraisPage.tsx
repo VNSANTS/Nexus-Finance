@@ -1,10 +1,8 @@
 import { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
-import { Settings, Sun, Moon, MonitorSmartphone, Check, RotateCcw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Settings, Check, ChevronRight, Palette } from 'lucide-react'
 import GfHeader from '../components/GfHeader'
 import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
-import { useTheme, CORES_PRINCIPAIS } from '@/hooks/useTheme'
-import type { ModoTema, TamanhoFonte, Densidade, IdCorPrincipal } from '@/hooks/useTheme'
 import { formatMoeda } from '../formatMoeda'
 import type { Idioma } from '../types'
 
@@ -22,28 +20,15 @@ const IDIOMAS: { codigo: Idioma; label: string; bandeira: string }[] = [
   { codigo: 'en-US', label: 'English (US)', bandeira: '🇺🇸' },
 ]
 
-const TAMANHOS_FONTE: { id: TamanhoFonte; label: string }[] = [
-  { id: 'pequeno', label: 'Pequeno' },
-  { id: 'padrao', label: 'Padrão' },
-  { id: 'grande', label: 'Grande' },
-  { id: 'extra-grande', label: 'Extra grande' },
-]
-
-const DENSIDADES: { id: Densidade; label: string; desc: string }[] = [
-  { id: 'compacta', label: 'Compacta', desc: 'Mais itens visíveis por tela' },
-  { id: 'padrao', label: 'Padrão', desc: 'Equilíbrio entre espaço e leitura' },
-  { id: 'confortavel', label: 'Confortável', desc: 'Mais espaço entre elementos' },
-]
-
 // Tela de Configurações gerais — cobre "2. Aparência" e parte de
 // "3. Configurações financeiras" (valores e moeda, período financeiro) do
 // documento de projeto. O que fica fora daqui por escopo (limites de
 // gastos, tipos de transação personalizados, regras financeiras) pertence
 // às telas de Orçamento/Notificações/Categorias, não a esta.
 export default function GfConfiguracoesGeraisPage() {
+  const navigate = useNavigate()
   const { estado, permissoes, definirMoeda, definirConfigFinanceira } = useGestaoFinanceira()
-  const tema = useTheme()
-  const [secaoAberta, setSecaoAberta] = useState<'aparencia' | 'idioma-moeda' | 'periodo'>('aparencia')
+  const [secaoAberta, setSecaoAberta] = useState<'idioma-moeda' | 'periodo'>('idioma-moeda')
 
   const exemploFormatado = useMemo(
     () =>
@@ -68,16 +53,21 @@ export default function GfConfiguracoesGeraisPage() {
       />
 
       <div className="px-4 mt-4 flex flex-col gap-3">
-        <Secao
-          id="aparencia"
-          titulo="Aparência"
-          desc="Tema, cor e tamanho de texto"
-          aberta={secaoAberta === 'aparencia'}
-          onToggle={() => setSecaoAberta(secaoAberta === 'aparencia' ? 'aparencia' : 'aparencia')}
-          onClick={() => setSecaoAberta('aparencia')}
+        <button
+          onClick={() => navigate('/personalizacao')}
+          className="card-surface rounded-2xl p-3.5 flex items-center justify-between text-left"
         >
-          <BlocoAparencia />
-        </Secao>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-accent-cyan/10 flex items-center justify-center shrink-0">
+              <Palette size={16} className="text-accent-cyan" />
+            </div>
+            <div>
+              <p className="text-[13.5px] font-semibold text-white">Personalização</p>
+              <p className="text-[11px] text-slate-500">Tema, cor, fonte e fundo do app</p>
+            </div>
+          </div>
+          <ChevronRight size={16} className="text-slate-500 shrink-0" />
+        </button>
 
         <Secao
           id="idioma-moeda"
@@ -104,19 +94,6 @@ export default function GfConfiguracoesGeraisPage() {
         >
           <BlocoPeriodo estado={estado} definirConfigFinanceira={definirConfigFinanceira} podeEditar={permissoes.editar} />
         </Secao>
-      </div>
-
-      <div className="px-4 mt-3">
-        <button
-          onClick={() => {
-            if (window.confirm('Restaurar aparência para os valores padrão (tema escuro, cor ciano, fonte padrão)?')) {
-              tema.restaurarPadroes()
-            }
-          }}
-          className="flex items-center gap-1.5 text-[11.5px] text-slate-500 font-medium mx-auto"
-        >
-          <RotateCcw size={12} /> Restaurar aparência padrão
-        </button>
       </div>
     </div>
   )
@@ -151,91 +128,6 @@ function Secao({
   )
 }
 
-function BlocoAparencia() {
-  const { modo, definirModo, corPrincipal, definirCorPrincipal, tamanhoFonte, definirTamanhoFonte, densidade, definirDensidade, animacoesAtivas, definirAnimacoesAtivas } = useTheme()
-
-  return (
-    <>
-      <div>
-        <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Tema</p>
-        <div className="grid grid-cols-3 gap-2">
-          <OpcaoTema label="Claro" Icon={Sun} ativo={modo === 'claro'} onClick={() => definirModo('claro')} />
-          <OpcaoTema label="Escuro" Icon={Moon} ativo={modo === 'escuro'} onClick={() => definirModo('escuro')} />
-          <OpcaoTema label="Automático" Icon={MonitorSmartphone} ativo={modo === 'automatico'} onClick={() => definirModo('automatico')} />
-        </div>
-      </div>
-
-      <div>
-        <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Cor principal</p>
-        <div className="flex gap-2.5 flex-wrap">
-          {CORES_PRINCIPAIS.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => definirCorPrincipal(c.id as IdCorPrincipal)}
-              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-              style={{ background: `linear-gradient(135deg, ${c.cor}, ${c.fim})` }}
-              aria-label={c.label}
-            >
-              {corPrincipal === c.id && <Check size={15} className="text-white" strokeWidth={3} />}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Tamanho da fonte</p>
-        <div className="grid grid-cols-2 gap-2">
-          {TAMANHOS_FONTE.map((t) => (
-            <ChipOpcao key={t.id} label={t.label} ativo={tamanhoFonte === t.id} onClick={() => definirTamanhoFonte(t.id)} />
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <p className="text-[11.5px] text-slate-500 font-medium mb-1.5">Densidade da interface</p>
-        <div className="flex flex-col gap-2">
-          {DENSIDADES.map((d) => (
-            <button
-              key={d.id}
-              onClick={() => definirDensidade(d.id)}
-              className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 border ${
-                densidade === d.id ? 'border-accent-cyan bg-accent-cyan/10' : 'border-border card-surface'
-              }`}
-            >
-              <div className="text-left">
-                <p className={`text-[12.5px] font-semibold ${densidade === d.id ? 'text-accent-cyan' : 'text-white'}`}>{d.label}</p>
-                <p className="text-[10.5px] text-slate-500">{d.desc}</p>
-              </div>
-              {densidade === d.id && <Check size={15} className="text-accent-cyan shrink-0" />}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <LinhaSwitch
-        label="Animações"
-        desc="Desative para uma interface mais rápida e enxuta"
-        ativo={animacoesAtivas}
-        onToggle={() => definirAnimacoesAtivas(!animacoesAtivas)}
-      />
-    </>
-  )
-}
-
-function OpcaoTema({ label, Icon, ativo, onClick }: { label: string; Icon: typeof Sun; ativo: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex flex-col items-center gap-1.5 rounded-xl py-3 border ${
-        ativo ? 'border-accent-cyan bg-accent-cyan/10' : 'border-border card-surface'
-      }`}
-    >
-      <Icon size={17} className={ativo ? 'text-accent-cyan' : 'text-slate-400'} />
-      <span className={`text-[11px] font-semibold ${ativo ? 'text-accent-cyan' : 'text-slate-400'}`}>{label}</span>
-    </button>
-  )
-}
-
 function ChipOpcao({ label, ativo, onClick }: { label: string; ativo: boolean; onClick: () => void }) {
   return (
     <button
@@ -245,27 +137,6 @@ function ChipOpcao({ label, ativo, onClick }: { label: string; ativo: boolean; o
       }`}
     >
       {label}
-    </button>
-  )
-}
-
-function LinhaSwitch({ label, desc, ativo, onToggle }: { label: string; desc?: string; ativo: boolean; onToggle: () => void }) {
-  return (
-    <button onClick={onToggle} className="w-full flex items-center justify-between">
-      <div className="text-left pr-3">
-        <p className="text-[12.5px] font-semibold text-white">{label}</p>
-        {desc && <p className="text-[10.5px] text-slate-500">{desc}</p>}
-      </div>
-      <span
-        className="relative w-11 h-6 rounded-full shrink-0 transition-colors"
-        style={{ background: ativo ? 'var(--accent-primaria)' : '#1C2740' }}
-      >
-        <motion.span
-          className="absolute top-0.5 w-5 h-5 rounded-full bg-white"
-          animate={{ left: ativo ? 22 : 2 }}
-          transition={{ type: 'spring', stiffness: 500, damping: 32 }}
-        />
-      </span>
     </button>
   )
 }

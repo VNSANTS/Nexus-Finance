@@ -1,119 +1,66 @@
-# Atualização — Família e perfis (Gestão Financeira → Mais)
+# Nexus Finance — Sessão D: Fundo degradê/imagem + integração final
+
+Entrega referente à "Sessão D" do handoff em `PROXIMA_SESSAO.md`
+(Personalização → fundo do app). Zip só com os arquivos novos/modificados
+— não é o projeto completo.
 
 ## O que mudou
 
-O item "Família e perfis" no menu **Mais** existia só como placeholder
-("em breve"). Esta atualização implementa a tela de verdade.
+- **Novo:** `src/utils/comprimirImagemFundo.ts` — comprime a imagem de
+  fundo escolhida pelo usuário (canvas: redimensiona pra no máximo 1080px
+  de largura, JPEG qualidade 0.75) antes de virar `data:` URL. Se o
+  resultado ainda passar de ~3MB, tenta uma segunda compressão mais
+  agressiva (qualidade 0.5); se mesmo assim passar, rejeita com
+  `ImagemFundoMuitoGrandeError` em vez de deixar estourar o localStorage
+  silenciosamente. Arquivo próprio (não reusa
+  `gestao-financeira/comprimirImagem.ts`) porque a GF é isolada de
+  propósito e Personalização é usada fora dela também.
+- **Modificado:** `src/pages/PersonalizacaoPage.tsx` — bloco "Imagem"
+  (antes só um placeholder "em construção") agora é o componente novo
+  `SeletorImagemFundo`: escolher/trocar/remover imagem, preview, estado
+  de carregamento, aviso de erro, e slider de opacidade
+  (`imagemFundoOpacidade`) quando já existe imagem salva. A parte de
+  degradê **não foi tocada** — já estava completa desde a Sessão B.
+- **Modificado:** `src/App.tsx` — os dois wrappers de nível raiz
+  (onboarding e app principal) trocaram `bg-bg` (opaco, `var(--cor-bg)`)
+  por `bg-transparent`, resolvendo o problema documentado pela Sessão A:
+  o fundo custom (`--bg-fundo-app`, aplicado no `body`) agora aparece de
+  verdade, em vez de ficar coberto pelo wrapper. Nenhum outro uso de
+  `bg-bg` no projeto foi tocado (modais/overlays/inputs devem continuar
+  opacos com a cor de tema pura — checado com grep antes de mexer).
+- **Modificado:** `PROXIMA_SESSAO.md` — Sessão D marcada `[FEITO]` com o
+  resumo do que foi feito. Com isso as 4 sessões (A/B/C/D) da feature de
+  Personalização estão completas.
 
-Como a Gestão Financeira inteira é local (sem servidor, sem conta na
-nuvem — decisão já documentada no próprio código), isto **não é
-multiusuário real entre aparelhos diferentes**. É um sistema de perfis
-dentro do mesmo dispositivo: várias pessoas da família podem ter um
-perfil (nome, avatar, cor, papel) pra organizar quem lançou o quê, com
-um conjunto de permissões que fica salvo — mas trocar de perfil não pede
-senha (é como trocar de usuário num app de streaming, não um login).
+## Verificação rodada
 
-### Papéis e permissões
+```
+rm -rf node_modules
+npm install
+./node_modules/.bin/tsc --noEmit   → zero erros
+npm run build                      → passou, PWA precache gerado normal
+```
 
-Quatro papéis prontos, cada um com um conjunto padrão de permissões que
-pode ser ajustado individualmente por membro ("Personalizar permissões"
-no formulário):
+Sandbox desta sessão tinha acesso à internet.
 
-- **Administrador** — acesso total, inclusive gerenciar outros membros
-- **Adulto** — lança, edita e exclui, mas não mexe nos membros
-- **Jovem/dependente** — lança e edita, não exclui
-- **Visualizador** — só consulta
+## Como instalar
 
-Permissões: lançar, editar, excluir, ver saldos, gerenciar membros.
+1. Substituir/adicionar os arquivos deste zip no projeto (mantendo os
+   caminhos: `src/utils/comprimirImagemFundo.ts` é novo, os outros
+   substituem os existentes).
+2. Não precisa `npm install` de dependência nova — nenhuma foi
+   adicionada nesta sessão.
+3. Testar a tela `/personalizacao`:
+   - Fundo "Imagem": escolher uma foto, conferir preview + slider de
+     opacidade, trocar e remover.
+   - Fundo "Sólido"/"Degradê": confirmar que agora aparecem de verdade
+     por trás do conteúdo (antes ficavam escondidos pelo wrapper).
+   - Testar em pelo menos uma tela de cada área (Home, dentro da GF, um
+     modal/bottom-sheet) pra garantir que nenhum texto ficou ilegível —
+     isso não foi validado visualmente nesta sessão (sandbox sem
+     navegador gráfico), só por leitura de código.
 
-O app sempre garante pelo menos **um administrador** — não deixa excluir
-o membro principal (o "dono" do aparelho, criado automaticamente) nem
-tirar a permissão de gerenciar membros do único administrador restante.
+## O que não foi mexido
 
-### O que a tela faz
-
-- Mostra o **perfil ativo** no topo, com botão "Trocar" (abre a lista de
-  membros pra escolher outro — sem senha)
-- Lista todos os membros, com chips resumindo as permissões de cada um
-- Adicionar / editar / excluir membro (excluir não apaga lançamentos já
-  feitos por essa pessoa, só desvincula)
-
-## Arquivos modificados/criados (7)
-
-Novos:
-- `src/gestao-financeira/permissoes.ts` — papéis, permissões padrão e helpers
-- `src/gestao-financeira/components/GfFormMembro.tsx` — formulário de membro
-- `src/gestao-financeira/pages/GfFamiliaPerfisPage.tsx` — a tela em si
-
-Modificados:
-- `src/gestao-financeira/types.ts` — tipos `Membro`, `PapelMembro`,
-  `PermissoesMembro`; `membros`/`membroAtivoId` no estado; `membroId?`
-  opcional em `Transacao` (preparado pra atribuir lançamentos a um
-  membro no futuro — hoje o formulário de lançamento ainda não usa isso)
-- `src/gestao-financeira/GestaoFinanceiraContext.tsx` — estado inicial
-  cria um membro "Eu" (administrador) automaticamente; ações
-  `adicionarMembro`/`editarMembro`/`excluirMembro`/`definirMembroAtivo`;
-  `LIMPAR_TODOS_DADOS` preserva os membros (são configuração, não dado
-  financeiro, mesma lógica já usada pras outras preferências)
-- `src/gestao-financeira/GestaoFinanceiraShell.tsx` — rota
-  `/gestao-financeira/familia-perfis`
-- `src/gestao-financeira/pages/GfMaisPage.tsx` — o item "Família e
-  perfis" agora navega pra tela em vez de ficar desabilitado
-
-Todos já existiam no projeto (exceto os 3 novos) — é só substituir pelo
-conteúdo deste zip (mesmo caminho, mesmo nome) e criar os novos nos
-caminhos indicados.
-
-## ⚠️ O que fica de fora por decisão (não é bug)
-
-- **Nenhuma tela existente passou a checar permissão de verdade** (ex.: o
-  botão de lançamento na Home ou em Lançamentos não fica desabilitado
-  pra um perfil "Visualizador" ainda). A tela de Família e perfis guarda
-  as permissões certinho — usá-las pra travar botões nas outras 19 telas
-  é trabalho à parte, pra não misturar duas mudanças grandes na mesma
-  leva. `permissoesAtivas(estado)` em `permissoes.ts` já está pronta pra
-  isso quando você quiser.
-- **Sem PIN por perfil** — trocar de perfil é livre, de propósito (ver
-  comentário na própria tela). Bloqueio de verdade é a futura tela
-  Segurança.
-- **Lançamentos ainda não mostram "quem lançou"** — o campo `membroId`
-  existe no tipo, mas o formulário de lançamento não foi alterado nesta
-  leva.
-
-## Como aplicar
-
-1. No GitHub, para os arquivos **modificados**: abra, edite (ícone de
-   lápis), apague o conteúdo e cole o conteúdo do arquivo correspondente
-   deste zip.
-2. Para os arquivos **novos**: crie o arquivo no caminho indicado (botão
-   "Add file" → "Create new file", cole o caminho completo) e cole o
-   conteúdo.
-3. Commit direto na branch `main` (ou um PR, como preferir).
-4. O GitHub Actions builda com `npm install` — não precisa mexer no
-   `deploy.yml`.
-
-## ⚠️ Verificação NÃO concluída nesta sessão
-
-Sem acesso à internet nesta sessão (ambiente sem rede), não rodei
-`npm install` / `tsc --noEmit` / `npm run build`. Revisei manualmente:
-chaves/parênteses balanceados em todos os arquivos tocados, imports
-usados, e os pontos de null-check que costumam gerar TS18048 (capturei
-`ativo`/`membroAtivo` em variável antes de usar em vez de acessar dentro
-de função aninhada). Ainda assim, **isso não substitui o build real** —
-se algo estiver errado, o GitHub Actions vai falhar e mostrar o erro
-exato.
-
-## Teste manual sugerido
-
-1. Vá em Mais → Família e perfis. Deve aparecer um membro "Eu"
-   (Administrador) já criado.
-2. Toque em "Adicionar", crie um segundo membro (ex.: papel
-   "Visualizador"), salve.
-3. Toque em "Trocar" no card do topo, escolha o novo perfil — o card
-   deve atualizar pra ele.
-4. Edite esse membro, abra "Personalizar permissões" e mude um switch —
-   salve e confira que o chip "Sem: ..." no card da lista mudou.
-5. Tente excluir o membro "Eu" (principal) — deve aparecer um aviso
-   bloqueando.
-6. Tente tirar "Gerenciar membros" do único administrador — deve
-   bloquear com aviso, mostrando a mensagem de erro no formulário.
+- Nada pendente das Sessões A/B/C — a feature de Personalização
+  (AMOLED, fundo sólido/degradê/imagem, color picker) está completa.

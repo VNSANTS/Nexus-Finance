@@ -24,6 +24,7 @@ const RevisaoPage = lazy(() => import('@/pages/RevisaoPage'))
 const BuscaPage = lazy(() => import('@/pages/BuscaPage'))
 const DesafioDiarioPage = lazy(() => import('@/pages/DesafioDiarioPage'))
 const NotificacoesConfigPage = lazy(() => import('@/pages/NotificacoesConfigPage'))
+const PersonalizacaoPage = lazy(() => import('@/pages/PersonalizacaoPage'))
 const GestaoFinanceiraShell = lazy(() => import('@/gestao-financeira/GestaoFinanceiraShell'))
 
 function TelaCarregando() {
@@ -98,6 +99,7 @@ function AppRotas() {
             <Route path="/busca" element={<BuscaPage />} />
             <Route path="/desafio-diario" element={<DesafioDiarioPage />} />
             <Route path="/notificacoes" element={<NotificacoesConfigPage />} />
+            <Route path="/personalizacao" element={<PersonalizacaoPage />} />
             <Route path="/gestao-financeira/*" element={<GestaoFinanceiraShell />} />
             <Route path="*" element={<NaoEncontrada />} />
           </Routes>
@@ -117,16 +119,23 @@ export default function App() {
   // e a ressalva sobre agendamento fora do app (sem Service Worker próprio).
   useAgendadorNotificacoesAprender(progress, progress.preferenciasNotificacoesAprender)
 
+  // Antes usava `bg-bg` (Tailwind, var(--cor-bg)) aqui — opaco, cobria o
+  // `body` por baixo. O `body` já provê o fundo geral do app via
+  // `--bg-fundo-app` (sólido, degradê ou imagem, ver globals.css e
+  // useTheme.tsx), então este wrapper agora fica transparente pra deixar
+  // esse fundo aparecer. Ver PROXIMA_SESSAO.md, "Sessão A"/"Sessão D", pro
+  // histórico desse ajuste. Cards continuam opacos via `--cor-bg-card`
+  // (`card-surface`), então nenhuma tela fica com texto sobre fundo errado.
   if (!progress.onboardingDone) {
     return (
-      <div className="max-w-[480px] mx-auto min-h-dvh relative bg-bg">
+      <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
         <Onboarding onFinalizar={setOnboardingDone} />
       </div>
     )
   }
 
   return (
-    <div className="max-w-[480px] mx-auto min-h-dvh relative bg-bg">
+    <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
       <AppRotas />
       {!dentroDeGf && <BottomNav />}
     </div>
