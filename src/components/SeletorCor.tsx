@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { HexAlphaColorPicker } from 'react-colorful'
+import { HexColorPicker, HexAlphaColorPicker } from 'react-colorful'
 import { Check, Sliders, X } from 'lucide-react'
 
 // Componente de seleção de cor compartilhado entre o app principal e a
@@ -19,11 +19,18 @@ import { Check, Sliders, X } from 'lucide-react'
 // Controlado, sem estado de tema embutido: só recebe `valor` (hex) e chama
 // `onChange(hex)` — quem usa decide o que fazer com o hex (ver
 // PersonalizacaoPage.tsx, fundo sólido e "de"/"para" do degradê).
+//
+// `permiteAlpha`: opt-in pro canal de opacidade (#RRGGBBAA). Só é seguro
+// ligar onde o hex é consumido direto como `background`. NUNCA ligar onde
+// a cor é reusada por concatenação de sufixo tipo `${cor}2E`/`${cor}44`
+// (é assim que a cor de perfil funciona em várias telas) — um hex de 9
+// dígitos + sufixo vira uma string inválida e quebra o CSS silenciosamente.
 
 export interface SeletorCorProps {
   label?: string
   valor: string
   onChange: (hex: string) => void
+  permiteAlpha?: boolean
 }
 
 // Fundo em xadrez atrás das amostras de cor — é o jeito padrão de indicar
@@ -85,6 +92,14 @@ function rgbaParaHex(r: number, g: number, b: number, a: number): string {
   return `#${canais.map((n) => n.toString(16).padStart(2, '0')).join('')}`.toUpperCase()
 }
 
+// Força de volta pra #RRGGBB, cortando o canal alpha se tiver algum — usado
+// em todo lugar com permiteAlpha=false (padrão), pra garantir que essa cor
+// nunca vaze um hex de 8 dígitos pra código que concatena sufixo tipo
+// `${cor}2E`.
+function forcarOpaco(hex: string): string {
+  return hex.length > 7 ? hex.slice(0, 7) : hex
+}
+
 // Decide se o "check" de seleção nos presets fica preto ou branco, conforme
 // a luminância percebida do swatch — só estética, não tem relação com tema.
 function corDeContraste(hex: string): string {
@@ -92,7 +107,7 @@ function corDeContraste(hex: string): string {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#000000' : '#FFFFFF'
 }
 
-export default function SeletorCor({ label, valor, onChange }: SeletorCorProps) {
+export default function SeletorCor({ label, valor, onChange, permiteAlpha = false }: SeletorCorProps) {
   const [presetsAbertos, setPresetsAbertos] = useState(false)
   const [avancadoAberto, setAvancadoAberto] = useState(false)
   const [hexDigitado, setHexDigitado] = useState(valor)
@@ -101,11 +116,12 @@ export default function SeletorCor({ label, valor, onChange }: SeletorCorProps) 
   // mantém o campo de texto em sincronia.
   useEffect(() => setHexDigitado(valor), [valor])
 
-  const corValida = normalizarHex(valor) ?? '#000000'
+  const corValida0 = normalizarHex(valor) ?? '#000000'
+  const corValida = permiteAlpha ? corValida0 : forcarOpaco(corValida0)
 
   function confirmarTexto(texto: string) {
     const normalizado = normalizarHex(texto)
-    if (normalizado) onChange(normalizado)
+    if (normalizado) onChange(permiteAlpha ? normalizado : forcarOpaco(normalizado))
     else setHexDigitado(valor) // inválido: reverte pro último valor válido
   }
 
@@ -172,7 +188,13 @@ export default function SeletorCor({ label, valor, onChange }: SeletorCorProps) 
         )}
       </AnimatePresence>
 
-      <ModalAvancado aberto={avancadoAberto} onFechar={() => setAvancadoAberto(false)} valor={corValida} onChange={onChange} />
+      <ModalAvancado
+        aberto={avancadoAberto}
+        onFechar={() => setAvancadoAberto(false)}
+        valor={corValida}
+        onChange={onChange}
+        permiteAlpha={permiteAlpha}
+      />
     </div>
   )
 }
@@ -182,17 +204,20 @@ export function ModalAvancado({
   onFechar,
   valor,
   onChange,
+  permiteAlpha = false,
 }: {
   aberto: boolean
   onFechar: () => void
   valor: string
   onChange: (hex: string) => void
+  permiteAlpha?: boolean
 }) {
   const [hexDigitado, setHexDigitado] = useState(valor)
   const [rgbDigitado, setRgbDigitado] = useState(hexParaRgb(valor))
   // Opacidade exibida em % (0–100) pra ficar mais natural que o byte
   // alpha (0–255) do hex — a conversão acontece só na hora de gravar.
-  const [opacidadeDigitada, setOpacidadeDigitada] = useState(Math.round((hexParaAlpha(valor) / 255) * 100))
+  // Sem permiteAlpha, fica travada em 100 e o campo nem aparece.
+  const [opacidadeDigitada, setOpacidadeDigitada] = useState(permiteAlpha ? Math.round((hexParaAlpha(valor) / 255) * 100) : 100)
 
   // Sincroniza os campos sempre que o valor de fora mudar — inclusive
   // quando o próprio quadrado de saturação/matiz do react-colorful muda o
@@ -200,29 +225,31 @@ export function ModalAvancado({
   useEffect(() => {
     setHexDigitado(valor)
     setRgbDigitado(hexParaRgb(valor))
-    setOpacidadeDigitada(Math.round((hexParaAlpha(valor) / 255) * 100))
-  }, [valor])
+    if (permiteAlpha) setOpacidadeDigitada(Math.round((hexParaAlpha(valor) / 255) * 100))
+  }, [valor, permiteAlpha])
+
+  function gravar(r: number, g: number, b: number, opacidadePct: number) {
+    const hex = permiteAlpha ? rgbaParaHex(r, g, b, (opacidadePct / 100) * 255) : rgbaParaHex(r, g, b, 255)
+    onChange(hex)
+  }
 
   function aplicarRgb(campo: 'r' | 'g' | 'b', texto: string) {
     const n = texto === '' ? 0 : Number(texto)
     const novo = { ...rgbDigitado, [campo]: n }
     setRgbDigitado(novo)
-    if (!Number.isNaN(n)) onChange(rgbaParaHex(novo.r, novo.g, novo.b, (opacidadeDigitada / 100) * 255))
+    if (!Number.isNaN(n)) gravar(novo.r, novo.g, novo.b, opacidadeDigitada)
   }
 
   function aplicarOpacidade(texto: string) {
     const pct = texto === '' ? 0 : Number(texto)
     setOpacidadeDigitada(pct)
-    if (!Number.isNaN(pct)) {
-      const clamped = Math.max(0, Math.min(100, pct))
-      onChange(rgbaParaHex(rgbDigitado.r, rgbDigitado.g, rgbDigitado.b, (clamped / 100) * 255))
-    }
+    if (!Number.isNaN(pct)) gravar(rgbDigitado.r, rgbDigitado.g, rgbDigitado.b, Math.max(0, Math.min(100, pct)))
   }
 
   function aplicarHex(texto: string) {
     setHexDigitado(texto)
     const normalizado = normalizarHex(texto)
-    if (normalizado) onChange(normalizado)
+    if (normalizado) onChange(permiteAlpha ? normalizado : forcarOpaco(normalizado))
   }
 
   return (
@@ -251,7 +278,11 @@ export function ModalAvancado({
             </div>
 
             <div className="seletor-cor-avancado mb-4">
-              <HexAlphaColorPicker color={valor} onChange={(hex) => onChange(hex.toUpperCase())} />
+              {permiteAlpha ? (
+                <HexAlphaColorPicker color={valor} onChange={(hex) => onChange(hex.toUpperCase())} />
+              ) : (
+                <HexColorPicker color={valor} onChange={(hex) => onChange(hex.toUpperCase())} />
+              )}
             </div>
 
             <div className="flex items-center gap-2 rounded-xl border border-border card-surface px-2.5 py-2 mb-3">
@@ -265,7 +296,7 @@ export function ModalAvancado({
               />
             </div>
 
-            <div className="grid grid-cols-4 gap-2">
+            <div className={`grid gap-2 ${permiteAlpha ? 'grid-cols-4' : 'grid-cols-3'}`}>
               {(['r', 'g', 'b'] as const).map((campo) => (
                 <div key={campo}>
                   <p className="text-[10.5px] text-slate-500 font-medium mb-1 uppercase">{campo}</p>
@@ -279,17 +310,19 @@ export function ModalAvancado({
                   />
                 </div>
               ))}
-              <div>
-                <p className="text-[10.5px] text-slate-500 font-medium mb-1 uppercase">Opac. %</p>
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={opacidadeDigitada}
-                  onChange={(e) => aplicarOpacidade(e.target.value)}
-                  className="w-full rounded-xl border border-border card-surface px-2.5 py-2 text-[13px] font-semibold text-white text-center focus:outline-none"
-                />
-              </div>
+              {permiteAlpha && (
+                <div>
+                  <p className="text-[10.5px] text-slate-500 font-medium mb-1 uppercase">Opac. %</p>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={opacidadeDigitada}
+                    onChange={(e) => aplicarOpacidade(e.target.value)}
+                    className="w-full rounded-xl border border-border card-surface px-2.5 py-2 text-[13px] font-semibold text-white text-center focus:outline-none"
+                  />
+                </div>
+              )}
             </div>
           </motion.div>
         </motion.div>

@@ -217,14 +217,14 @@ export default function PersonalizacaoPage() {
             </div>
 
             {tipoFundo === 'solido' && (
-              <SeletorCor label="Cor de fundo" valor={corFundoSolido} onChange={definirCorFundoSolido} />
+              <SeletorCor label="Cor de fundo" valor={corFundoSolido} onChange={definirCorFundoSolido} permiteAlpha />
             )}
 
             {tipoFundo === 'degrade' && (
               <div className="flex flex-col gap-3">
                 <div className="flex flex-col gap-3">
-                  <SeletorCor label="De" valor={degradeFundo.de} onChange={(hex) => definirDegradeFundo({ de: hex })} />
-                  <SeletorCor label="Para" valor={degradeFundo.para} onChange={(hex) => definirDegradeFundo({ para: hex })} />
+                  <SeletorCor label="De" valor={degradeFundo.de} onChange={(hex) => definirDegradeFundo({ de: hex })} permiteAlpha />
+                  <SeletorCor label="Para" valor={degradeFundo.para} onChange={(hex) => definirDegradeFundo({ para: hex })} permiteAlpha />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1.5">

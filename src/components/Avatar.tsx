@@ -20,11 +20,15 @@ interface AvatarProps {
 export default function Avatar({ nome, emoji, cor, fotoUrl, fotoAjuste, size = 64, editavel }: AvatarProps) {
   const iniciais = nome ? nome.trim().split(' ').slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') : '?'
   const ajuste = fotoAjuste ?? { zoom: 1, deslocX: 0, deslocY: 0, rotacaoGraus: 0 }
+  // A cor de perfil é sempre reusada aqui via sufixo (`${cor}26`) — precisa
+  // ser #RRGGBB puro, senão um valor com canal alpha (#RRGGBBAA) vira um
+  // hex de 11 dígitos inválido e o CSS quebra silenciosamente.
+  const corOpaca = cor.length > 7 ? cor.slice(0, 7) : cor
 
   return (
     <div
       className="rounded-full flex items-center justify-center relative shrink-0 overflow-hidden"
-      style={{ width: size, height: size, background: `${cor}26`, border: `2px solid ${cor}` }}
+      style={{ width: size, height: size, background: `${corOpaca}26`, border: `2px solid ${corOpaca}` }}
     >
       {fotoUrl ? (
         <img
@@ -41,7 +45,7 @@ export default function Avatar({ nome, emoji, cor, fotoUrl, fotoAjuste, size = 6
       ) : emoji ? (
         <span style={{ fontSize: size * 0.45 }}>{emoji}</span>
       ) : (
-        <span className="font-display font-extrabold" style={{ fontSize: size * 0.32, color: cor }}>
+        <span className="font-display font-extrabold" style={{ fontSize: size * 0.32, color: corOpaca }}>
           {iniciais}
         </span>
       )}

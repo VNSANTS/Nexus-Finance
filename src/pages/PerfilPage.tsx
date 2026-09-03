@@ -133,7 +133,13 @@ export default function PerfilPage() {
     setTimeout(() => setExportado(false), 2500)
   }
 
-  const corPerfil = progress.perfilPessoal.cor
+  // Corta qualquer canal alpha que tenha ficado salvo por engano (bug já
+  // corrigido no SeletorCor, mas cores já salvas no navegador do usuário
+  // continuam precisando desse saneamento) — essa cor é reusada em vários
+  // lugares por concatenação de sufixo (`${corPerfil}2E` etc.), então
+  // precisa ser sempre #RRGGBB puro.
+  const corPerfilBruta = progress.perfilPessoal.cor
+  const corPerfil = corPerfilBruta.length > 7 ? corPerfilBruta.slice(0, 7) : corPerfilBruta
   const totalBadges = BADGES.filter((b) => b.condicao(statsUsuario)).length
 
   return (
@@ -302,7 +308,7 @@ export default function PerfilPage() {
           <EditarPerfilModal
             nome={progress.perfilPessoal.nome}
             emoji={progress.perfilPessoal.emoji}
-            cor={progress.perfilPessoal.cor}
+            cor={corPerfil}
             fotoUrl={progress.perfilPessoal.fotoUrl}
             fotoAjuste={progress.perfilPessoal.fotoAjuste}
             bio={progress.perfilPessoal.bio ?? ''}
