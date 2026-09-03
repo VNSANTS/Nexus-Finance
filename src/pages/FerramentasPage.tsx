@@ -134,9 +134,11 @@ function ResultCard({ label, value, sub, color }: { label: string; value: string
       style={{ background: `linear-gradient(135deg, ${color}1A, #3B82F61A)`, border: `1px solid ${color}44` }}
     >
       <p className="text-[11px] text-slate-400">{label}</p>
-      <p className="text-[26px] font-display font-extrabold text-white mt-1">{value}</p>
+      <p className="text-[26px] font-display font-extrabold text-white mt-1 truncate" title={value}>
+        {value}
+      </p>
       {sub && (
-        <p className="text-xs font-semibold mt-2" style={{ color }}>
+        <p className="text-xs font-semibold mt-2 truncate" style={{ color }} title={sub}>
           {sub}
         </p>
       )}
@@ -212,6 +214,14 @@ function CalculadoraRouter({ id, onBack }: { id: string; onBack: () => void }) {
 }
 
 function fmt(v: number) {
+  // Valores não-finitos (Infinity/NaN, comuns com taxas/prazos extremos) não têm representação numérica útil
+  if (!isFinite(v)) return 'R$ —'
+  // Acima de 1 quatrilhão o valor deixa de ser um cenário financeiro plausível — mostramos em notação
+  // científica compacta em vez de uma string com centenas de dígitos, que é cara de formatar/renderizar
+  // e é a principal causa do travamento ao arrastar os sliders com valores exagerados.
+  if (Math.abs(v) >= 1e15) {
+    return 'R$ ' + v.toExponential(2).replace('.', ',').replace('e+', ' × 10^').replace('e-', ' × 10^-')
+  }
   return 'R$ ' + Math.round(v).toLocaleString('pt-BR')
 }
 
@@ -248,9 +258,11 @@ function CalcJurosCompostos({ onBack }: { onBack: () => void }) {
           .map((ano, i) => {
             const ponto = historico.find((h) => h.ano === ano) || historico[historico.length - 1]
             return (
-              <div key={ano} className={`flex justify-between px-3.5 py-2.5 ${i % 2 === 0 ? 'bg-bg-card' : 'bg-bg-card/50'}`}>
-                <span className="text-xs text-slate-300">Ano {ano}</span>
-                <span className="text-xs font-bold text-white">{fmt(ponto.saldo)}</span>
+              <div key={ano} className={`flex justify-between items-center gap-2 px-3.5 py-2.5 ${i % 2 === 0 ? 'bg-bg-card' : 'bg-bg-card/50'}`}>
+                <span className="text-xs text-slate-300 shrink-0">Ano {ano}</span>
+                <span className="text-xs font-bold text-white truncate text-right flex-1 min-w-0" title={fmt(ponto.saldo)}>
+                  {fmt(ponto.saldo)}
+                </span>
               </div>
             )
           })}

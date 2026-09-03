@@ -1,66 +1,21 @@
-# Nexus Finance — Sessão D: Fundo degradê/imagem + integração final
+# Atualização — Correção de overflow/travamento nas Calculadoras (Ferramentas)
 
-Entrega referente à "Sessão D" do handoff em `PROXIMA_SESSAO.md`
-(Personalização → fundo do app). Zip só com os arquivos novos/modificados
-— não é o projeto completo.
+## Problema relatado
+Na calculadora de Juros Compostos (e nas demais que usam o mesmo `ResultCard`), ao colocar valores exagerados nos sliders:
+1. Arrastar o slider travava a tela.
+2. Quando o valor resultante era grande demais para caber na tela, ele simplesmente vazava para fora em vez de ser cortado com "...".
 
-## O que mudou
+## Causa
+- O `fmt()` sempre formatava o número completo por extenso (`toLocaleString`). Com taxas de juros extremas (até 1000% ao mês) compostas por até 40 anos, o resultado virava uma string com centenas de dígitos.
+- Essa string enorme era renderizada sem nenhum corte (`overflow`/`truncate`), então o navegador precisava desenhar uma caixa de texto imensa (bem mais larga que a tela) a cada novo evento do slider durante o arraste — isso é o que travava a rolagem/tela no celular.
 
-- **Novo:** `src/utils/comprimirImagemFundo.ts` — comprime a imagem de
-  fundo escolhida pelo usuário (canvas: redimensiona pra no máximo 1080px
-  de largura, JPEG qualidade 0.75) antes de virar `data:` URL. Se o
-  resultado ainda passar de ~3MB, tenta uma segunda compressão mais
-  agressiva (qualidade 0.5); se mesmo assim passar, rejeita com
-  `ImagemFundoMuitoGrandeError` em vez de deixar estourar o localStorage
-  silenciosamente. Arquivo próprio (não reusa
-  `gestao-financeira/comprimirImagem.ts`) porque a GF é isolada de
-  propósito e Personalização é usada fora dela também.
-- **Modificado:** `src/pages/PersonalizacaoPage.tsx` — bloco "Imagem"
-  (antes só um placeholder "em construção") agora é o componente novo
-  `SeletorImagemFundo`: escolher/trocar/remover imagem, preview, estado
-  de carregamento, aviso de erro, e slider de opacidade
-  (`imagemFundoOpacidade`) quando já existe imagem salva. A parte de
-  degradê **não foi tocada** — já estava completa desde a Sessão B.
-- **Modificado:** `src/App.tsx` — os dois wrappers de nível raiz
-  (onboarding e app principal) trocaram `bg-bg` (opaco, `var(--cor-bg)`)
-  por `bg-transparent`, resolvendo o problema documentado pela Sessão A:
-  o fundo custom (`--bg-fundo-app`, aplicado no `body`) agora aparece de
-  verdade, em vez de ficar coberto pelo wrapper. Nenhum outro uso de
-  `bg-bg` no projeto foi tocado (modais/overlays/inputs devem continuar
-  opacos com a cor de tema pura — checado com grep antes de mexer).
-- **Modificado:** `PROXIMA_SESSAO.md` — Sessão D marcada `[FEITO]` com o
-  resumo do que foi feito. Com isso as 4 sessões (A/B/C/D) da feature de
-  Personalização estão completas.
+## Correção (`src/pages/FerramentasPage.tsx`)
+1. **`fmt()`**: agora trata valores não finitos (`Infinity`/`NaN`) mostrando `R$ —`, e valores acima de 1 quatrilhão (cenário fora de qualquer uso real) são exibidos em notação científica compacta (ex.: `R$ 7,95 × 10^29`) em vez da string gigante. Isso resolve a causa raiz do travamento.
+2. **`ResultCard`** (componente usado por todas as ~30 calculadoras): o valor principal e a linha de "Investido/Juros" agora têm `truncate` (corta com "..." se não couber) + `title` com o valor completo.
+3. **Tabela de histórico por ano** (tela de Juros Compostos, a mesma do print): cada linha agora trunca o valor com "..." em vez de vazar para fora da tela, mantendo o rótulo "Ano X" sempre visível.
 
-## Verificação rodada
+## Como aplicar
+Substitua o arquivo `src/pages/FerramentasPage.tsx` do seu repositório pelo arquivo anexo (é o único arquivo alterado). Não há mudança em `types.ts` nem em outros contextos — mudança isolada de UI/formatação.
 
-```
-rm -rf node_modules
-npm install
-./node_modules/.bin/tsc --noEmit   → zero erros
-npm run build                      → passou, PWA precache gerado normal
-```
-
-Sandbox desta sessão tinha acesso à internet.
-
-## Como instalar
-
-1. Substituir/adicionar os arquivos deste zip no projeto (mantendo os
-   caminhos: `src/utils/comprimirImagemFundo.ts` é novo, os outros
-   substituem os existentes).
-2. Não precisa `npm install` de dependência nova — nenhuma foi
-   adicionada nesta sessão.
-3. Testar a tela `/personalizacao`:
-   - Fundo "Imagem": escolher uma foto, conferir preview + slider de
-     opacidade, trocar e remover.
-   - Fundo "Sólido"/"Degradê": confirmar que agora aparecem de verdade
-     por trás do conteúdo (antes ficavam escondidos pelo wrapper).
-   - Testar em pelo menos uma tela de cada área (Home, dentro da GF, um
-     modal/bottom-sheet) pra garantir que nenhum texto ficou ilegível —
-     isso não foi validado visualmente nesta sessão (sandbox sem
-     navegador gráfico), só por leitura de código.
-
-## O que não foi mexido
-
-- Nada pendente das Sessões A/B/C — a feature de Personalização
-  (AMOLED, fundo sólido/degradê/imagem, color picker) está completa.
+## Observação
+Valores "normais" (até milhões/bilhões, o uso real do app) continuam formatados exatamente como antes — só valores absurdamente exagerados (típicos de teste, como 514% ao mês) passam a usar a notação compacta.
