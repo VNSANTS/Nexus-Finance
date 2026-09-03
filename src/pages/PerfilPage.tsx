@@ -28,6 +28,7 @@ import ProgressRing from '@/components/ProgressRing'
 import Avatar from '@/components/Avatar'
 import EditorFotoPerfil from '@/components/EditorFotoPerfil'
 import { ModalAvancado as SeletorCorAvancado } from '@/components/SeletorCor'
+import { corComAlfa, corOpaca } from '@/utils/cor'
 import { useUserProgress } from '@/hooks/useUserProgress'
 import { BADGES } from '@/data/badges'
 import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
@@ -133,13 +134,14 @@ export default function PerfilPage() {
     setTimeout(() => setExportado(false), 2500)
   }
 
-  // Corta qualquer canal alpha que tenha ficado salvo por engano (bug já
-  // corrigido no SeletorCor, mas cores já salvas no navegador do usuário
-  // continuam precisando desse saneamento) — essa cor é reusada em vários
-  // lugares por concatenação de sufixo (`${corPerfil}2E` etc.), então
-  // precisa ser sempre #RRGGBB puro.
-  const corPerfilBruta = progress.perfilPessoal.cor
-  const corPerfil = corPerfilBruta.length > 7 ? corPerfilBruta.slice(0, 7) : corPerfilBruta
+  // Cor de perfil, agora com opacidade própria opcional (#RRGGBB ou
+  // #RRGGBBAA). Onde ela é usada como fundo/borda "suave", combinamos com
+  // corComAlfa (multiplica as opacidades) em vez de concatenar sufixo —
+  // era essa concatenação que quebrava com uma cor já translúcida. Onde
+  // precisa ficar sólida (texto, ícone, contorno do glow), usamos
+  // corOpaca pra garantir legibilidade mesmo se o usuário escolher uma
+  // cor bem transparente.
+  const corPerfil = progress.perfilPessoal.cor
   const totalBadges = BADGES.filter((b) => b.condicao(statsUsuario)).length
 
   return (
@@ -148,11 +150,11 @@ export default function PerfilPage() {
           precisar de uma imagem de capa de verdade (mantém tudo local/leve) */}
       <div
         className="h-[132px] w-full relative overflow-hidden"
-        style={{ background: `linear-gradient(160deg, ${corPerfil}2E 0%, #070B16 78%)` }}
+        style={{ background: `linear-gradient(160deg, ${corComAlfa(corPerfil, 18)} 0%, #070B16 78%)` }}
       >
         <div
           className="absolute -top-10 -right-14 w-[180px] h-[180px] rounded-full blur-3xl opacity-40"
-          style={{ background: corPerfil }}
+          style={{ background: corOpaca(corPerfil) }}
         />
         <div className="px-4 pt-5">
           <h1 className="text-xl font-display font-extrabold text-white">Perfil</h1>
@@ -179,7 +181,7 @@ export default function PerfilPage() {
               <p className="text-base font-display font-bold text-white truncate">{progress.perfilPessoal.nome}</p>
               <span
                 className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-full shrink-0"
-                style={{ background: `${corPerfil}22`, color: corPerfil }}
+                style={{ background: corComAlfa(corPerfil, 13), color: corOpaca(corPerfil) }}
               >
                 Nv. {levelInfo.level}
               </span>
@@ -190,9 +192,9 @@ export default function PerfilPage() {
           </div>
           <div
             className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mb-1"
-            style={{ background: `${corPerfil}1A`, border: `1px solid ${corPerfil}44` }}
+            style={{ background: corComAlfa(corPerfil, 10), border: `1px solid ${corComAlfa(corPerfil, 27)}` }}
           >
-            <Pencil size={12} style={{ color: corPerfil }} />
+            <Pencil size={12} style={{ color: corOpaca(corPerfil) }} />
           </div>
         </button>
 
@@ -699,9 +701,9 @@ function EditarPerfilModal({
                         <button
                           onClick={() => setEmojiTemp(null)}
                           className="w-[36px] h-[36px] rounded-full flex items-center justify-center"
-                          style={{ background: !emojiTemp ? `${corTemp}33` : '#070B16', border: `1.5px solid ${!emojiTemp ? corTemp : '#1C2740'}` }}
+                          style={{ background: !emojiTemp ? corComAlfa(corTemp, 20) : '#070B16', border: `1.5px solid ${!emojiTemp ? corOpaca(corTemp) : '#1C2740'}` }}
                         >
-                          <Smile size={15} style={{ color: !emojiTemp ? corTemp : '#64748B' }} />
+                          <Smile size={15} style={{ color: !emojiTemp ? corOpaca(corTemp) : '#64748B' }} />
                         </button>
                       )}
                       {grupo.itens.map((e) => (
@@ -710,7 +712,7 @@ function EditarPerfilModal({
                           whileTap={{ scale: 0.85 }}
                           onClick={() => setEmojiTemp(e)}
                           className="w-[36px] h-[36px] rounded-full flex items-center justify-center text-[15px]"
-                          style={{ background: emojiTemp === e ? `${corTemp}33` : '#070B16', border: `1.5px solid ${emojiTemp === e ? corTemp : '#1C2740'}` }}
+                          style={{ background: emojiTemp === e ? corComAlfa(corTemp, 20) : '#070B16', border: `1.5px solid ${emojiTemp === e ? corOpaca(corTemp) : '#1C2740'}` }}
                         >
                           {e}
                         </motion.button>
@@ -751,6 +753,7 @@ function EditarPerfilModal({
             onFechar={() => setCorAvancadaAberta(false)}
             valor={corTemp}
             onChange={setCorTemp}
+            permiteAlpha
           />
 
           <div className="flex gap-2.5">

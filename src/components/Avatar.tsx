@@ -1,5 +1,6 @@
 import { Edit3 } from 'lucide-react'
 import type { AjusteFoto } from '@/types'
+import { corComAlfa, corOpaca } from '@/utils/cor'
 
 interface AvatarProps {
   nome: string
@@ -20,15 +21,17 @@ interface AvatarProps {
 export default function Avatar({ nome, emoji, cor, fotoUrl, fotoAjuste, size = 64, editavel }: AvatarProps) {
   const iniciais = nome ? nome.trim().split(' ').slice(0, 2).map((p) => p[0]?.toUpperCase()).join('') : '?'
   const ajuste = fotoAjuste ?? { zoom: 1, deslocX: 0, deslocY: 0, rotacaoGraus: 0 }
-  // A cor de perfil é sempre reusada aqui via sufixo (`${cor}26`) — precisa
-  // ser #RRGGBB puro, senão um valor com canal alpha (#RRGGBBAA) vira um
-  // hex de 11 dígitos inválido e o CSS quebra silenciosamente.
-  const corOpaca = cor.length > 7 ? cor.slice(0, 7) : cor
+  // `cor` pode vir com opacidade própria (#RRGGBBAA) — corComAlfa combina
+  // isso com a opacidade do fundo sem quebrar (em vez de concatenar
+  // sufixo direto na string, que só funciona com hex de 6 dígitos).
+  // Borda e texto ficam sempre sólidos (corOpaca) pra manter legibilidade
+  // mesmo se o usuário escolher uma cor bem transparente.
+  const corBorda = corOpaca(cor)
 
   return (
     <div
       className="rounded-full flex items-center justify-center relative shrink-0 overflow-hidden"
-      style={{ width: size, height: size, background: `${corOpaca}26`, border: `2px solid ${corOpaca}` }}
+      style={{ width: size, height: size, background: corComAlfa(cor, 15), border: `2px solid ${corBorda}` }}
     >
       {fotoUrl ? (
         <img
@@ -45,7 +48,7 @@ export default function Avatar({ nome, emoji, cor, fotoUrl, fotoAjuste, size = 6
       ) : emoji ? (
         <span style={{ fontSize: size * 0.45 }}>{emoji}</span>
       ) : (
-        <span className="font-display font-extrabold" style={{ fontSize: size * 0.32, color: corOpaca }}>
+        <span className="font-display font-extrabold" style={{ fontSize: size * 0.32, color: corBorda }}>
           {iniciais}
         </span>
       )}
