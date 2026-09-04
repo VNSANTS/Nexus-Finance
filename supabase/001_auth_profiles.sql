@@ -131,11 +131,19 @@ create policy "admin_exclui"
 --   add constraint user_progress_modules_user_id_fkey
 --     foreign key (user_id) references public.profiles (id) on delete cascade;
 
--- Se `user_progress_modules` ainda não existe, crie já apontando certo:
+-- Se `user_progress_modules` ainda não existe, crie já apontando certo.
+-- module_id fica como TEXT solto (sem foreign key pra `modules`) porque a
+-- tabela `modules` do schema.sql original ainda não foi criada nesse banco
+-- — ela não é necessária pra login/auth funcionar. Quando rodar o
+-- schema.sql completo (que cria `modules`), pode adicionar a constraint
+-- depois com:
+--   alter table public.user_progress_modules
+--     add constraint user_progress_modules_module_id_fkey
+--     foreign key (module_id) references public.modules (id) on delete cascade;
 create table if not exists public.user_progress_modules (
   id bigserial primary key,
   user_id uuid references public.profiles (id) on delete cascade,
-  module_id text references public.modules (id) on delete cascade,
+  module_id text,
   completed boolean default false,
   progress jsonb,
   updated_at timestamp with time zone default now()

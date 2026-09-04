@@ -110,5 +110,8 @@ function traduzirErro(mensagem: string): string {
     'Password should be at least 6 characters': 'A senha precisa ter pelo menos 6 caracteres.',
     'Email not confirmed': 'Confirme seu e-mail antes de entrar (verifique sua caixa de entrada).',
   }
+  if (mensagem.toLowerCase().includes('banned') || mensagem.toLowerCase().includes('suspended')) {
+    return 'Sua conta está bloqueada. Entre em contato com o suporte.'
+  }
   return mapa[mensagem] ?? mensagem
 }
