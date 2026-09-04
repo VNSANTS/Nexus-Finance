@@ -1,0 +1,257 @@
+/* As fontes são carregadas via <link> no index.html: o @import aqui só era
+   descoberto depois do CSS baixar, atrasando o primeiro texto na tela. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Sistema de tema (CSS variables) =====
+   Toda cor do app referencia uma dessas variáveis (via tailwind.config.js),
+   nunca um hex direto. Trocar de tema = trocar qual bloco está ativo no
+   <html> (classe .tema-claro) — nenhum componente precisa saber disso.
+   :root = tema escuro (valores originais do app, inalterados). */
+:root {
+  --cor-bg: #070B16;
+  --cor-bg-card: #0E1526;
+  --cor-border: #1C2740;
+  --cor-texto: #F4F6FA;
+  --cor-texto-secundario: #94A3B8;
+  --cor-scrollbar: #1C2740;
+  --cor-overlay: rgba(4, 6, 12, 0.92);
+  --cor-overlay-leve: rgba(5, 7, 13, 0.8);
+
+  /* Cor de destaque (accent) — "Cor principal do aplicativo" no documento.
+     --accent-primaria muda com a escolha do usuário; as outras accents
+     (gold/green/pink/red/blue/purple) são semânticas (sucesso, erro etc.)
+     e não mudam com o tema, só a primária. */
+  --accent-primaria: #00D4FF;
+  --accent-primaria-fim: #3B82F6; /* fim do gradiente ciano→azul usado em botões/barras */
+  --accent-gold: #FFC93C;
+  --accent-green: #22C55E;
+  --accent-pink: #EC4899;
+  --accent-red: #EF4444;
+  --accent-blue: #3B82F6;
+  --accent-purple: #8B5CF6;
+
+  /* Escala de fonte e densidade — multiplicadores aplicados via rem em vez
+     de sobrescrever cada tamanho manualmente. 1 = padrão atual do app. */
+  --escala-fonte: 1;
+  --escala-densidade: 1;
+  /* Acessibilidade: espaçamento entre linhas/letras e escala geral da
+     interface (afeta padding/tamanho de toque, distinto de --escala-fonte
+     que só afeta o texto). */
+  --escala-linha: 1;
+  --espacamento-letra: normal;
+  --escala-interface: 1;
+
+  /* ===== Personalização: fundo geral do app =====
+     Setadas via JS pelo ThemeProvider (useTheme.tsx). --bg-fundo-app é a
+     cor sólida OU o gradiente CSS já pronto (linear-gradient(...)),
+     dependendo do que o usuário escolheu — o hook decide, aqui só
+     consome. --cor-bg continua existindo (não removida — outros
+     componentes/telas ainda podem referenciar o fundo "de tema" puro,
+     ex. dentro de modais/inputs que não devem herdar imagem de fundo). */
+  --bg-fundo-app: var(--cor-bg);
+}
+
+.tema-claro {
+  --cor-bg: #F4F6FA;
+  --cor-bg-card: #FFFFFF;
+  --cor-border: #E2E8F0;
+  --cor-texto: #0B1120;
+  --cor-texto-secundario: #64748B;
+  --cor-scrollbar: #CBD5E1;
+  --cor-overlay: rgba(15, 23, 42, 0.55);
+  --cor-overlay-leve: rgba(241, 245, 249, 0.85);
+}
+
+/* Alto contraste — reforça a separação entre texto/fundo e engrossa bordas.
+   Um bloco por tema porque o alvo de contraste (WCAG) é diferente em cada
+   um: no escuro o texto secundário e as bordas ficam quase invisíveis com
+   baixa luminosidade; no claro, cinzas muito claros que somem no branco. */
+.alto-contraste:not(.tema-claro) {
+  --cor-bg: #000000;
+  --cor-bg-card: #0A0A0A;
+  --cor-border: #6B7688;
+  --cor-texto: #FFFFFF;
+  --cor-texto-secundario: #D6DCE8;
+}
+.alto-contraste.tema-claro {
+  --cor-bg: #FFFFFF;
+  --cor-bg-card: #FFFFFF;
+  --cor-border: #33394A;
+  --cor-texto: #000000;
+  --cor-texto-secundario: #33394A;
+}
+.alto-contraste .card-surface {
+  border-width: 2px;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  background: var(--cor-bg);
+  color: var(--cor-texto);
+  font-family: 'Inter', system-ui, sans-serif;
+  overscroll-behavior-y: none;
+  font-size: calc(1em * var(--escala-fonte));
+  line-height: var(--escala-linha);
+  letter-spacing: var(--espacamento-letra);
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Tipo de fonte "mais legível" — troca para uma fonte de sistema com
+   formas de letra mais abertas e distinção clara entre caracteres
+   parecidos (1/l/I), recomendada para baixa visão e dislexia. */
+.fonte-legivel, .fonte-legivel input, .fonte-legivel textarea, .fonte-legivel select {
+  font-family: 'Atkinson Hyperlegible', Verdana, system-ui, sans-serif;
+}
+
+.texto-negrito, .texto-negrito * {
+  font-weight: 600 !important;
+}
+
+/* Escala geral da interface — cresce padding/gap dos cards e botões (não
+   só o texto, que já é coberto por --escala-fonte). Usa uma variável de
+   multiplicação lida pelos componentes de layout mais comuns via classes
+   utilitárias do Tailwind arbitrário (ex: p-[calc(0.875rem*var(--escala-interface))]);
+   aqui cobrimos os alvos de toque genéricos (botão, link) que já existem
+   em todo o app sem precisar editar cada tela. */
+.escala-interface-ativa button, .escala-interface-ativa a[role="button"] {
+  transform: scale(var(--escala-interface));
+  transform-origin: center;
+}
+
+/* Área de toque ampliada — garante o mínimo recomendado (44x44px) mesmo em
+   ícones pequenos, com um pseudo-elemento invisível que estende a área
+   clicável sem alterar o tamanho visual do elemento. */
+.area-toque-ampliada button, .area-toque-ampliada a {
+  position: relative;
+}
+.area-toque-ampliada button::after, .area-toque-ampliada a::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+/* Reduz transparências: overlays/blur ficam praticamente opacos, o que
+   ajuda quem tem sensibilidade a elementos semi-transparentes sobre
+   conteúdo em movimento. */
+.reduzir-transparencias .card-surface {
+  backdrop-filter: none !important;
+}
+.reduzir-transparencias [style*="var(--cor-overlay"] {
+  background: var(--cor-bg) !important;
+  opacity: 0.98;
+}
+
+/* Desativa efeitos visuais decorativos (sombra, blur, glow) mantendo a
+   interface funcional — mais forte que "reduzir transparências", pensado
+   para quem prefere uma interface totalmente plana. */
+.sem-efeitos-visuais * {
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+
+body {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  position: relative;
+  /* Fundo geral do app controlado por --bg-fundo-app (sólido ou gradiente,
+     setado pelo ThemeProvider). O wrapper em App.tsx usa `bg-bg` do
+     Tailwind (var(--cor-bg)) por cima — a Sessão B/D que ligar a página de
+     Personalização precisa trocar essa classe pra não sobrepor o fundo
+     custom escolhido aqui. Documentado em PROXIMA_SESSAO.md. */
+  background: var(--bg-fundo-app);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--cor-scrollbar);
+  border-radius: 4px;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Focus visibility for accessibility */
+:focus-visible {
+  outline: 2px solid var(--accent-primaria);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Classe aplicada no <html> quando o usuário desativa animações nas
+   Configurações gerais — cobre o que prefers-reduced-motion não pega
+   (a preferência aqui é explícita do app, não do sistema operacional). */
+.animacoes-desativadas *, .animacoes-desativadas *::before, .animacoes-desativadas *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--accent-primaria) 0%, var(--accent-primaria-fim) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.card-surface {
+  background: var(--cor-bg-card);
+  border: 1px solid var(--cor-border);
+}
+
+.flip-card {
+  perspective: 1200px;
+}
+.flip-card-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+}
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+.flip-card-face {
+  backface-visibility: hidden;
+}
+.flip-card-back {
+  transform: rotateY(180deg);
+}
+
+/* ===== SeletorCor (src/components/SeletorCor.tsx) — modal "avançado" =====
+   react-colorful já injeta seu próprio <style>, então essas regras só
+   ajustam tamanho/cantos pra combinar com o resto do app (cards
+   arredondados, borda sutil) — não mexem na lógica de cor da lib. */
+.seletor-cor-avancado .react-colorful {
+  width: 100%;
+  height: 200px;
+}
+.seletor-cor-avancado .react-colorful__saturation {
+  border-radius: 14px;
+  border-bottom: none;
+}
+.seletor-cor-avancado .react-colorful__hue,
+.seletor-cor-avancado .react-colorful__alpha {
+  height: 16px;
+  border-radius: 8px;
+  margin-top: 12px;
+}
+.seletor-cor-avancado .react-colorful__pointer {
+  width: 20px;
+  height: 20px;
+  border-width: 2px;
+}

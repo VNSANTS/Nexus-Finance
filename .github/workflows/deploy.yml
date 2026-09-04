@@ -1,0 +1,66 @@
+name: Deploy Nexus Finance no GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # npm install (não npm ci) de propósito: assim, se o package.json ganhar
+      # uma dependência nova e o package-lock.json ainda não tiver sido
+      # regenerado, o build corrige isso sozinho em vez de falhar.
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Checar tipos (TypeScript)
+        run: ./node_modules/.bin/tsc --noEmit
+
+      - name: Build
+        # VITE_SUPABASE_PUBLISHABLE_KEY é segura de ficar aqui (mesma
+        # natureza de uma "anon key" — protegida pela Row Level Security no
+        # banco, não por estar escondida). Se preferir não deixar visível no
+        # workflow mesmo assim, mova os dois valores pra
+        # Settings → Secrets and variables → Actions → New repository
+        # secret, e troque os valores abaixo por
+        # ${{ secrets.VITE_SUPABASE_URL }} / ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}.
+        env:
+          VITE_SUPABASE_URL: https://ygtroklufolvixwazkne.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_uRP9xxjMeC_-L6A8AWwj8g_Seonofnf
+        run: npm run build
+
+      - name: Preparar artefato do Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

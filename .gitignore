@@ -1,0 +1,15 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Variáveis de ambiente — nunca commitar chaves reais.
+# .env.example fica versionado (sem valores reais); .env.local não.
+.env
+.env.local
+.env.*.local
+
+# Editor / SO
+.DS_Store
+.vscode/*
+!.vscode/extensions.json

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="ribbonMain" x1="15%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="#22E7F5"/>
+      <stop offset="38%" stop-color="#3FA9F5"/>
+      <stop offset="68%" stop-color="#7B6DF0"/>
+      <stop offset="100%" stop-color="#C63BE0"/>
+    </linearGradient>
+    <linearGradient id="ribbonShade" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E3A5C"/>
+      <stop offset="100%" stop-color="#2A2A6B"/>
+    </linearGradient>
+    <linearGradient id="ribbonHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#BFF6FF" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#BFF6FF" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="symGlow">
+      <stop offset="0%" stop-color="#22E7F5" stop-opacity="0.28"/>
+      <stop offset="45%" stop-color="#22E7F5" stop-opacity="0.1"/>
+      <stop offset="72%" stop-color="#22E7F5" stop-opacity="0.03"/>
+      <stop offset="100%" stop-color="#22E7F5" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <ellipse cx="256" cy="256" rx="248" ry="248" fill="url(#symGlow)"/>
+
+  <g transform="translate(256,256) scale(1.55) translate(-256,-256)">
+    <!-- back/shadow layer of the ribbon for depth -->
+    <path d="M182 118 L182 300 L150 300 L150 168 Z" fill="url(#ribbonShade)"/>
+    <path d="M362 118 L362 300 L330 300 L330 232 Z" fill="url(#ribbonShade)"/>
+
+    <!-- left stroke of the N, tapering to a point at bottom-left -->
+    <path d="
+      M 214 116
+      C 178 118, 150 146, 150 182
+      L 150 396
+      L 124 452
+      L 150 396
+      L 176 340
+      L 176 182
+      C 176 160, 194 144, 214 144
+      Z" fill="url(#ribbonMain)"/>
+
+    <!-- right stroke of the N, tapering to a point at top-right -->
+    <path d="
+      M 388 118
+      C 384 116, 379 116, 375 118
+      L 302 262
+      L 302 116
+      L 328 172
+      L 328 262
+      C 328 284, 346 300, 368 300
+      L 388 300
+      C 388 300, 412 264, 424 210
+      C 436 158, 400 120, 388 118
+      Z" fill="url(#ribbonMain)"/>
+
+    <!-- central diagonal band connecting the two strokes -->
+    <path d="
+      M 176 182
+      L 176 236
+      L 320 396
+      C 336 414, 362 420, 382 408
+      C 402 396, 408 370, 396 350
+      L 328 262
+      L 302 262
+      L 214 144
+      Z" fill="url(#ribbonMain)"/>
+
+    <!-- rounded terminal knot at bottom-right -->
+    <ellipse cx="358" cy="366" rx="38" ry="42" fill="url(#ribbonMain)"/>
+
+    <!-- soft highlight sweep for the twisted ribbon sheen -->
+    <path d="M186 150 L176 182 L176 236 L302 262 L262 200 Z" fill="url(#ribbonHighlight)" opacity="0.5"/>
+  </g>
+</svg>
