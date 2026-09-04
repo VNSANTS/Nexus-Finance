@@ -8,6 +8,7 @@ import HomePage from '@/pages/HomePage'
 import { useUserProgress } from '@/hooks/useUserProgress'
 import { useAgendadorNotificacoesAprender } from '@/lib/notificacoesAprender'
 import GfTransicao from '@/gestao-financeira/components/GfTransicao'
+import { RotaAdmin } from '@/auth/RotaProtegida'
 
 // A Home entra no bundle inicial (é a primeira tela). O resto é carregado ao
 // navegar: cada tela vira um chunk próprio, então abrir o app não custa mais
@@ -28,6 +29,7 @@ const NotificacoesConfigPage = lazy(() => import('@/pages/NotificacoesConfigPage
 const PersonalizacaoPage = lazy(() => import('@/pages/PersonalizacaoPage'))
 const GestaoFinanceiraShell = lazy(() => import('@/gestao-financeira/GestaoFinanceiraShell'))
 const AdminUsuariosPage = lazy(() => import('@/admin/AdminUsuariosPage'))
+const LoginPage = lazy(() => import('@/auth/LoginPage'))
 
 function TelaCarregando() {
   return (
@@ -103,7 +105,15 @@ function AppRotas() {
             <Route path="/notificacoes" element={<NotificacoesConfigPage />} />
             <Route path="/personalizacao" element={<PersonalizacaoPage />} />
             <Route path="/gestao-financeira/*" element={<GestaoFinanceiraShell />} />
-            <Route path="/admin/usuarios" element={<AdminUsuariosPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/admin/usuarios"
+              element={
+                <RotaAdmin>
+                  <AdminUsuariosPage />
+                </RotaAdmin>
+              }
+            />
             <Route path="*" element={<NaoEncontrada />} />
           </Routes>
         </Suspense>

@@ -1,16 +1,12 @@
 /**
  * Ponto único de entrada do "backend" do painel admin.
  *
- * Hoje aponta pra ./mock (array em memória, ver src/admin/mockUsers.ts).
- * Quando a API real existir:
- *
- *   1. Criar src/admin/backend/remoto.ts com as MESMAS 5 funções
- *      exportadas aqui (listarUsuarios, atualizarPapel, atualizarStatus,
- *      editarUsuario, excluirUsuario), fazendo fetch pra API em vez de
- *      mexer no array em memória.
- *   2. Trocar a linha abaixo pra importar de './remoto'.
+ * Agora aponta pra ./remoto (Supabase real, tabela `profiles`). O mock
+ * (./mock, array em memória) continua existindo em src/admin/backend/mock.ts
+ * caso seja útil pra testar a tela sem depender de rede/Supabase — é só
+ * trocar a linha abaixo de volta pra './mock'.
  *
  * Nenhuma página do admin importa de ./mock ou ./remoto diretamente — só
- * daqui. No dia da troca é 1 linha, igual foi pensado em src/backend/.
+ * daqui, então essa troca nunca exige mexer em mais nada.
  */
-export { listarUsuarios, atualizarPapel, atualizarStatus, editarUsuario, excluirUsuario } from './mock'
+export { listarUsuarios, atualizarPapel, atualizarStatus, editarUsuario, excluirUsuario } from './remoto'

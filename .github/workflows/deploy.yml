@@ -37,6 +37,16 @@ jobs:
         run: ./node_modules/.bin/tsc --noEmit
 
       - name: Build
+        # VITE_SUPABASE_PUBLISHABLE_KEY é segura de ficar aqui (mesma
+        # natureza de uma "anon key" — protegida pela Row Level Security no
+        # banco, não por estar escondida). Se preferir não deixar visível no
+        # workflow mesmo assim, mova os dois valores pra
+        # Settings → Secrets and variables → Actions → New repository
+        # secret, e troque os valores abaixo por
+        # ${{ secrets.VITE_SUPABASE_URL }} / ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}.
+        env:
+          VITE_SUPABASE_URL: https://ygtroklufolvixwazkne.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_uRP9xxjMeC_-L6A8AWwj8g_Seonofnf
         run: npm run build
 
       - name: Preparar artefato do Pages

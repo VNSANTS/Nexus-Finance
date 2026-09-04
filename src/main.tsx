@@ -5,6 +5,7 @@ import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { ProgressProvider } from './hooks/useUserProgress'
 import { ThemeProvider } from './hooks/useTheme'
+import { AuthProvider } from './auth/AuthContext'
 import './styles/globals.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -16,10 +17,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           app inteiro, não específica de nenhum dos dois). */}
       <ThemeProvider>
         <BrowserRouter basename="/Nexus-Finance/">
-          {/* Uma instância única do progresso para o app inteiro. */}
-          <ProgressProvider>
-            <App />
-          </ProgressProvider>
+          {/* AuthProvider por fora do Router: qualquer tela (inclusive o
+              próprio /login) precisa poder ler sessão/perfil. */}
+          <AuthProvider>
+            {/* Uma instância única do progresso para o app inteiro. */}
+            <ProgressProvider>
+              <App />
+            </ProgressProvider>
+          </AuthProvider>
         </BrowserRouter>
       </ThemeProvider>
     </ErrorBoundary>
