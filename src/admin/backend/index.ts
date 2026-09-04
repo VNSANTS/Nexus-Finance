@@ -9,4 +9,4 @@
  * Nenhuma página do admin importa de ./mock ou ./remoto diretamente — só
  * daqui, então essa troca nunca exige mexer em mais nada.
  */
-export { listarUsuarios, atualizarPapel, atualizarStatus, editarUsuario, excluirUsuario } from './remoto'
+export { listarUsuarios, atualizarPapel, atualizarStatus, editarUsuario, atualizarMetricas, excluirUsuario } from './remoto'

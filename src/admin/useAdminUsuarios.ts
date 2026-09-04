@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { EdicaoUsuarioAdmin, FiltrosAdmin, OrdenacaoAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from './types'
-import { atualizarPapel, atualizarStatus, editarUsuario, excluirUsuario, listarUsuarios } from './backend'
+import type { EdicaoMetricasAdmin, EdicaoUsuarioAdmin, FiltrosAdmin, OrdenacaoAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from './types'
+import { atualizarMetricas, atualizarPapel, atualizarStatus, editarUsuario, excluirUsuario, listarUsuarios } from './backend'
 
 const FILTROS_INICIAIS: FiltrosAdmin = { busca: '', papel: 'todos', status: 'todos' }
 
@@ -71,6 +71,16 @@ export function useAdminUsuarios() {
     }
   }, [])
 
+  const salvarMetricas = useCallback(async (id: string, dados: EdicaoMetricasAdmin) => {
+    marcarPendente(id, true)
+    try {
+      const atualizado = await atualizarMetricas(id, dados)
+      setUsuarios((prev) => prev.map((u) => (u.id === id ? atualizado : u)))
+    } finally {
+      marcarPendente(id, false)
+    }
+  }, [])
+
   const remover = useCallback(async (id: string) => {
     marcarPendente(id, true)
     try {
@@ -134,6 +144,7 @@ export function useAdminUsuarios() {
     alternarPapel,
     alternarStatus,
     salvarEdicao,
+    salvarMetricas,
     remover,
   }
 }

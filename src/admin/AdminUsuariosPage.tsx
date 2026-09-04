@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft, Search, ShieldCheck, ShieldOff, Lock, Unlock, Pencil, Trash2,
-  Users, UserCheck, UserX, Crown, X, Loader2, AlertTriangle, ChevronDown,
+  Users, UserCheck, UserX, Crown, X, Loader2, AlertTriangle, ChevronDown, Sparkles,
 } from 'lucide-react'
 import { useAdminUsuarios } from './useAdminUsuarios'
-import type { EdicaoUsuarioAdmin, OrdenacaoAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from './types'
+import type { EdicaoMetricasAdmin, EdicaoUsuarioAdmin, OrdenacaoAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from './types'
 
 function formatarData(iso: string | null) {
   if (!iso) return 'Nunca acessou'
@@ -152,6 +152,107 @@ function ModalEdicao({
   )
 }
 
+// --- Modal de edição de métricas (XP, level, streak etc.) -----------------
+
+function ModalMetricas({
+  usuario, carregando, onSalvar, onCancelar,
+}: {
+  usuario: UsuarioAdmin
+  carregando: boolean
+  onSalvar: (dados: EdicaoMetricasAdmin) => void
+  onCancelar: () => void
+}) {
+  const [xp, setXp] = useState(String(usuario.metricas.xp))
+  const [level, setLevel] = useState(String(usuario.metricas.level))
+  const [streak, setStreak] = useState(String(usuario.metricas.streak))
+  const [badges, setBadges] = useState(String(usuario.metricas.badges))
+  const [desafios, setDesafios] = useState(String(usuario.metricas.desafiosCompletos))
+
+  // Aceita negativo só em XP (o próprio app permite XP negativo — ver
+  // useUserProgress.ts, perderXp). Os demais campos não fazem sentido
+  // negativos, então ficam presos em >= 0.
+  const numOuNull = (v: string, permiteNegativo = false) => {
+    if (v.trim() === '' || v.trim() === '-') return null
+    const n = Number(v)
+    if (!Number.isFinite(n)) return null
+    if (!permiteNegativo && n < 0) return null
+    return Math.trunc(n)
+  }
+
+  const xpNum = numOuNull(xp, true)
+  const levelNum = numOuNull(level)
+  const streakNum = numOuNull(streak)
+  const badgesNum = numOuNull(badges)
+  const desafiosNum = numOuNull(desafios)
+  const podeSalvar =
+    xpNum !== null && levelNum !== null && levelNum >= 1 && streakNum !== null && badgesNum !== null && desafiosNum !== null
+
+  function campoNumerico(label: string, valor: string, onChange: (v: string) => void, valido: boolean) {
+    return (
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-semibold text-texto-secundario">{label}</span>
+        <input
+          value={valor}
+          onChange={(e) => onChange(e.target.value)}
+          inputMode="numeric"
+          className={`rounded-xl bg-bg border px-3 py-2.5 text-sm text-texto outline-none focus:border-accent-cyan ${
+            valido ? 'border-border' : 'border-accent-red'
+          }`}
+        />
+      </label>
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={onCancelar}>
+      <div
+        className="w-full max-w-sm rounded-card-lg bg-bg-card border border-border p-5 flex flex-col gap-4 mb-6 sm:mb-0"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles size={16} className="text-accent-gold" />
+            <h3 className="font-display font-bold text-texto text-sm">Editar progresso</h3>
+          </div>
+          <button onClick={onCancelar} className="text-texto-secundario">
+            <X size={18} />
+          </button>
+        </div>
+
+        <p className="text-xs text-texto-secundario -mt-2">
+          Editar aqui muda o progresso salvo no servidor. O nível/título (ex: "{usuario.metricas.levelName}") não
+          muda sozinho — ajuste também se fizer sentido.
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          {campoNumerico('XP', xp, setXp, xpNum !== null)}
+          {campoNumerico('Nível (1-6)', level, setLevel, levelNum !== null && levelNum >= 1)}
+          {campoNumerico('Sequência (dias)', streak, setStreak, streakNum !== null)}
+          {campoNumerico('Badges', badges, setBadges, badgesNum !== null)}
+        </div>
+        {campoNumerico('Desafios diários completos', desafios, setDesafios, desafiosNum !== null)}
+
+        <div className="flex gap-2">
+          <button onClick={onCancelar} className="flex-1 rounded-full border border-border py-2.5 text-sm font-semibold text-texto">
+            Cancelar
+          </button>
+          <button
+            onClick={() =>
+              podeSalvar &&
+              onSalvar({ xp: xpNum!, level: levelNum!, streak: streakNum!, badges: badgesNum!, desafiosCompletos: desafiosNum! })
+            }
+            disabled={!podeSalvar || carregando}
+            className="flex-1 rounded-full bg-accent-cyan py-2.5 text-sm font-semibold text-black flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            {carregando && <Loader2 size={14} className="animate-spin" />}
+            Salvar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // --- Cartão de métricas expandido ---------------------------------------
 
 function LinhaMetrica({ label, valor }: { label: string; valor: string }) {
@@ -166,13 +267,14 @@ function LinhaMetrica({ label, valor }: { label: string; valor: string }) {
 // --- Linha de usuário (cartão) -------------------------------------------
 
 function CartaoUsuario({
-  usuario, pendente, onAlternarPapel, onAlternarStatus, onEditar, onExcluir,
+  usuario, pendente, onAlternarPapel, onAlternarStatus, onEditar, onEditarMetricas, onExcluir,
 }: {
   usuario: UsuarioAdmin
   pendente: boolean
   onAlternarPapel: () => void
   onAlternarStatus: () => void
   onEditar: () => void
+  onEditarMetricas: () => void
   onExcluir: () => void
 }) {
   const [expandido, setExpandido] = useState(false)
@@ -259,6 +361,14 @@ function CartaoUsuario({
               Editar
             </button>
             <button
+              onClick={onEditarMetricas}
+              disabled={pendente}
+              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border border-accent-gold/40 text-accent-gold disabled:opacity-50"
+            >
+              <Sparkles size={13} />
+              Progresso
+            </button>
+            <button
               onClick={onExcluir}
               disabled={pendente}
               className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border border-accent-red/40 text-accent-red disabled:opacity-50 ml-auto"
@@ -278,10 +388,11 @@ function CartaoUsuario({
 export default function AdminUsuariosPage() {
   const {
     usuarios, totalSemFiltro, estatisticas, carregando, erro, filtros, setFiltros,
-    ordenacao, setOrdenacao, pendentes, recarregar, alternarPapel, alternarStatus, salvarEdicao, remover,
+    ordenacao, setOrdenacao, pendentes, recarregar, alternarPapel, alternarStatus, salvarEdicao, salvarMetricas, remover,
   } = useAdminUsuarios()
 
   const [editando, setEditando] = useState<UsuarioAdmin | null>(null)
+  const [editandoMetricas, setEditandoMetricas] = useState<UsuarioAdmin | null>(null)
   const [excluindo, setExcluindo] = useState<UsuarioAdmin | null>(null)
 
   return (
@@ -385,6 +496,7 @@ export default function AdminUsuariosPage() {
               onAlternarPapel={() => alternarPapel(u.id, u.papel)}
               onAlternarStatus={() => alternarStatus(u.id, u.status)}
               onEditar={() => setEditando(u)}
+              onEditarMetricas={() => setEditandoMetricas(u)}
               onExcluir={() => setExcluindo(u)}
             />
           ))}
@@ -399,6 +511,18 @@ export default function AdminUsuariosPage() {
           onSalvar={async (dados) => {
             await salvarEdicao(editando.id, dados)
             setEditando(null)
+          }}
+        />
+      )}
+
+      {editandoMetricas && (
+        <ModalMetricas
+          usuario={editandoMetricas}
+          carregando={pendentes.has(editandoMetricas.id)}
+          onCancelar={() => setEditandoMetricas(null)}
+          onSalvar={async (dados) => {
+            await salvarMetricas(editandoMetricas.id, dados)
+            setEditandoMetricas(null)
           }}
         />
       )}

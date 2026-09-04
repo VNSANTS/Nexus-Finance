@@ -164,7 +164,7 @@ export default function App() {
       <FundoPersonalizado />
       <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
         <AppRotas />
-        {!dentroDeGf && <BottomNav />}
+        {!dentroDeGf && location.pathname !== '/login' && <BottomNav />}
       </div>
     </>
   )

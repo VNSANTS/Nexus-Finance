@@ -1,14 +1,18 @@
 import { supabase } from '@/lib/supabase'
-import type { EdicaoUsuarioAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from '../types'
+import type { EdicaoMetricasAdmin, EdicaoUsuarioAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from '../types'
 
 // Implementação real (Supabase) do backend do admin. Troque o import em
 // ./index.ts de './mock' para './remoto' quando quiser sair do modo mock —
 // nenhuma página do admin precisa mudar.
 //
-// Duas camadas de ação aqui:
+// Três camadas de ação aqui:
 //  - Promover/rebaixar admin e editar nome: update direto em `profiles`,
 //    já protegido por RLS (só admin pode fazer update em linha alheia —
 //    ver supabase/001_auth_profiles.sql).
+//  - Editar métricas (XP, level, streak, badges, desafios): update direto
+//    em `user_progress` (ver supabase/002_user_progress.sql) — RLS já
+//    permite admin escrever em qualquer linha, não precisa de Edge
+//    Function pra isso (não mexe em auth.users).
 //  - Excluir usuário, editar e-mail de LOGIN e bloquear de verdade: essas
 //    três exigem privilégio total sobre auth.users, que a publishable key
 //    não tem (de propósito). Passam pela Edge Function `admin-users`
@@ -16,11 +20,10 @@ import type { EdicaoUsuarioAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } fr
 //    service_role key só no servidor e confirma que quem está chamando é
 //    admin antes de fazer qualquer coisa.
 //
-// LIMITAÇÃO ATUAL: a tabela `profiles` só guarda id/email/nome/role/status
-// — não tem xp, level, streak, badges etc. Esses dados hoje vivem só no
-// localStorage de cada usuário (ver src/backend/local/progressStore.ts),
-// não em `user_progress_modules` no banco. Até o app passar a sincronizar
-// progresso pro Supabase de verdade, as métricas abaixo vêm zeradas.
+// `profiles` e `user_progress` são tabelas separadas (progresso é opcional
+// — usuário recém-cadastrado ainda não tem linha em user_progress até
+// sincronizar pela primeira vez), então listarUsuarios faz duas queries e
+// mescla em memória em vez de um join no Supabase JS.
 
 type LinhaProfile = {
   id: string
@@ -29,6 +32,19 @@ type LinhaProfile = {
   role: PapelUsuario
   status: StatusUsuario
   created_at: string
+}
+
+type LinhaProgresso = {
+  user_id: string
+  xp: number
+  level: number
+  level_name: string
+  streak: number
+  badges_count: number
+  desafios_completos: number
+  modulos_concluidos: number
+  risk_profile: 'conservador' | 'moderado' | 'agressivo' | null
+  ultima_atividade: string | null
 }
 
 function metricasVazias(): UsuarioAdmin['metricas'] {
@@ -46,7 +62,23 @@ function metricasVazias(): UsuarioAdmin['metricas'] {
   }
 }
 
-function mapearLinha(linha: LinhaProfile): UsuarioAdmin {
+function mapearMetricas(linha: LinhaProgresso | undefined): UsuarioAdmin['metricas'] {
+  if (!linha) return metricasVazias()
+  return {
+    xp: linha.xp,
+    level: linha.level,
+    levelName: linha.level_name,
+    streak: linha.streak,
+    modulosConcluidos: linha.modulos_concluidos,
+    totalModulos: 66,
+    badges: linha.badges_count,
+    desafiosCompletos: linha.desafios_completos,
+    riskProfile: linha.risk_profile,
+    ultimaAtividade: linha.ultima_atividade,
+  }
+}
+
+function mapearLinha(linha: LinhaProfile, progresso: LinhaProgresso | undefined): UsuarioAdmin {
   return {
     id: linha.id,
     email: linha.email,
@@ -54,7 +86,7 @@ function mapearLinha(linha: LinhaProfile): UsuarioAdmin {
     papel: linha.role,
     status: linha.status,
     criadoEm: linha.created_at,
-    metricas: metricasVazias(),
+    metricas: mapearMetricas(progresso),
   }
 }
 
@@ -68,14 +100,31 @@ async function chamarAdminFunction<T>(payload: Record<string, unknown>): Promise
   return data.dados as T
 }
 
-export async function listarUsuarios(): Promise<UsuarioAdmin[]> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, email, nome, role, status, created_at')
-    .order('nome', { ascending: true })
+async function buscarProgressoPorId(id: string): Promise<LinhaProgresso | undefined> {
+  const { data } = await supabase
+    .from('user_progress')
+    .select('user_id, xp, level, level_name, streak, badges_count, desafios_completos, modulos_concluidos, risk_profile, ultima_atividade')
+    .eq('user_id', id)
+    .maybeSingle()
+  return (data as LinhaProgresso | null) ?? undefined
+}
 
-  if (error) throw new Error(error.message)
-  return (data as LinhaProfile[]).map(mapearLinha)
+export async function listarUsuarios(): Promise<UsuarioAdmin[]> {
+  const [{ data: perfis, error: erroPerfis }, { data: progressos, error: erroProgresso }] = await Promise.all([
+    supabase.from('profiles').select('id, email, nome, role, status, created_at').order('nome', { ascending: true }),
+    supabase
+      .from('user_progress')
+      .select('user_id, xp, level, level_name, streak, badges_count, desafios_completos, modulos_concluidos, risk_profile, ultima_atividade'),
+  ])
+
+  if (erroPerfis) throw new Error(erroPerfis.message)
+  // Se user_progress ainda não existir no banco (ex: SQL 002 não rodado
+  // ainda), não derruba a listagem — só mostra métricas zeradas pra todos.
+  const progressoPorId = new Map(
+    (erroProgresso ? [] : ((progressos as LinhaProgresso[] | null) ?? [])).map((p) => [p.user_id, p])
+  )
+
+  return (perfis as LinhaProfile[]).map((p) => mapearLinha(p, progressoPorId.get(p.id)))
 }
 
 export async function atualizarPapel(id: string, papel: PapelUsuario): Promise<UsuarioAdmin> {
@@ -87,7 +136,7 @@ export async function atualizarPapel(id: string, papel: PapelUsuario): Promise<U
     .single()
 
   if (error) throw new Error(error.message)
-  return mapearLinha(data as LinhaProfile)
+  return mapearLinha(data as LinhaProfile, await buscarProgressoPorId(id))
 }
 
 export async function atualizarStatus(id: string, status: StatusUsuario): Promise<UsuarioAdmin> {
@@ -103,7 +152,7 @@ export async function atualizarStatus(id: string, status: StatusUsuario): Promis
     .single()
 
   if (error) throw new Error(error.message)
-  return mapearLinha(data as LinhaProfile)
+  return mapearLinha(data as LinhaProfile, await buscarProgressoPorId(id))
 }
 
 export async function editarUsuario(id: string, dados: EdicaoUsuarioAdmin): Promise<UsuarioAdmin> {
@@ -120,11 +169,44 @@ export async function editarUsuario(id: string, dados: EdicaoUsuarioAdmin): Prom
     .single()
 
   if (error) throw new Error(error.message)
-  return mapearLinha(data as LinhaProfile)
+  return mapearLinha(data as LinhaProfile, await buscarProgressoPorId(id))
+}
+
+// Edita XP, level, streak, badges e desafios completos de um usuário.
+// Update direto em `user_progress` — RLS (ver 002_user_progress.sql) já
+// libera admin escrever em qualquer linha, não precisa de Edge Function
+// (só as ações que mexem em auth.users precisam disso).
+//
+// Se a linha ainda não existir (usuário nunca sincronizou progresso —
+// cadastro muito recente, ou ainda não abriu o app depois de logar), faz
+// upsert: cria a linha já com os valores editados pelo admin.
+export async function atualizarMetricas(id: string, dados: EdicaoMetricasAdmin): Promise<UsuarioAdmin> {
+  const { error } = await supabase.from('user_progress').upsert(
+    {
+      user_id: id,
+      xp: dados.xp,
+      level: dados.level,
+      streak: dados.streak,
+      badges_count: dados.badges,
+      desafios_completos: dados.desafiosCompletos,
+    },
+    { onConflict: 'user_id' }
+  )
+  if (error) throw new Error(error.message)
+
+  const { data: perfil, error: erroPerfil } = await supabase
+    .from('profiles')
+    .select('id, email, nome, role, status, created_at')
+    .eq('id', id)
+    .single()
+
+  if (erroPerfil) throw new Error(erroPerfil.message)
+  return mapearLinha(perfil as LinhaProfile, await buscarProgressoPorId(id))
 }
 
 export async function excluirUsuario(id: string): Promise<void> {
   // Remove o login de verdade (auth.users) via Edge Function; o perfil em
-  // `profiles` some sozinho por causa do ON DELETE CASCADE.
+  // `profiles` some sozinho por causa do ON DELETE CASCADE (e a linha em
+  // user_progress também, mesmo mecanismo).
   await chamarAdminFunction({ tipo: 'excluirUsuario', alvoId: id })
 }

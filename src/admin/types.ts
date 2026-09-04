@@ -47,6 +47,17 @@ export interface EdicaoUsuarioAdmin {
   email: string
 }
 
+// Payload de edição de métricas de progresso (XP, level, streak etc.) —
+// separado de EdicaoUsuarioAdmin porque tem sua própria função no backend
+// (atualizarMetricas) e seu próprio modal na tela.
+export interface EdicaoMetricasAdmin {
+  xp: number
+  level: number
+  streak: number
+  badges: number
+  desafiosCompletos: number
+}
+
 export interface FiltrosAdmin {
   busca: string
   papel: PapelUsuario | 'todos'

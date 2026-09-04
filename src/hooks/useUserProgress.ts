@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import type { UserProgress, ItemRevisao, Flashcard, QuizQuestion, NomeAba, PerguntaDesafio } from '@/types'
 import { TODAS_ABAS, XP_POR_ABA } from '@/types'
 import { defaultProgress, carregarProgressoSincrono, salvarProgresso } from '@/backend'
+import { buscarDoServidor, enviarParaServidor, setUsuarioAtual } from '@/backend/remoto/progressSync'
+import { useAuth } from '@/auth/AuthContext'
 
 const PERSIST_DEBOUNCE_MS = 400
 const JANELA_ANTI_GRINDING_MS = 10 * 60 * 1000
@@ -116,6 +118,12 @@ function useProgressStore() {
     salvarProgresso(stateRef.current!).catch(() => {
       // modo privado / cota cheia: o app continua funcionando em memória
     })
+    // Envio ao Supabase é "e se der certo, ótimo": localStorage já é a
+    // fonte de verdade local, isto só mantém o servidor atualizado para o
+    // painel admin e para sincronizar entre aparelhos. Falha de rede aqui
+    // nunca aparece pro usuário nem derruba nada — a próxima mudança
+    // tenta de novo.
+    enviarParaServidor(stateRef.current!).catch(() => {})
   }, [])
 
   const update = useCallback(
@@ -133,6 +141,38 @@ function useProgressStore() {
     },
     [persistir]
   )
+
+  // Sincronização com o Supabase ao logar/deslogar.
+  //
+  // Ao logar: avisa progressSync.ts quem é o usuário atual (pra
+  // enviarParaServidor saber pra qual linha escrever) e busca o progresso
+  // salvo no servidor. Se existir e tiver mais XP que o local, aplica por
+  // cima — heurística simples que evita perder progresso feito em outro
+  // aparelho sem sobrescrever à toa um progresso local mais avançado feito
+  // offline antes de logar (ex: usuário mexeu no app deslogado, depois
+  // logou). Não é um merge de verdade campo a campo — não deveria haver os
+  // dois preenchidos de forma divergente no uso normal (o progresso relevante
+  // é sempre o do usuário logado); isto é só uma rede de segurança.
+  //
+  // Ao deslogar: limpa o usuário atual, para de mandar pro servidor (volta
+  // a ficar só local, mesmo comportamento de antes de existir login).
+  const auth = useAuth()
+  const ultimoUserIdSincronizadoRef = useRef<string | null>(null)
+  useEffect(() => {
+    const userId = auth.sessao?.user?.id ?? null
+    setUsuarioAtual(userId)
+
+    if (!userId || ultimoUserIdSincronizadoRef.current === userId) return
+    ultimoUserIdSincronizadoRef.current = userId
+
+    buscarDoServidor(userId).then((remoto) => {
+      if (!remoto) return // usuário novo no servidor — próximo save cria a linha
+      if (remoto.xp > stateRef.current!.xp) {
+        stateRef.current = remoto
+        notificar()
+      }
+    })
+  }, [auth.sessao])
 
   // Garante que nada se perde quando o app vai para segundo plano. No iOS,
   // 'pagehide' é o evento confiável — 'beforeunload' não dispara.
