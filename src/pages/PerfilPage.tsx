@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Smile,
   Star,
+  Trash2,
   Trophy,
   type LucideIcon,
 } from 'lucide-react'
@@ -63,7 +64,7 @@ const MAX_BIO = 60
 export default function PerfilPage() {
   const navigate = useNavigate()
   const { progress, levelInfo, setPerfilPessoal, resetProgress } = useUserProgress()
-  const { ehAdmin } = useAuth()
+  const { ehAdmin, sair, excluirPropriaConta } = useAuth()
 
   const modulosCompletos = Object.values(progress.abasConcluidas).filter((abas) => abas.length === 6).length
 
@@ -92,6 +93,11 @@ export default function PerfilPage() {
   const [editandoPerfil, setEditandoPerfil] = useState(false)
   const [badgeCompartilhando, setBadgeCompartilhando] = useState<(typeof BADGES)[number] | null>(null)
   const [confirmandoReset, setConfirmandoReset] = useState(false)
+  const [confirmandoSair, setConfirmandoSair] = useState(false)
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
+  const [excluindoConta, setExcluindoConta] = useState(false)
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null)
+  const [textoConfirmacaoExclusao, setTextoConfirmacaoExclusao] = useState('')
   const [exportado, setExportado] = useState(false)
 
   const hoje = new Date().getDate()
@@ -311,7 +317,8 @@ export default function PerfilPage() {
             chevron={!exportado}
           />
           <ConfigRow icon={LogOut} label="Reiniciar progresso" cor="#EF4444" onClick={() => setConfirmandoReset(true)} chevron />
-          <ConfigRow icon={Lock} label="Sair da conta" cor="#475569" desabilitado />
+          <ConfigRow icon={Lock} label="Sair da conta" cor="#94A3B8" onClick={() => setConfirmandoSair(true)} chevron />
+          <ConfigRow icon={Trash2} label="Excluir minha conta" cor="#EF4444" onClick={() => setConfirmandoExclusao(true)} chevron />
         </div>
       </div>
       </div>
@@ -375,6 +382,136 @@ export default function PerfilPage() {
                   className="flex-1 h-[46px] rounded-2xl bg-accent-red text-white text-[13px] font-bold"
                 >
                   Sim, reiniciar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal confirmar saída */}
+      <AnimatePresence>
+        {confirmandoSair && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 z-[100] flex items-end justify-center"
+            onClick={() => setConfirmandoSair(false)}
+          >
+            <motion.div
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              exit={{ y: 100 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[380px] bg-bg-card border-t border-border rounded-t-[24px] p-6 pb-8"
+            >
+              <div className="w-9 h-1 rounded-full bg-border mx-auto mb-4.5" />
+              <div className="w-[46px] h-[46px] rounded-2xl bg-slate-500/10 flex items-center justify-center mb-3.5">
+                <Lock size={21} className="text-slate-400" />
+              </div>
+              <p className="text-[15px] font-bold text-white mb-2">Sair da conta?</p>
+              <p className="text-[12.5px] text-slate-400 leading-relaxed mb-5">
+                Você precisará entrar de novo com seu e-mail e senha (ou Google/GitHub) para continuar usando o app.
+              </p>
+              <div className="flex gap-2.5">
+                <button onClick={() => setConfirmandoSair(false)} className="flex-1 h-[46px] rounded-2xl border border-border text-slate-300 text-[13px] font-semibold">
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setConfirmandoSair(false)
+                    sair()
+                  }}
+                  className="flex-1 h-[46px] rounded-2xl bg-slate-600 text-white text-[13px] font-bold"
+                >
+                  Sim, sair
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal confirmar exclusão de conta — confirmação reforçada (digitar
+          "excluir") porque é irreversível e apaga o login de verdade, não
+          só o progresso local (diferente do "Reiniciar progresso" acima). */}
+      <AnimatePresence>
+        {confirmandoExclusao && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 z-[100] flex items-end justify-center"
+            onClick={() => {
+              if (excluindoConta) return
+              setConfirmandoExclusao(false)
+              setTextoConfirmacaoExclusao('')
+              setErroExclusao(null)
+            }}
+          >
+            <motion.div
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              exit={{ y: 100 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[380px] bg-bg-card border-t border-border rounded-t-[24px] p-6 pb-8"
+            >
+              <div className="w-9 h-1 rounded-full bg-border mx-auto mb-4.5" />
+              <div className="w-[46px] h-[46px] rounded-2xl bg-accent-red/10 flex items-center justify-center mb-3.5">
+                <Trash2 size={21} className="text-accent-red" />
+              </div>
+              <p className="text-[15px] font-bold text-white mb-2">Excluir sua conta?</p>
+              <p className="text-[12.5px] text-slate-400 leading-relaxed mb-4">
+                Isso apaga seu login e todo o progresso salvo no servidor de forma permanente. Não pode ser desfeito.
+              </p>
+              <label className="flex flex-col gap-1.5 mb-4">
+                <span className="text-[11px] text-slate-400">
+                  Digite <span className="font-bold text-slate-200">excluir</span> para confirmar
+                </span>
+                <input
+                  value={textoConfirmacaoExclusao}
+                  onChange={(e) => setTextoConfirmacaoExclusao(e.target.value)}
+                  className="rounded-xl bg-bg border border-border px-3 py-2.5 text-sm text-white outline-none focus:border-accent-red"
+                  placeholder="excluir"
+                  autoCapitalize="none"
+                />
+              </label>
+              {erroExclusao && <p className="text-[12px] text-accent-red mb-3">{erroExclusao}</p>}
+              <div className="flex gap-2.5">
+                <button
+                  onClick={() => {
+                    setConfirmandoExclusao(false)
+                    setTextoConfirmacaoExclusao('')
+                    setErroExclusao(null)
+                  }}
+                  disabled={excluindoConta}
+                  className="flex-1 h-[46px] rounded-2xl border border-border text-slate-300 text-[13px] font-semibold disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    if (textoConfirmacaoExclusao.trim().toLowerCase() !== 'excluir') {
+                      setErroExclusao('Digite "excluir" para confirmar.')
+                      return
+                    }
+                    setExcluindoConta(true)
+                    setErroExclusao(null)
+                    const resultado = await excluirPropriaConta()
+                    if (resultado.erro) {
+                      setErroExclusao(resultado.erro)
+                      setExcluindoConta(false)
+                    }
+                    // Sucesso: excluirPropriaConta já faz signOut internamente,
+                    // o RotaProtegida do App.tsx redireciona pro /login sozinho.
+                  }}
+                  disabled={excluindoConta || textoConfirmacaoExclusao.trim().toLowerCase() !== 'excluir'}
+                  className="flex-1 h-[46px] rounded-2xl bg-accent-red text-white text-[13px] font-bold disabled:opacity-50"
+                >
+                  {excluindoConta ? 'Excluindo...' : 'Excluir conta'}
                 </button>
               </div>
             </motion.div>

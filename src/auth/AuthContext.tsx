@@ -11,6 +11,7 @@ interface AuthContextValor {
   cadastrar: (nome: string, email: string, senha: string) => Promise<{ erro: string | null }>
   entrarComOAuth: (provedor: ProvedorOAuth) => Promise<{ erro: string | null }>
   sair: () => Promise<void>
+  excluirPropriaConta: () => Promise<{ erro: string | null }>
   ehAdmin: boolean
 }
 
@@ -105,6 +106,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }, [])
 
+  const excluirPropriaConta = useCallback(async () => {
+    const userId = sessao?.user?.id
+    if (!userId) return { erro: 'Sessão inválida.' }
+
+    const { data, error } = await supabase.functions.invoke('admin-users', {
+      body: { tipo: 'excluirPropriaConta', alvoId: userId },
+    })
+    if (error) return { erro: traduzirErro(error.message) }
+    if (!data?.ok) return { erro: data?.erro ?? 'Não foi possível excluir a conta.' }
+
+    // A conta já foi apagada no servidor — desloga localmente pra limpar
+    // a sessão (que agora aponta pra um usuário que não existe mais).
+    await supabase.auth.signOut()
+    return { erro: null }
+  }, [sessao])
+
   return (
     <AuthContext.Provider
       value={{
@@ -115,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         cadastrar,
         entrarComOAuth,
         sair,
+        excluirPropriaConta,
         ehAdmin: perfil?.role === 'admin',
       }}
     >

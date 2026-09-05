@@ -1,21 +1,23 @@
 // Edge Function: admin-users
 //
-// Centraliza as 3 ações que o painel admin não consegue fazer só com a
-// publishable key (porque exigem privilégio total sobre auth.users):
-//   - excluirUsuario: remove o login de verdade (auth.users), não só o
-//     perfil (public.profiles)
-//   - editarEmail: troca o e-mail de LOGIN, não só o de exibição
-//   - alternarBloqueio: usa o "ban" nativo do Supabase Auth, então um
-//     usuário bloqueado não consegue mais logar de verdade (hoje o campo
-//     `status` em profiles só é decorativo, não impede login nenhum)
+// Centraliza ações que o app não consegue fazer só com a publishable key
+// (porque exigem privilégio total sobre auth.users):
+//   - excluirUsuario (admin): remove o login de verdade (auth.users) de
+//     OUTRO usuário, não só o perfil (public.profiles)
+//   - editarEmail (admin): troca o e-mail de LOGIN de outro usuário, não
+//     só o de exibição
+//   - alternarBloqueio (admin): usa o "ban" nativo do Supabase Auth, então
+//     um usuário bloqueado não consegue mais logar de verdade
+//   - excluirPropriaConta (qualquer usuário logado): exclui A PRÓPRIA
+//     conta — única ação aqui que não exige ser admin, só exige que
+//     alvoId bata com quem está fazendo a chamada
 //
 // SEGURANÇA: esta function roda com a service_role key (acesso total),
 // mas a service_role key NUNCA sai do servidor — ela vive só nas variáveis
 // de ambiente da própria function, nunca no bundle do frontend. Todo
-// request chega aqui com o token JWT de quem está chamando; a primeira
-// coisa que a function faz é confirmar que esse usuário é admin de
-// verdade no banco (nunca confia em nada vindo do frontend, nem que a
-// pessoa diga "sou admin" — ela consulta profiles.role ela mesma).
+// request chega aqui com o token JWT de quem está chamando; a function
+// nunca confia em nada vindo do frontend sobre quem é o usuário ou se ele
+// é admin — sempre confirma direto no banco.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -28,6 +30,7 @@ type Acao =
   | { tipo: 'excluirUsuario'; alvoId: string }
   | { tipo: 'editarEmail'; alvoId: string; novoEmail: string }
   | { tipo: 'alternarBloqueio'; alvoId: string; bloquear: boolean }
+  | { tipo: 'excluirPropriaConta'; alvoId: string }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -61,6 +64,21 @@ Deno.serve(async (req) => {
       return respostaErro('Sessão inválida.', 401)
     }
 
+    const acao: Acao = await req.json()
+
+    // 'excluirPropriaConta' é a única ação que NÃO exige ser admin — só
+    // exige que a pessoa esteja excluindo a própria conta (alvoId tem que
+    // bater com o id de quem está logado). Todas as outras ações mexem em
+    // conta de terceiros e continuam exigindo role='admin' no banco.
+    if (acao.tipo === 'excluirPropriaConta') {
+      if (acao.alvoId !== user.id) {
+        return respostaErro('Só é possível excluir a própria conta.', 403)
+      }
+      const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id)
+      if (error) return respostaErro(error.message, 400)
+      return respostaOk({ excluido: true })
+    }
+
     const { data: perfil, error: erroPerfil } = await supabaseAdmin
       .from('profiles')
       .select('role')
@@ -70,8 +88,6 @@ Deno.serve(async (req) => {
     if (erroPerfil || perfil?.role !== 'admin') {
       return respostaErro('Apenas administradores podem executar essa ação.', 403)
     }
-
-    const acao: Acao = await req.json()
 
     switch (acao.tipo) {
       case 'excluirUsuario': {
