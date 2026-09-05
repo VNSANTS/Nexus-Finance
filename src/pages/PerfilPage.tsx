@@ -413,7 +413,7 @@ export default function PerfilPage() {
               </div>
               <p className="text-[15px] font-bold text-white mb-2">Sair da conta?</p>
               <p className="text-[12.5px] text-slate-400 leading-relaxed mb-5">
-                Você precisará entrar de novo com seu e-mail e senha (ou Google/GitHub) para continuar usando o app.
+                Você precisará entrar de novo para continuar usando o app.
               </p>
               <div className="flex gap-2.5">
                 <button onClick={() => setConfirmandoSair(false)} className="flex-1 h-[46px] rounded-2xl border border-border text-slate-300 text-[13px] font-semibold">
