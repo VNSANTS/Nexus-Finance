@@ -118,12 +118,11 @@ function useProgressStore() {
     salvarProgresso(stateRef.current!).catch(() => {
       // modo privado / cota cheia: o app continua funcionando em memória
     })
-    // Envio ao Supabase é "e se der certo, ótimo": localStorage já é a
-    // fonte de verdade local, isto só mantém o servidor atualizado para o
-    // painel admin e para sincronizar entre aparelhos. Falha de rede aqui
-    // nunca aparece pro usuário nem derruba nada — a próxima mudança
-    // tenta de novo.
-    enviarParaServidor(stateRef.current!).catch(() => {})
+    // Envio ao Supabase NÃO acontece aqui — isso salvava a cada mudança
+    // (a cada 400ms de digitação/clique), o que é chamada demais pro
+    // banco. Em vez disso, roda num timer próprio de 30s (ver useEffect
+    // "sincronizarComServidorPeriodicamente" abaixo), mandando o estado
+    // mais recente de uma vez só.
   }, [])
 
   const update = useCallback(
@@ -142,43 +141,63 @@ function useProgressStore() {
     [persistir]
   )
 
-  // Sincronização com o Supabase ao logar/deslogar.
+  // Sincronização com o Supabase.
   //
   // Ao logar: avisa progressSync.ts quem é o usuário atual (pra
   // enviarParaServidor saber pra qual linha escrever) e busca o progresso
   // salvo no servidor. Se existir e tiver mais XP que o local, aplica por
   // cima — heurística simples que evita perder progresso feito em outro
   // aparelho sem sobrescrever à toa um progresso local mais avançado feito
-  // offline antes de logar (ex: usuário mexeu no app deslogado, depois
-  // logou). Não é um merge de verdade campo a campo — não deveria haver os
-  // dois preenchidos de forma divergente no uso normal (o progresso relevante
-  // é sempre o do usuário logado); isto é só uma rede de segurança.
+  // offline antes de logar. Depende de `userId` (string), não do objeto
+  // `sessao` inteiro — o Supabase troca a referência de `sessao` a cada
+  // refresh de token automático, e se este efeito dependesse do objeto
+  // inteiro ele dispararia de novo a cada refresh (todo objeto novo por
+  // referência conta como "mudou" pro React).
   //
-  // Ao deslogar: limpa o usuário atual, para de mandar pro servidor (volta
-  // a ficar só local, mesmo comportamento de antes de existir login).
+  // A cada 30s enquanto logado: manda o progresso mais recente pro banco
+  // numa chamada só (não a cada mudança — evita chamada demais ao banco).
+  // Isso roda por cima do salvamento local (que continua instantâneo, no
+  // debounce curto de sempre) — a tela nunca espera essa parte pra
+  // responder.
   const auth = useAuth()
+  const userId = auth.sessao?.user?.id ?? null
   const ultimoUserIdSincronizadoRef = useRef<string | null>(null)
+
   useEffect(() => {
-    const userId = auth.sessao?.user?.id ?? null
     setUsuarioAtual(userId)
+    if (!userId) return
 
-    if (!userId || ultimoUserIdSincronizadoRef.current === userId) return
-    ultimoUserIdSincronizadoRef.current = userId
+    if (ultimoUserIdSincronizadoRef.current !== userId) {
+      ultimoUserIdSincronizadoRef.current = userId
+      buscarDoServidor(userId).then((remoto) => {
+        if (!remoto) return // usuário novo no servidor — próximo envio periódico cria a linha
+        if (remoto.xp > stateRef.current!.xp) {
+          stateRef.current = remoto
+          notificar()
+        }
+      })
+    }
 
-    buscarDoServidor(userId).then((remoto) => {
-      if (!remoto) return // usuário novo no servidor — próximo save cria a linha
-      if (remoto.xp > stateRef.current!.xp) {
-        stateRef.current = remoto
-        notificar()
-      }
-    })
-  }, [auth.sessao])
+    const intervalo = setInterval(() => {
+      enviarParaServidor(stateRef.current!).catch(() => {
+        // sem internet momentânea: tenta de novo no próximo ciclo de 30s,
+        // localStorage já garantiu que nada se perde localmente
+      })
+    }, 30_000)
+
+    return () => clearInterval(intervalo)
+  }, [userId])
 
   // Garante que nada se perde quando o app vai para segundo plano. No iOS,
   // 'pagehide' é o evento confiável — 'beforeunload' não dispara.
+  // Também força o envio pro Supabase nesse momento (fora do ciclo de
+  // 30s) — sem isso, fechar o app pouco depois de progredir podia perder
+  // até 30s de progresso não sincronizado com o servidor (o localStorage
+  // continuava seguro, só o banco é que ficaria desatualizado).
   useEffect(() => {
     const flush = () => {
       if (timerRef.current) persistir()
+      enviarParaServidor(stateRef.current!).catch(() => {})
     }
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') flush()
