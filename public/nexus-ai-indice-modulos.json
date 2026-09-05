@@ -1,0 +1,546 @@
+{
+  "trilhas": [
+    {
+      "id": "fundamentos",
+      "nome": "Fundamentos e Mentalidade",
+      "descricao": "A base de tudo: como você pensa sobre dinheiro"
+    },
+    {
+      "id": "economia-mercado",
+      "nome": "Economia e Mercado",
+      "descricao": "Entenda as engrenagens por trás do seu dinheiro"
+    },
+    {
+      "id": "renda-fixa-previdencia",
+      "nome": "Renda Fixa e Previdência",
+      "descricao": "Segurança e previsibilidade para seu patrimônio"
+    },
+    {
+      "id": "fundos",
+      "nome": "Fundos",
+      "descricao": "Invista em conjunto, com gestão profissional"
+    },
+    {
+      "id": "acoes-bolsa",
+      "nome": "Ações e Bolsa",
+      "descricao": "Torne-se sócio das melhores empresas do país"
+    },
+    {
+      "id": "estrategia-gestao",
+      "nome": "Estratégia e Gestão",
+      "descricao": "Monte e proteja sua carteira como um profissional"
+    },
+    {
+      "id": "alternativos-derivativos",
+      "nome": "Alternativos e Derivativos",
+      "descricao": "Cripto, ouro, opções e outras classes de ativos"
+    },
+    {
+      "id": "vida-financeira",
+      "nome": "Vida Financeira",
+      "descricao": "Liberdade financeira e planejamento de longo prazo"
+    },
+    {
+      "id": "carreira-negocios",
+      "nome": "Carreira e Negócios",
+      "descricao": "Aumente sua renda ativa e sua capacidade de investir"
+    },
+    {
+      "id": "cultura-investimentos",
+      "nome": "Cultura de Investimentos",
+      "descricao": "Histórias, livros e casos que formam sua visão de mundo"
+    },
+    {
+      "id": "geracao-de-receita",
+      "nome": "Geração de Receita",
+      "descricao": "Os números que separam negócios que vendem de negócios que crescem"
+    },
+    {
+      "id": "cultura-organizacional",
+      "nome": "Cultura Organizacional",
+      "descricao": "O sistema por trás de times que performam sem cobrança constante"
+    },
+    {
+      "id": "eficiencia-operacional",
+      "nome": "Eficiência Operacional",
+      "descricao": "O método da Toyota aplicado a qualquer tipo de operação"
+    },
+    {
+      "id": "gestao-financeira-negocios",
+      "nome": "Gestão Financeira de Negócios",
+      "descricao": "Lucro no papel não paga conta — o arsenal de quem decide com números"
+    }
+  ],
+  "modulos": [
+    {
+      "id": "educacao-financeira",
+      "trilhaId": "fundamentos",
+      "titulo": "Educação Financeira"
+    },
+    {
+      "id": "organizacao-financeira",
+      "trilhaId": "fundamentos",
+      "titulo": "Organização Financeira"
+    },
+    {
+      "id": "mentalidade-investidor",
+      "trilhaId": "fundamentos",
+      "titulo": "Mentalidade de Investidor"
+    },
+    {
+      "id": "psicologia-financeira",
+      "trilhaId": "fundamentos",
+      "titulo": "Psicologia Financeira"
+    },
+    {
+      "id": "psicologia-do-dinheiro",
+      "trilhaId": "fundamentos",
+      "titulo": "Psicologia do Dinheiro"
+    },
+    {
+      "id": "vieses-comportamentais",
+      "trilhaId": "fundamentos",
+      "titulo": "Vieses Comportamentais"
+    },
+    {
+      "id": "educacao-financeira-infantil",
+      "trilhaId": "fundamentos",
+      "titulo": "Educação Financeira Infantil"
+    },
+    {
+      "id": "formacao-investidor",
+      "trilhaId": "fundamentos",
+      "titulo": "Formação do Investidor"
+    },
+    {
+      "id": "mercado-financeiro",
+      "trilhaId": "economia-mercado",
+      "titulo": "Mercado Financeiro"
+    },
+    {
+      "id": "economia",
+      "trilhaId": "economia-mercado",
+      "titulo": "Economia"
+    },
+    {
+      "id": "matematica-financeira",
+      "trilhaId": "economia-mercado",
+      "titulo": "Matemática Financeira"
+    },
+    {
+      "id": "contabilidade-investidores",
+      "trilhaId": "economia-mercado",
+      "titulo": "Contabilidade para Investidores"
+    },
+    {
+      "id": "financas-publicas",
+      "trilhaId": "economia-mercado",
+      "titulo": "Finanças Públicas"
+    },
+    {
+      "id": "cenario-macroeconomico",
+      "trilhaId": "economia-mercado",
+      "titulo": "Cenário Macroeconômico"
+    },
+    {
+      "id": "ciclos-economicos",
+      "trilhaId": "economia-mercado",
+      "titulo": "Ciclos Econômicos"
+    },
+    {
+      "id": "juros-inflacao",
+      "trilhaId": "economia-mercado",
+      "titulo": "Juros e Inflação"
+    },
+    {
+      "id": "cambio",
+      "trilhaId": "economia-mercado",
+      "titulo": "Câmbio"
+    },
+    {
+      "id": "renda-fixa",
+      "trilhaId": "renda-fixa-previdencia",
+      "titulo": "Renda Fixa"
+    },
+    {
+      "id": "tesouro-direto",
+      "trilhaId": "renda-fixa-previdencia",
+      "titulo": "Tesouro Direto"
+    },
+    {
+      "id": "previdencia",
+      "trilhaId": "renda-fixa-previdencia",
+      "titulo": "Previdência"
+    },
+    {
+      "id": "imposto-de-renda",
+      "trilhaId": "renda-fixa-previdencia",
+      "titulo": "Imposto de Renda"
+    },
+    {
+      "id": "fundos-investimento",
+      "trilhaId": "fundos",
+      "titulo": "Fundos de Investimento"
+    },
+    {
+      "id": "fundos-imobiliarios",
+      "trilhaId": "fundos",
+      "titulo": "Fundos Imobiliários (FIIs)"
+    },
+    {
+      "id": "bolsa-de-valores",
+      "trilhaId": "acoes-bolsa",
+      "titulo": "Bolsa de Valores"
+    },
+    {
+      "id": "fundamentos-bolsa",
+      "trilhaId": "acoes-bolsa",
+      "titulo": "Fundamentos da Bolsa"
+    },
+    {
+      "id": "acoes",
+      "trilhaId": "acoes-bolsa",
+      "titulo": "Ações"
+    },
+    {
+      "id": "small-caps",
+      "trilhaId": "acoes-bolsa",
+      "titulo": "Small Caps"
+    },
+    {
+      "id": "analise-fundamentalista",
+      "trilhaId": "acoes-bolsa",
+      "titulo": "Análise Fundamentalista"
+    },
+    {
+      "id": "analise-indicadores",
+      "trilhaId": "acoes-bolsa",
+      "titulo": "Análise de Indicadores"
+    },
+    {
+      "id": "analise-tecnica",
+      "trilhaId": "acoes-bolsa",
+      "titulo": "Análise Técnica"
+    },
+    {
+      "id": "valuation",
+      "trilhaId": "acoes-bolsa",
+      "titulo": "Valuation"
+    },
+    {
+      "id": "dividendos",
+      "trilhaId": "acoes-bolsa",
+      "titulo": "Dividendos"
+    },
+    {
+      "id": "buy-and-hold",
+      "trilhaId": "acoes-bolsa",
+      "titulo": "Buy and Hold"
+    },
+    {
+      "id": "primeiros-passos",
+      "trilhaId": "estrategia-gestao",
+      "titulo": "Primeiros Passos para Investir"
+    },
+    {
+      "id": "carteira-investimentos",
+      "trilhaId": "estrategia-gestao",
+      "titulo": "Carteira de Investimentos"
+    },
+    {
+      "id": "diversificacao",
+      "trilhaId": "estrategia-gestao",
+      "titulo": "Diversificação"
+    },
+    {
+      "id": "alocacao-ativos",
+      "trilhaId": "estrategia-gestao",
+      "titulo": "Alocação de Ativos"
+    },
+    {
+      "id": "gestao-de-risco",
+      "trilhaId": "estrategia-gestao",
+      "titulo": "Gestão de Risco"
+    },
+    {
+      "id": "estrategias-grandes-gestores",
+      "trilhaId": "estrategia-gestao",
+      "titulo": "Estratégias dos Grandes Gestores"
+    },
+    {
+      "id": "investimento-internacional",
+      "trilhaId": "estrategia-gestao",
+      "titulo": "Investimento Internacional"
+    },
+    {
+      "id": "macro-aplicada-carteira",
+      "trilhaId": "estrategia-gestao",
+      "titulo": "Macroeconomia Aplicada à Carteira"
+    },
+    {
+      "id": "criptomoedas",
+      "trilhaId": "alternativos-derivativos",
+      "titulo": "Criptomoedas"
+    },
+    {
+      "id": "reserva-de-valor",
+      "trilhaId": "alternativos-derivativos",
+      "titulo": "Reserva de Valor"
+    },
+    {
+      "id": "ouro",
+      "trilhaId": "alternativos-derivativos",
+      "titulo": "Ouro"
+    },
+    {
+      "id": "equity",
+      "trilhaId": "alternativos-derivativos",
+      "titulo": "Equity"
+    },
+    {
+      "id": "opcoes",
+      "trilhaId": "alternativos-derivativos",
+      "titulo": "Opções"
+    },
+    {
+      "id": "investimentos-alternativos",
+      "trilhaId": "alternativos-derivativos",
+      "titulo": "Investimentos Alternativos"
+    },
+    {
+      "id": "esg",
+      "trilhaId": "alternativos-derivativos",
+      "titulo": "ESG"
+    },
+    {
+      "id": "independencia-financeira",
+      "trilhaId": "vida-financeira",
+      "titulo": "Independência Financeira"
+    },
+    {
+      "id": "liberdade-financeira",
+      "trilhaId": "vida-financeira",
+      "titulo": "Liberdade Financeira"
+    },
+    {
+      "id": "construcao-patrimonio",
+      "trilhaId": "vida-financeira",
+      "titulo": "Construção de Patrimônio"
+    },
+    {
+      "id": "renda-passiva",
+      "trilhaId": "vida-financeira",
+      "titulo": "Renda Passiva"
+    },
+    {
+      "id": "planejamento-financeiro",
+      "trilhaId": "vida-financeira",
+      "titulo": "Planejamento Financeiro"
+    },
+    {
+      "id": "planejamento-patrimonial",
+      "trilhaId": "vida-financeira",
+      "titulo": "Planejamento Patrimonial"
+    },
+    {
+      "id": "renda-fixa-avancada",
+      "trilhaId": "vida-financeira",
+      "titulo": "Renda Fixa Avançada para Renda Mensal"
+    },
+    {
+      "id": "empresas-negocios",
+      "trilhaId": "carreira-negocios",
+      "titulo": "Empresas e Negócios"
+    },
+    {
+      "id": "empreendedorismo",
+      "trilhaId": "carreira-negocios",
+      "titulo": "Empreendedorismo"
+    },
+    {
+      "id": "lideranca",
+      "trilhaId": "carreira-negocios",
+      "titulo": "Liderança"
+    },
+    {
+      "id": "carreira",
+      "trilhaId": "carreira-negocios",
+      "titulo": "Carreira"
+    },
+    {
+      "id": "negociacao",
+      "trilhaId": "carreira-negocios",
+      "titulo": "Negociação"
+    },
+    {
+      "id": "historia-grandes-investidores",
+      "trilhaId": "cultura-investimentos",
+      "titulo": "História de Grandes Investidores"
+    },
+    {
+      "id": "biografias-investidores",
+      "trilhaId": "cultura-investimentos",
+      "titulo": "Biografias de Investidores"
+    },
+    {
+      "id": "estudos-de-caso",
+      "trilhaId": "cultura-investimentos",
+      "titulo": "Estudos de Caso de Empresas"
+    },
+    {
+      "id": "documentarios",
+      "trilhaId": "cultura-investimentos",
+      "titulo": "Documentários sobre Economia"
+    },
+    {
+      "id": "resumos-livros",
+      "trilhaId": "cultura-investimentos",
+      "titulo": "Resumos de Livros Financeiros"
+    },
+    {
+      "id": "relatorios-investimentos",
+      "trilhaId": "cultura-investimentos",
+      "titulo": "Relatórios de Investimentos"
+    },
+    {
+      "id": "introducao-geracao-de-receita",
+      "trilhaId": "geracao-de-receita",
+      "titulo": "Introdução: Geração de Receita"
+    },
+    {
+      "id": "fases-da-receita",
+      "trilhaId": "geracao-de-receita",
+      "titulo": "As Quatro Fases da Receita"
+    },
+    {
+      "id": "ltv-cac",
+      "trilhaId": "geracao-de-receita",
+      "titulo": "LTV/CAC: A Régua que Decide se Vale a Pena Crescer"
+    },
+    {
+      "id": "icp",
+      "trilhaId": "geracao-de-receita",
+      "titulo": "ICP: O Perfil de Cliente Ideal"
+    },
+    {
+      "id": "funil-de-conversao",
+      "trilhaId": "geracao-de-receita",
+      "titulo": "Funil de Conversão: Onde o Dinheiro Vaza"
+    },
+    {
+      "id": "cross-sell-up-sell-nrr",
+      "trilhaId": "geracao-de-receita",
+      "titulo": "Cross-sell, Up-sell e NRR"
+    },
+    {
+      "id": "priorizacao-de-canais",
+      "trilhaId": "geracao-de-receita",
+      "titulo": "Priorização de Canais e o Coeficiente Viral"
+    },
+    {
+      "id": "introducao-cultura-organizacional",
+      "trilhaId": "cultura-organizacional",
+      "titulo": "Introdução: Cultura Organizacional"
+    },
+    {
+      "id": "informed-captain",
+      "trilhaId": "cultura-organizacional",
+      "titulo": "Informed Captain"
+    },
+    {
+      "id": "keeper-test",
+      "trilhaId": "cultura-organizacional",
+      "titulo": "Keeper Test"
+    },
+    {
+      "id": "estrutura-e-contratacao",
+      "trilhaId": "cultura-organizacional",
+      "titulo": "Estrutura e Contratação"
+    },
+    {
+      "id": "disagree-and-commit",
+      "trilhaId": "cultura-organizacional",
+      "titulo": "Disagree and Commit"
+    },
+    {
+      "id": "conversas-1-1",
+      "trilhaId": "cultura-organizacional",
+      "titulo": "Conversas 1:1"
+    },
+    {
+      "id": "okrs",
+      "trilhaId": "cultura-organizacional",
+      "titulo": "OKRs"
+    },
+    {
+      "id": "introducao-eficiencia-operacional",
+      "trilhaId": "eficiencia-operacional",
+      "titulo": "Introdução: Eficiência Operacional"
+    },
+    {
+      "id": "oito-desperdicios",
+      "trilhaId": "eficiencia-operacional",
+      "titulo": "Os Oito Desperdícios (Muda)"
+    },
+    {
+      "id": "vsm",
+      "trilhaId": "eficiencia-operacional",
+      "titulo": "VSM: Mapeamento do Fluxo de Valor"
+    },
+    {
+      "id": "kaizen-pdca",
+      "trilhaId": "eficiencia-operacional",
+      "titulo": "Kaizen e PDCA"
+    },
+    {
+      "id": "oee",
+      "trilhaId": "eficiencia-operacional",
+      "titulo": "OEE: A Métrica que Mede Eficiência Real"
+    },
+    {
+      "id": "pessoas-processos-tecnologia",
+      "trilhaId": "eficiencia-operacional",
+      "titulo": "A Ordem Certa: Pessoas, Processos, Tecnologia"
+    },
+    {
+      "id": "alavancagem-corte-custo",
+      "trilhaId": "eficiencia-operacional",
+      "titulo": "Alavancagem de Corte de Custo"
+    },
+    {
+      "id": "introducao-gestao-financeira-negocios",
+      "trilhaId": "gestao-financeira-negocios",
+      "titulo": "Introdução: Gestão Financeira de Negócios"
+    },
+    {
+      "id": "custo-vs-investimento",
+      "trilhaId": "gestao-financeira-negocios",
+      "titulo": "Custo vs. Investimento"
+    },
+    {
+      "id": "dre",
+      "trilhaId": "gestao-financeira-negocios",
+      "titulo": "DRE: O Demonstrativo que Conta a Verdade"
+    },
+    {
+      "id": "orcamento-base-zero",
+      "trilhaId": "gestao-financeira-negocios",
+      "titulo": "Orçamento Base Zero"
+    },
+    {
+      "id": "ccc",
+      "trilhaId": "gestao-financeira-negocios",
+      "titulo": "CCC: O Tempo que o Dinheiro Fica Preso"
+    },
+    {
+      "id": "roic-vs-wacc",
+      "trilhaId": "gestao-financeira-negocios",
+      "titulo": "ROIC vs. WACC: A Régua dos Investidores"
+    },
+    {
+      "id": "forecast-cenarios",
+      "trilhaId": "gestao-financeira-negocios",
+      "titulo": "Forecast em Cenários"
+    }
+  ]
+}

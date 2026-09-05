@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import BottomNav from '@/components/BottomNav'
+import NexusAIChat from '@/nexus-ai/NexusAIChat'
 import FundoPersonalizado from '@/components/FundoPersonalizado'
 import Onboarding from '@/components/Onboarding'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -165,6 +166,7 @@ export default function App() {
       <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
         <AppRotas />
         {!dentroDeGf && location.pathname !== '/login' && <BottomNav />}
+        {!dentroDeGf && location.pathname !== '/login' && <NexusAIChat />}
       </div>
     </>
   )
