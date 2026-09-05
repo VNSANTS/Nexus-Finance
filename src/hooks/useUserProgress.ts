@@ -1,4 +1,4 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useReducer, useRef } from 'react'
+import { createContext, createElement, useCallback, useContext, useEffect, useReducer, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { UserProgress, ItemRevisao, Flashcard, QuizQuestion, NomeAba, PerguntaDesafio } from '@/types'
 import { TODAS_ABAS, XP_POR_ABA } from '@/types'
@@ -186,6 +186,30 @@ function useProgressStore() {
     }, 30_000)
 
     return () => clearInterval(intervalo)
+  }, [userId])
+
+  // Sincronização manual, sob demanda — botão "Sincronizar agora" no
+  // Perfil. Diferente da busca automática ao logar (que só aplica se o
+  // servidor tiver MAIS xp, como rede de segurança contra perder progresso
+  // offline), esta aplica o que vier do servidor incondicionalmente —
+  // fazendo sentido justamente para trazer uma edição do admin, que pode
+  // ter aumentado OU diminuído qualquer campo.
+  const [sincronizando, setSincronizando] = useState(false)
+  const sincronizarAgora = useCallback(async (): Promise<{ ok: boolean; erro?: string }> => {
+    if (!userId) return { ok: false, erro: 'Você precisa estar logado para sincronizar.' }
+    setSincronizando(true)
+    try {
+      const remoto = await buscarDoServidor(userId)
+      if (remoto) {
+        stateRef.current = remoto
+        notificar()
+      }
+      return { ok: true }
+    } catch {
+      return { ok: false, erro: 'Não foi possível sincronizar agora. Verifique sua internet.' }
+    } finally {
+      setSincronizando(false)
+    }
   }, [userId])
 
   // Garante que nada se perde quando o app vai para segundo plano. No iOS,
@@ -588,6 +612,8 @@ function useProgressStore() {
     sortearPerguntasDesafio,
     removerItemRevisao,
     resetProgress,
+    sincronizarAgora,
+    sincronizando,
   }
 }
 

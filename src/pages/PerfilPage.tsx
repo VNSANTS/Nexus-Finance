@@ -17,6 +17,7 @@ import {
   Palette,
   Pencil,
   Plus,
+  RefreshCw,
   Share2,
   ShieldCheck,
   Smile,
@@ -63,7 +64,7 @@ const MAX_BIO = 60
 
 export default function PerfilPage() {
   const navigate = useNavigate()
-  const { progress, levelInfo, setPerfilPessoal, resetProgress } = useUserProgress()
+  const { progress, levelInfo, setPerfilPessoal, resetProgress, sincronizarAgora, sincronizando } = useUserProgress()
   const { ehAdmin, sair, excluirPropriaConta } = useAuth()
 
   const modulosCompletos = Object.values(progress.abasConcluidas).filter((abas) => abas.length === 6).length
@@ -99,6 +100,8 @@ export default function PerfilPage() {
   const [erroExclusao, setErroExclusao] = useState<string | null>(null)
   const [textoConfirmacaoExclusao, setTextoConfirmacaoExclusao] = useState('')
   const [exportado, setExportado] = useState(false)
+  const [sincronizadoAgora, setSincronizadoAgora] = useState(false)
+  const [erroSincronizacao, setErroSincronizacao] = useState<string | null>(null)
 
   const hoje = new Date().getDate()
   const diasAtivos = Array.from({ length: progress.streak }, (_, i) => hoje - i).filter((d) => d > 0)
@@ -285,6 +288,27 @@ export default function PerfilPage() {
       <div>
         <p className="text-[12.5px] font-bold text-white mb-2.5">Configurações</p>
         <div className="flex flex-col gap-2">
+          <ConfigRow
+            icon={RefreshCw}
+            label={
+              sincronizadoAgora ? 'Progresso atualizado!' : erroSincronizacao ? erroSincronizacao : 'Sincronizar agora'
+            }
+            cor={sincronizadoAgora ? '#22C55E' : erroSincronizacao ? '#EF4444' : '#00D4FF'}
+            girando={sincronizando}
+            onClick={async () => {
+              if (sincronizando) return
+              setSincronizadoAgora(false)
+              setErroSincronizacao(null)
+              const resultado = await sincronizarAgora()
+              if (resultado.ok) {
+                setSincronizadoAgora(true)
+                setTimeout(() => setSincronizadoAgora(false), 2500)
+              } else {
+                setErroSincronizacao(resultado.erro ?? 'Erro ao sincronizar.')
+                setTimeout(() => setErroSincronizacao(null), 3500)
+              }
+            }}
+          />
           {ehAdmin && (
             <ConfigRow
               icon={ShieldCheck}
@@ -1048,6 +1072,7 @@ function ConfigRow({
   onClick,
   chevron,
   desabilitado,
+  girando,
 }: {
   icon: LucideIcon
   label: string
@@ -1056,6 +1081,7 @@ function ConfigRow({
   onClick?: () => void
   chevron?: boolean
   desabilitado?: boolean
+  girando?: boolean
 }) {
   return (
     <button
@@ -1065,7 +1091,7 @@ function ConfigRow({
       style={{ opacity: desabilitado ? 0.55 : 1, cursor: onClick ? 'pointer' : 'default' }}
     >
       <div className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: `${cor}1A` }}>
-        <Icon size={15} style={{ color: cor }} />
+        <Icon size={15} style={{ color: cor }} className={girando ? 'animate-spin' : undefined} />
       </div>
       <span className={`text-[12.5px] font-semibold flex-1 ${desabilitado ? 'text-slate-500' : 'text-slate-200'}`}>{label}</span>
       {desabilitado && <span className="text-[9.5px] font-bold text-slate-500 bg-slate-500/15 px-1.5 py-0.5 rounded-full">EM BREVE</span>}

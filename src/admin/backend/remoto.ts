@@ -180,15 +180,73 @@ export async function editarUsuario(id: string, dados: EdicaoUsuarioAdmin): Prom
 // Se a linha ainda não existir (usuário nunca sincronizou progresso —
 // cadastro muito recente, ou ainda não abriu o app depois de logar), faz
 // upsert: cria a linha já com os valores editados pelo admin.
+// Mesma tabela de níveis usada no app (src/hooks/useUserProgress.ts,
+// LEVELS) — duplicada aqui de propósito: o admin roda como código separado
+// do app principal (bundle diferente), então importar do hook criaria uma
+// dependência cruzada desnecessária por 6 linhas de dado estático. Se a
+// tabela de níveis mudar no app, replicar a mudança aqui também.
+const LEVELS = [
+  { min: 0, name: 'Novato' },
+  { min: 300, name: 'Poupador' },
+  { min: 900, name: 'Investidor' },
+  { min: 2000, name: 'Estrategista' },
+  { min: 4000, name: 'Tubarão' },
+  { min: 8000, name: 'Nexus Master' },
+]
+
+function nomeDoNivel(xp: number): string {
+  let atual = LEVELS[0]
+  for (const l of LEVELS) {
+    if (xp >= l.min) atual = l
+  }
+  return atual.name
+}
+
+// Edita XP, level, streak, badges e desafios completos de um usuário.
+//
+// Atualiza tanto as colunas espelhadas (xp, level, level_name...) QUANTO
+// `dados_jsonb` — é esse JSON que o app do usuário de fato lê pra exibir o
+// progresso na tela (ver src/backend/remoto/progressSync.ts,
+// buscarDoServidor). Só atualizar as colunas espelhadas deixava o painel
+// admin mostrando o valor novo mas o app do usuário continuava mostrando o
+// valor antigo — a edição "não aparecia na prática".
+//
+// `levelName` sempre é recalculado a partir do XP editado (mesma régua do
+// app, LEVELS acima), nunca aceito como texto solto — evita ficar
+// mostrando "nível 6" com o nome "Novato" por inconsistência manual.
+//
+// Se a linha em user_progress ainda não existir (usuário nunca sincronizou
+// — cadastro muito recente, ou ainda não abriu o app depois de logar), faz
+// upsert criando a linha já com os valores editados, com um dados_jsonb
+// mínimo (o próximo sync do app preenche o resto dos 30+ campos).
 export async function atualizarMetricas(id: string, dados: EdicaoMetricasAdmin): Promise<UsuarioAdmin> {
+  const { data: linhaAtual } = await supabase.from('user_progress').select('dados_jsonb').eq('user_id', id).maybeSingle()
+
+  const levelName = nomeDoNivel(dados.xp)
+  const jsonBase = (linhaAtual?.dados_jsonb as Record<string, unknown> | null) ?? {}
+  const jsonAtualizado = {
+    ...jsonBase,
+    xp: dados.xp,
+    level: dados.level,
+    levelName,
+    streak: dados.streak,
+    desafiosCompletos: dados.desafiosCompletos,
+    // `badges` no UserProgress do app é um array de ids conquistados, não
+    // um contador — não dá pra "setar a quantidade" sem inventar quais
+    // badges o usuário tem. O contador exposto ao admin (badges_count)
+    // fica só na coluna espelhada, não mexe no array dentro do JSON.
+  }
+
   const { error } = await supabase.from('user_progress').upsert(
     {
       user_id: id,
       xp: dados.xp,
       level: dados.level,
+      level_name: levelName,
       streak: dados.streak,
       badges_count: dados.badges,
       desafios_completos: dados.desafiosCompletos,
+      dados_jsonb: jsonAtualizado,
     },
     { onConflict: 'user_id' }
   )
