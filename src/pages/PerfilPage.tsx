@@ -266,24 +266,6 @@ export default function PerfilPage() {
         <ConquistasCarrossel badges={BADGES} statsUsuario={statsUsuario} onCompartilhar={setBadgeCompartilhando} />
       </div>
 
-      {/* Nível Profissional — em breve */}
-      <div className="mb-5.5">
-        <div className="flex items-center gap-3.5 p-4 rounded-[18px]" style={{ background: 'linear-gradient(135deg, #FFC93C14, #EF44440D)', border: '1px solid #FFC93C33' }}>
-          <div className="w-11 h-11 rounded-2xl bg-accent-gold/20 flex items-center justify-center shrink-0">
-            <Lock size={19} className="text-accent-gold" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-1.5">
-              <p className="text-[13.5px] font-bold text-white">Nível Profissional</p>
-              <span className="text-[9px] font-bold text-accent-gold bg-accent-gold/20 px-1.5 py-0.5 rounded-full">EM BREVE</span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-              Prove que você sabe: 100 perguntas de altíssimo nível liberam um caminho exclusivo dentro do Nexus Finance
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Configurações */}
       <div>
         <p className="text-[12.5px] font-bold text-white mb-2.5">Configurações</p>
