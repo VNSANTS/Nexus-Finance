@@ -9,9 +9,18 @@ interface AuthContextValor {
   carregando: boolean // true só durante o carregamento inicial da sessão
   entrar: (email: string, senha: string) => Promise<{ erro: string | null }>
   cadastrar: (nome: string, email: string, senha: string) => Promise<{ erro: string | null }>
+  entrarComOAuth: (provedor: ProvedorOAuth) => Promise<{ erro: string | null }>
   sair: () => Promise<void>
   ehAdmin: boolean
 }
+
+// Os 4 provedores pedidos. Cada um precisa ser habilitado e configurado
+// separadamente em Supabase → Authentication → Providers (client
+// ID/secret gerados no site de cada provedor) antes do botão funcionar de
+// verdade — sem isso, o Supabase retorna erro "provider is not enabled"
+// ao clicar. O código já suporta os 4; ativar um novo depois é só
+// configuração no painel do Supabase, não precisa mexer aqui.
+export type ProvedorOAuth = 'google' | 'facebook' | 'github'
 
 const AuthContext = createContext<AuthContextValor | null>(null)
 
@@ -74,6 +83,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { erro: null }
   }, [])
 
+  const entrarComOAuth = useCallback(async (provedor: ProvedorOAuth) => {
+    // redirectTo garante que, depois de autorizar no Google/Facebook/etc.,
+    // a pessoa volta pro app (e não pra localhost, mesmo problema que
+    // tivemos com o e-mail de confirmação — aqui resolvido de saída
+    // porque usa a URL real do navegador, não uma configurada à parte).
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: provedor,
+      options: { redirectTo: window.location.origin + '/Nexus-Finance/' },
+    })
+    // Em fluxo OAuth, sucesso não retorna aqui — o navegador é redirecionado
+    // pro provedor (Google etc.) e depois volta pro app já logado, o
+    // onAuthStateChange (acima) capta a sessão nova sozinho. Só chega
+    // neste ponto do código se o REDIRECIONAMENTO falhou (provedor não
+    // habilitado no Supabase, bloqueador de pop-up, etc.).
+    if (error) return { erro: traduzirErro(error.message) }
+    return { erro: null }
+  }, [])
+
   const sair = useCallback(async () => {
     await supabase.auth.signOut()
   }, [])
@@ -86,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         carregando,
         entrar,
         cadastrar,
+        entrarComOAuth,
         sair,
         ehAdmin: perfil?.role === 'admin',
       }}
@@ -112,6 +140,9 @@ function traduzirErro(mensagem: string): string {
   }
   if (mensagem.toLowerCase().includes('banned') || mensagem.toLowerCase().includes('suspended')) {
     return 'Sua conta está bloqueada. Entre em contato com o suporte.'
+  }
+  if (mensagem.toLowerCase().includes('provider is not enabled')) {
+    return 'Esse jeito de entrar ainda não está disponível. Tente com e-mail e senha.'
   }
   return mapa[mensagem] ?? mensagem
 }
