@@ -18,6 +18,7 @@ import {
   Pencil,
   Plus,
   Share2,
+  ShieldCheck,
   Smile,
   Star,
   Trophy,
@@ -30,6 +31,7 @@ import EditorFotoPerfil from '@/components/EditorFotoPerfil'
 import { ModalAvancado as SeletorCorAvancado } from '@/components/SeletorCor'
 import { corComAlfa, corOpaca } from '@/utils/cor'
 import { useUserProgress } from '@/hooks/useUserProgress'
+import { useAuth } from '@/auth/AuthContext'
 import { BADGES } from '@/data/badges'
 import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
 import { ARTES_BADGE } from '@/assets/badges'
@@ -61,6 +63,7 @@ const MAX_BIO = 60
 export default function PerfilPage() {
   const navigate = useNavigate()
   const { progress, levelInfo, setPerfilPessoal, resetProgress } = useUserProgress()
+  const { ehAdmin } = useAuth()
 
   const modulosCompletos = Object.values(progress.abasConcluidas).filter((abas) => abas.length === 6).length
 
@@ -276,6 +279,15 @@ export default function PerfilPage() {
       <div>
         <p className="text-[12.5px] font-bold text-white mb-2.5">Configurações</p>
         <div className="flex flex-col gap-2">
+          {ehAdmin && (
+            <ConfigRow
+              icon={ShieldCheck}
+              label="Painel Admin"
+              cor="#FFC93C"
+              onClick={() => navigate('/admin/usuarios')}
+              chevron
+            />
+          )}
           <ConfigRow
             icon={Bell}
             label="Notificações"
