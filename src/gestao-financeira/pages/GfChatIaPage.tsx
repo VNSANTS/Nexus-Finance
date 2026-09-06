@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import NexusAIChatCorpo from '@/nexus-ai/NexusAIChatCorpo'
 
@@ -10,6 +10,11 @@ import NexusAIChatCorpo from '@/nexus-ai/NexusAIChatCorpo'
 // geral (mesmo usuário, duas "memórias" diferentes).
 export default function GfChatIaPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // ?novo=true vem do atalho "Nexus AI" no joystick radial
+  // (GfBotaoAcaoRapida) — abre a página já numa conversa em branco, em vez
+  // de continuar a sessão anterior automaticamente.
+  const iniciarEmNovoChat = searchParams.get('novo') === 'true'
 
   return (
     <div className="h-dvh flex flex-col">
@@ -17,6 +22,7 @@ export default function GfChatIaPage() {
         escopo="gestao-financeira"
         subtitulo="Ajuda com suas finanças"
         placeholderVazio="Pergunte sobre como organizar seus gastos, montar um orçamento, ou definir uma meta."
+        iniciarEmNovoChat={iniciarEmNovoChat}
         acaoInicioCabecalho={
           <button onClick={() => navigate(-1)} className="text-texto-secundario p-1.5 -ml-1.5 mr-1" aria-label="Voltar">
             <ArrowLeft size={19} />

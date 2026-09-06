@@ -35,6 +35,11 @@ interface NexusAIChatCorpoProps {
   acaoInicioCabecalho?: React.ReactNode
   // Slot para um botão extra no fim do cabeçalho (ex: fechar, no painel flutuante).
   acaoFimCabecalho?: React.ReactNode
+  // Quando true, força uma sessão nova ao montar — usado pelo atalho "Nova
+  // conversa" do joystick radial da Gestão Financeira (GfBotaoAcaoRapida),
+  // que abre o chat já pedindo uma conversa em branco em vez de continuar
+  // a sessão anterior.
+  iniciarEmNovoChat?: boolean
 }
 
 export default function NexusAIChatCorpo({
@@ -44,6 +49,7 @@ export default function NexusAIChatCorpo({
   placeholderVazio,
   acaoInicioCabecalho,
   acaoFimCabecalho,
+  iniciarEmNovoChat = false,
 }: NexusAIChatCorpoProps) {
   const [texto, setTexto] = useState('')
   const [historicoAberto, setHistoricoAberto] = useState(false)
@@ -59,6 +65,18 @@ export default function NexusAIChatCorpo({
     listarHistoricoSessoes,
   } = useNexusAI(escopo)
   const fimDaListaRef = useRef<HTMLDivElement>(null)
+  const jaIniciouNovoChatRef = useRef(false)
+
+  // Dispara iniciarNovoChat() uma única vez ao montar, se pedido — não
+  // fica re-disparando a cada re-render (o botão "Nova conversa" no
+  // joystick da GF continua montado/desmontado a cada abertura do painel,
+  // então "ao montar" já é o comportamento certo aqui).
+  useEffect(() => {
+    if (iniciarEmNovoChat && !jaIniciouNovoChatRef.current) {
+      jaIniciouNovoChatRef.current = true
+      iniciarNovoChat()
+    }
+  }, [iniciarEmNovoChat, iniciarNovoChat])
 
   useEffect(() => {
     fimDaListaRef.current?.scrollIntoView({ behavior: 'smooth' })

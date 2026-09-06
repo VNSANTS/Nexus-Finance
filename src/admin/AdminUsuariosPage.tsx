@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowLeft, Search, ShieldCheck, ShieldOff, Lock, Unlock, Pencil, Trash2,
   Users, UserCheck, UserX, Crown, X, Loader2, AlertTriangle, ChevronDown, Sparkles,
 } from 'lucide-react'
 import { useAdminUsuarios } from './useAdminUsuarios'
+import { buscarAppConfig, atualizarAppConfig } from './backend'
 import type { EdicaoMetricasAdmin, EdicaoUsuarioAdmin, OrdenacaoAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from './types'
 
 function formatarData(iso: string | null) {
@@ -385,6 +386,90 @@ function CartaoUsuario({
 
 // --- Página principal ------------------------------------------------------
 
+// --- Painel de controle global de acesso (fechar cadastro / manutenção) ---
+
+function ToggleAcesso({
+  titulo, descricao, ativo, cor, carregando, onToggle,
+}: {
+  titulo: string
+  descricao: string
+  ativo: boolean
+  cor: string
+  carregando: boolean
+  onToggle: () => void
+}) {
+  return (
+    <div className="flex items-center gap-3 rounded-card bg-bg-card border border-border px-3.5 py-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-texto">{titulo}</p>
+        <p className="text-xs text-texto-secundario mt-0.5">{descricao}</p>
+      </div>
+      <button
+        onClick={onToggle}
+        disabled={carregando}
+        className="shrink-0 w-11 h-6 rounded-full relative transition-colors disabled:opacity-50"
+        style={{ background: ativo ? cor : 'var(--border)' }}
+        aria-label={titulo}
+      >
+        <span
+          className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform"
+          style={{ transform: ativo ? 'translateX(22px)' : 'translateX(2px)' }}
+        />
+      </button>
+    </div>
+  )
+}
+
+function PainelControleAcesso() {
+  const [config, setConfig] = useState<{ cadastroFechado: boolean; modoManutencao: boolean } | null>(null)
+  const [carregando, setCarregando] = useState(true)
+  const [salvando, setSalvando] = useState<'cadastro' | 'manutencao' | null>(null)
+
+  useEffect(() => {
+    buscarAppConfig().then((c) => {
+      setConfig(c)
+      setCarregando(false)
+    })
+  }, [])
+
+  async function alternar(campo: 'cadastroFechado' | 'modoManutencao', chave: 'cadastro' | 'manutencao') {
+    if (!config) return
+    setSalvando(chave)
+    try {
+      const atualizado = await atualizarAppConfig({ [campo]: !config[campo] })
+      setConfig(atualizado)
+    } finally {
+      setSalvando(null)
+    }
+  }
+
+  if (carregando || !config) {
+    return <div className="h-[136px] rounded-card bg-bg-card animate-pulse" />
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-xs font-semibold text-texto-secundario px-0.5">Controle de acesso ao app</p>
+      <ToggleAcesso
+        titulo="Bloquear novos cadastros"
+        descricao="Ninguém consegue criar conta nova até você desligar (quem já tem conta não é afetado)."
+        ativo={config.cadastroFechado}
+        cor="var(--accent-gold)"
+        carregando={salvando === 'cadastro'}
+        onToggle={() => alternar('cadastroFechado', 'cadastro')}
+      />
+      <ToggleAcesso
+        titulo="Modo manutenção"
+        descricao="Só administradores conseguem entrar. Sessões já abertas de outros usuários continuam funcionando."
+        ativo={config.modoManutencao}
+        cor="var(--accent-red)"
+        carregando={salvando === 'manutencao'}
+        onToggle={() => alternar('modoManutencao', 'manutencao')}
+      />
+    </div>
+  )
+}
+
 export default function AdminUsuariosPage() {
   const {
     usuarios, totalSemFiltro, estatisticas, carregando, erro, filtros, setFiltros,
@@ -414,6 +499,8 @@ export default function AdminUsuariosPage() {
         <CartaoEstatistica icone={<UserX size={15} />} label="Bloqueados" valor={estatisticas.bloqueados} cor="var(--accent-red)" />
         <CartaoEstatistica icone={<Crown size={15} />} label="Admins" valor={estatisticas.admins} cor="var(--accent-gold)" />
       </div>
+
+      <PainelControleAcesso />
 
       {/* Busca */}
       <div className="relative">

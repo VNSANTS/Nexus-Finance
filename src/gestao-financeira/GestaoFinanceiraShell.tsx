@@ -4,6 +4,7 @@ import { GestaoFinanceiraProvider, useGestaoFinanceira } from './GestaoFinanceir
 import GfBottomNav from './components/GfBottomNav'
 import GfPrivacyOverlay from './components/GfPrivacyOverlay'
 import GfBloqueioOverlay from './components/GfBloqueioOverlay'
+import NexusAIChat from '@/nexus-ai/NexusAIChat'
 import GfPrimeiroAcesso from './pages/GfPrimeiroAcesso'
 
 const GfHomePage = lazy(() => import('./pages/GfHomePage'))
@@ -94,6 +95,7 @@ function GestaoFinanceiraConteudo() {
       <GfBottomNav />
       <GfPrivacyOverlay />
       <GfBloqueioOverlay />
+      <NexusAIChat escopo="gestao-financeira" />
     </>
   )
 }

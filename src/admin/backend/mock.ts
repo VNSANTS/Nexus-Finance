@@ -59,3 +59,15 @@ export async function excluirUsuario(id: string): Promise<void> {
   base = base.filter((u) => u.id !== id)
   return delay(undefined)
 }
+
+// Mock do controle global — guardado em memória, reseta a cada refresh.
+let mockAppConfig = { cadastroFechado: false, modoManutencao: false }
+
+export async function buscarAppConfig() {
+  return delay({ ...mockAppConfig })
+}
+
+export async function atualizarAppConfig(dados: Partial<typeof mockAppConfig>) {
+  mockAppConfig = { ...mockAppConfig, ...dados }
+  return delay({ ...mockAppConfig })
+}

@@ -3,10 +3,16 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import type { Perfil } from './types'
 
+interface AppConfig {
+  cadastroFechado: boolean
+  modoManutencao: boolean
+}
+
 interface AuthContextValor {
   sessao: Session | null
   perfil: Perfil | null
   carregando: boolean // true só durante o carregamento inicial da sessão
+  appConfig: AppConfig | null
   entrar: (email: string, senha: string) => Promise<{ erro: string | null }>
   cadastrar: (nome: string, email: string, senha: string) => Promise<{ erro: string | null }>
   entrarComOAuth: (provedor: ProvedorOAuth) => Promise<{ erro: string | null }>
@@ -15,12 +21,11 @@ interface AuthContextValor {
   ehAdmin: boolean
 }
 
-// Os 4 provedores pedidos. Cada um precisa ser habilitado e configurado
-// separadamente em Supabase → Authentication → Providers (client
-// ID/secret gerados no site de cada provedor) antes do botão funcionar de
-// verdade — sem isso, o Supabase retorna erro "provider is not enabled"
-// ao clicar. O código já suporta os 4; ativar um novo depois é só
-// configuração no painel do Supabase, não precisa mexer aqui.
+// Os 3 provedores configurados. Cada um precisa ser habilitado e
+// configurado separadamente em Supabase → Authentication → Providers
+// (client ID/secret gerados no site de cada provedor) antes do botão
+// funcionar de verdade — sem isso, o Supabase retorna erro "provider is
+// not enabled" ao clicar.
 export type ProvedorOAuth = 'google' | 'facebook' | 'github'
 
 const AuthContext = createContext<AuthContextValor | null>(null)
@@ -36,12 +41,25 @@ async function buscarPerfil(userId: string): Promise<Perfil | null> {
   return data as Perfil
 }
 
+async function buscarAppConfig(): Promise<AppConfig> {
+  const { data } = await supabase.from('app_config').select('cadastro_fechado, modo_manutencao').eq('id', true).maybeSingle()
+  // Se a linha não existir ainda (SQL 005 não rodado) ou a leitura falhar,
+  // assume tudo aberto — nunca trava o app por causa de uma config ausente.
+  return {
+    cadastroFechado: data?.cadastro_fechado ?? false,
+    modoManutencao: data?.modo_manutencao ?? false,
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessao, setSessao] = useState<Session | null>(null)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [carregando, setCarregando] = useState(true)
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
 
   useEffect(() => {
+    buscarAppConfig().then(setAppConfig)
+
     // Carrega a sessão existente (usuário já logado antes, cookie/local
     // storage do supabase-js) uma vez ao montar o app.
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -69,8 +87,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const entrar = useCallback(async (email: string, senha: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha })
     if (error) return { erro: traduzirErro(error.message) }
+
+    // Modo manutenção: só admin consegue efetivamente ENTRAR. Checa depois
+    // do login (não dá pra saber o role antes de autenticar), e desloga na
+    // hora se a pessoa não for admin — a sessão nunca fica "meio aberta".
+    const configAtual = await buscarAppConfig()
+    setAppConfig(configAtual)
+    if (configAtual.modoManutencao && data.user) {
+      const p = await buscarPerfil(data.user.id)
+      if (p?.role !== 'admin') {
+        await supabase.auth.signOut()
+        return { erro: 'O app está em manutenção no momento. Tente novamente mais tarde.' }
+      }
+    }
+
     return { erro: null }
   }, [])
 
@@ -85,6 +117,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const entrarComOAuth = useCallback(async (provedor: ProvedorOAuth) => {
+    // Checa cadastro fechado ANTES de redirecionar pro provedor — evita
+    // mandar a pessoa pro Google/GitHub pra só voltar com erro depois.
+    // Isto é só uma barreira de UX: a barreira real (impossível de
+    // contornar) é o trigger em auth.users (ver supabase/005_controle_acesso.sql),
+    // que também bloqueia contas OAuth novas quando cadastro_fechado=true.
+    const configAtual = await buscarAppConfig()
+    setAppConfig(configAtual)
+    if (configAtual.cadastroFechado) {
+      return { erro: 'Novos cadastros estão temporariamente pausados. Se você já tem conta, isso não te afeta — tente entrar normalmente.' }
+    }
+
     // redirectTo garante que, depois de autorizar no Google/Facebook/etc.,
     // a pessoa volta pro app (e não pra localhost, mesmo problema que
     // tivemos com o e-mail de confirmação — aqui resolvido de saída
@@ -128,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessao,
         perfil,
         carregando,
+        appConfig,
         entrar,
         cadastrar,
         entrarComOAuth,
@@ -161,6 +205,9 @@ function traduzirErro(mensagem: string): string {
   }
   if (mensagem.toLowerCase().includes('provider is not enabled')) {
     return 'Esse jeito de entrar ainda não está disponível. Tente com e-mail e senha.'
+  }
+  if (mensagem.includes('CADASTRO_FECHADO')) {
+    return 'Novos cadastros estão temporariamente pausados. Se você já tem conta, isso não te afeta — tente entrar normalmente.'
   }
   return mapa[mensagem] ?? mensagem
 }

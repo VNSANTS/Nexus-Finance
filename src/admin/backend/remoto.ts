@@ -268,3 +268,35 @@ export async function excluirUsuario(id: string): Promise<void> {
   // user_progress também, mesmo mecanismo).
   await chamarAdminFunction({ tipo: 'excluirUsuario', alvoId: id })
 }
+
+// --- Controle global de acesso (fechar cadastro / modo manutenção) --------
+// Tabela singleton (1 linha só, id=true) — ver supabase/005_controle_acesso.sql.
+// A RLS já garante que só admin consegue dar update aqui; qualquer um pode
+// ler (a tela de login precisa saber o estado antes mesmo de logar).
+
+export interface AppConfigAdmin {
+  cadastroFechado: boolean
+  modoManutencao: boolean
+}
+
+export async function buscarAppConfig(): Promise<AppConfigAdmin> {
+  const { data, error } = await supabase.from('app_config').select('cadastro_fechado, modo_manutencao').eq('id', true).single()
+  if (error) throw new Error(error.message)
+  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao }
+}
+
+export async function atualizarAppConfig(dados: Partial<AppConfigAdmin>): Promise<AppConfigAdmin> {
+  const patch: Record<string, boolean> = {}
+  if (dados.cadastroFechado !== undefined) patch.cadastro_fechado = dados.cadastroFechado
+  if (dados.modoManutencao !== undefined) patch.modo_manutencao = dados.modoManutencao
+
+  const { data, error } = await supabase
+    .from('app_config')
+    .update(patch)
+    .eq('id', true)
+    .select('cadastro_fechado, modo_manutencao')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao }
+}

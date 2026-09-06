@@ -37,7 +37,7 @@ const PROVEDORES: { id: ProvedorOAuth; nome: string; icone: () => React.JSX.Elem
 ]
 
 export default function LoginPage() {
-  const { sessao, carregando, entrar, cadastrar, entrarComOAuth } = useAuth()
+  const { sessao, carregando, entrar, cadastrar, entrarComOAuth, appConfig } = useAuth()
   const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar')
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -50,8 +50,10 @@ export default function LoginPage() {
   // Já logado — não faz sentido mostrar a tela de login de novo.
   if (!carregando && sessao) return <Navigate to="/" replace />
 
+  const cadastroFechado = appConfig?.cadastroFechado ?? false
   const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  const podeEnviar = emailValido && senha.length >= 6 && (modo === 'entrar' || nome.trim().length >= 2)
+  const podeEnviar =
+    emailValido && senha.length >= 6 && (modo === 'entrar' || (nome.trim().length >= 2 && !cadastroFechado))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -94,6 +96,12 @@ export default function LoginPage() {
         </p>
       </div>
 
+      {cadastroFechado && (
+        <p className="text-[11.5px] text-accent-gold bg-accent-gold/10 border border-accent-gold/25 rounded-xl px-3.5 py-2.5 text-center mb-4">
+          Novos cadastros estão temporariamente pausados. Se você já tem conta, pode entrar normalmente.
+        </p>
+      )}
+
       <div className="flex rounded-full bg-bg-card border border-border p-1 mb-6">
         <button
           onClick={() => { setModo('entrar'); setErro(null) }}
@@ -104,8 +112,9 @@ export default function LoginPage() {
           Entrar
         </button>
         <button
-          onClick={() => { setModo('cadastrar'); setErro(null) }}
-          className={`flex-1 text-sm font-semibold py-2 rounded-full transition-colors ${
+          onClick={() => { if (!cadastroFechado) { setModo('cadastrar'); setErro(null) } }}
+          disabled={cadastroFechado}
+          className={`flex-1 text-sm font-semibold py-2 rounded-full transition-colors disabled:opacity-40 ${
             modo === 'cadastrar' ? 'bg-accent-cyan text-black' : 'text-texto-secundario'
           }`}
         >
