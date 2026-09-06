@@ -21,6 +21,7 @@ import {
   Share2,
   ShieldCheck,
   Smile,
+  Sparkles,
   Star,
   Trash2,
   Trophy,
@@ -290,6 +291,13 @@ export default function PerfilPage() {
                 setTimeout(() => setErroSincronizacao(null), 3500)
               }
             }}
+          />
+          <ConfigRow
+            icon={Sparkles}
+            label="Nexus AI"
+            cor="#00D4FF"
+            onClick={() => navigate('/nexus-ai')}
+            chevron
           />
           {ehAdmin && (
             <ConfigRow
