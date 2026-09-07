@@ -18,6 +18,21 @@ export interface SessaoHistorico {
   totalMensagens: number
 }
 
+// O supabase-js (functions.invoke) só preenche `error` quando a Edge
+// Function responde com status não-2xx, e nesse caso `data` vem null — o
+// corpo de verdade (com o campo `erro` que a nossa function sempre manda)
+// fica em `error.context`, uma Response que precisa ser lida à parte.
+async function extrairMensagemDeErro(error: unknown): Promise<string | null> {
+  const contexto = (error as { context?: Response } | null)?.context
+  if (!contexto || typeof contexto.json !== 'function') return null
+  try {
+    const corpo = await contexto.clone().json()
+    return typeof corpo?.erro === 'string' ? corpo.erro : null
+  } catch {
+    return null // corpo não era JSON (ex: function nem chegou a rodar) — segue pro fallback genérico
+  }
+}
+
 const INATIVIDADE_NOVA_SESSAO_MS = 2 * 60 * 1000 // 2 minutos
 const CHAVE_ULTIMA_ATIVIDADE = (escopo: EscopoNexusAI) => `nexus-ai:${escopo}:ultima-atividade`
 const CHAVE_SESSAO_ATUAL = (escopo: EscopoNexusAI) => `nexus-ai:${escopo}:sessao-atual`
@@ -110,7 +125,12 @@ export function useNexusAI(escopo: EscopoNexusAI = 'geral') {
         })
 
         if (error || !data?.ok) {
-          const msgErro = data?.erro ?? 'Não foi possível falar com o Nexus AI agora.'
+          // Quando a Edge Function responde com status de erro (400/401/500/502),
+          // o supabase-js devolve `data: null` e o motivo real fica só dentro de
+          // `error.context` (a Response bruta) — precisa ser lido manualmente,
+          // senão a mensagem específica que a function gerou (ex: "Sessão
+          // inválida", "chave do Gemini ausente") se perde e vira genérico.
+          const msgErro = data?.erro ?? (await extrairMensagemDeErro(error)) ?? 'Não foi possível falar com o Nexus AI agora.'
           setErro(msgErro)
           setMensagens((prev) => prev.filter((m) => m.id !== idOtimista && m.id !== `${idOtimista}-resp`))
           return
