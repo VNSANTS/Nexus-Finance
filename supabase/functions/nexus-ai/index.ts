@@ -10,10 +10,18 @@
 // function confirma que quem chamou tem sessão válida → busca as últimas
 // mensagens DAQUELA SESSÃO (não do usuário inteiro — cada conversa tem
 // sua própria memória, sem misturar com conversas antigas) → monta o
-// prompt (system prompt do escopo + índice de módulos, se escopo geral +
-// contexto do módulo atual, se houver + histórico da sessão + mensagem
-// nova) → chama o Gemini → salva a pergunta e a resposta no histórico →
-// devolve a resposta.
+// prompt (system prompt do escopo + índice de módulos + contexto
+// financeiro real, se escopo gestao-financeira + contexto do módulo
+// atual, se houver + histórico da sessão + mensagem nova) → chama o
+// Gemini → salva a pergunta e a resposta no histórico → devolve a resposta.
+//
+// IMPORTANTE sobre acesso a dados financeiros: a function lê
+// gestao_financeira_estado usando o token do PRÓPRIO usuário que chamou
+// (createClient com o Authorization header dele), nunca a service_role
+// key — ou seja, a RLS de gestao_financeira_estado (só auth.uid() =
+// user_id) protege isso normalmente, a function só consegue ler os dados
+// de quem está efetivamente logado fazendo a pergunta, nunca de outro
+// usuário.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -25,6 +33,7 @@ const CORS_HEADERS = {
 const GEMINI_MODEL = 'gemini-3.6-flash'
 const URL_INDICE_MODULOS = 'https://vnsants.github.io/Nexus-Finance/nexus-ai-indice-modulos.json'
 const MAX_MENSAGENS_HISTORICO = 20 // últimas 20 (10 trocas) da sessão atual — memória curta o suficiente sem inflar o prompt
+const MAX_TRANSACOES_NO_PROMPT = 30 // últimas 30 transações — dá contexto real sem mandar o histórico financeiro inteiro a cada mensagem
 
 type Escopo = 'geral' | 'gestao-financeira'
 
@@ -43,13 +52,18 @@ Regras importantes:
 
   'gestao-financeira': `Você é o Nexus AI, assistente dentro do módulo de Gestão Financeira do Nexus Finance — um app brasileiro de organização financeira pessoal (controle de receitas, despesas, cartões, metas e orçamento).
 
-Seu papel aqui é diferente do assistente educacional do app principal: seu foco é ajudar a pessoa a organizar e entender AS PRÓPRIAS finanças — como categorizar melhor um gasto, como montar um orçamento por categoria, como interpretar um relatório de receitas/despesas, como definir e acompanhar uma meta financeira, como usar as funções do app (lançamentos, cartões, orçamento).
+Você TEM ACESSO aos dados financeiros reais da pessoa (saldo, contas, cartões, transações recentes, dívidas, metas, orçamento por categoria) — eles vêm resumidos logo abaixo, na seção "Dados financeiros do usuário". Use esses números de verdade nas suas respostas: se perguntarem "como estão minhas finanças", analise os dados reais em vez de pedir para a pessoa te contar de novo.
+
+Seu papel:
+- Analisar a situação financeira real da pessoa e dar um retrato honesto (gastando mais do que ganha? qual categoria pesa mais? meta no prazo?).
+- Ajudar a organizar: categorizar melhor um gasto, montar orçamento, interpretar tendências nos próprios números.
+- Quando fizer sentido pelo que você vê nos dados (ex: gasto alto e recorrente numa categoria, dívida crescendo, meta estagnada), conecte com um módulo educacional relevante do índice abaixo e sugira que a pessoa aprofunde lá — você é também uma ponte para o aprendizado, não só um espelho dos números.
 
 Regras importantes:
-- Você não tem acesso aos lançamentos, saldos ou valores reais da pessoa (isso não é enviado a você) — não invente números específicos dela nem finja saber o que ela já cadastrou. Se a pergunta depender de dados que você não tem, peça para ela te contar o valor/contexto relevante.
-- Nunca dê recomendação de investimento específica (tipo "compre X" ou "invista Y% no seu caso") — direcione para o assistente educacional geral do app ou para um profissional, se for o caso.
-- Seja prático e direto — a pessoa está no meio de organizar a vida financeira, não estudando teoria.
-- Respostas curtas (2-3 parágrafos), a não ser que peçam mais detalhe.`,
+- Nunca dê recomendação de investimento específica (tipo "compre X" ou "invista Y% no seu caso") — para isso, direcione ao assistente educacional geral do app ou a um profissional.
+- Os dados financeiros abaixo podem estar incompletos ou desatualizados por alguns segundos (sincronizam periodicamente) — se algo parecer estranho ou você não tiver o dado necessário, pergunte à pessoa em vez de inventar.
+- Seja prático, direto, e baseado nos números reais — a pessoa está organizando a vida financeira dela de verdade.
+- Respostas curtas (2-4 parágrafos), a não ser que peçam mais detalhe.`,
 }
 
 type CorpoRequisicao = {
@@ -57,6 +71,70 @@ type CorpoRequisicao = {
   sessaoId: string
   escopo?: Escopo
   moduloContexto?: string | null
+}
+
+type IndiceModulos = { modulos: { titulo: string; trilhaId: string }[] }
+
+async function buscarIndiceModulos(): Promise<string> {
+  try {
+    const resp = await fetch(URL_INDICE_MODULOS)
+    if (!resp.ok) return ''
+    const indice: IndiceModulos = await resp.json()
+    return '\n\nÍndice de módulos disponíveis no app:\n' +
+      indice.modulos.map((m) => `- ${m.titulo} (trilha: ${m.trilhaId})`).join('\n')
+  } catch {
+    return '' // site fora do ar ou sem rede — segue sem índice em vez de travar a conversa
+  }
+}
+
+// Monta um resumo compacto (não o JSON bruto inteiro, que pode ter
+// centenas de transações e estouraria o prompt) do estado financeiro real
+// da pessoa, para o escopo gestao-financeira.
+function montarContextoFinanceiro(estadoGf: Record<string, unknown> | null): string {
+  if (!estadoGf) {
+    return '\n\nDados financeiros do usuário: ainda não há dados sincronizados (conta nova ou app ainda não sincronizou). Peça para a pessoa abrir a tela inicial da Gestão Financeira ao menos uma vez.'
+  }
+
+  const contas = (estadoGf.contas as { nome: string; saldo: number; tipo: string }[]) ?? []
+  const cartoes = (estadoGf.cartoes as { nome: string; limite: number }[]) ?? []
+  const transacoes = (estadoGf.transacoes as { descricao: string; valor: number; tipo: string; categoriaId: string; data: string }[]) ?? []
+  const dividas = (estadoGf.dividas as { descricao: string; valorTotal: number; valorPago: number }[]) ?? []
+  const metas = (estadoGf.metas as { nome: string; valorAlvo: number; valorAtual: number }[]) ?? []
+  const orcamentos = (estadoGf.orcamentos as { categoriaId: string; valorLimite: number }[]) ?? []
+  const categorias = (estadoGf.categorias as { id: string; nome: string }[]) ?? []
+  const nomeCategoria = (id: string) => categorias.find((c) => c.id === id)?.nome ?? id
+
+  const saldoTotal = contas.reduce((soma, c) => soma + (c.saldo ?? 0), 0)
+
+  const ultimasTransacoes = [...transacoes]
+    .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
+    .slice(0, MAX_TRANSACOES_NO_PROMPT)
+
+  const partes: string[] = []
+  partes.push(`Saldo total (todas as contas): R$ ${saldoTotal.toFixed(2)}`)
+  partes.push(`Contas: ${contas.length ? contas.map((c) => `${c.nome} (${c.tipo}): R$ ${c.saldo.toFixed(2)}`).join('; ') : 'nenhuma cadastrada'}`)
+  if (cartoes.length) partes.push(`Cartões: ${cartoes.map((c) => `${c.nome} (limite R$ ${c.limite.toFixed(2)})`).join('; ')}`)
+  if (dividas.length) {
+    partes.push(
+      `Dívidas: ${dividas.map((d) => `${d.descricao}: pago R$ ${d.valorPago.toFixed(2)} de R$ ${d.valorTotal.toFixed(2)}`).join('; ')}`
+    )
+  }
+  if (metas.length) {
+    partes.push(`Metas: ${metas.map((m) => `${m.nome}: R$ ${m.valorAtual.toFixed(2)} de R$ ${m.valorAlvo.toFixed(2)}`).join('; ')}`)
+  }
+  if (orcamentos.length) {
+    partes.push(`Orçamento por categoria: ${orcamentos.map((o) => `${nomeCategoria(o.categoriaId)}: limite R$ ${o.valorLimite.toFixed(2)}`).join('; ')}`)
+  }
+  partes.push(
+    `Últimas ${ultimasTransacoes.length} transações (mais recente primeiro): ` +
+      (ultimasTransacoes.length
+        ? ultimasTransacoes
+            .map((t) => `[${t.data}] ${t.tipo} "${t.descricao}" R$ ${t.valor.toFixed(2)} (${nomeCategoria(t.categoriaId)})`)
+            .join(' | ')
+        : 'nenhuma transação ainda')
+  )
+
+  return '\n\nDados financeiros do usuário (use estes números reais nas suas respostas):\n' + partes.join('\n')
 }
 
 Deno.serve(async (req) => {
@@ -96,27 +174,32 @@ Deno.serve(async (req) => {
       .limit(MAX_MENSAGENS_HISTORICO)
     const historicoOrdenado = (historico ?? []).reverse()
 
-    // Índice de módulos só faz sentido no escopo geral (educacional) — o
-    // assistente da Gestão Financeira não precisa saber dos módulos.
-    let indiceTexto = ''
-    if (escopo === 'geral') {
-      try {
-        const resp = await fetch(URL_INDICE_MODULOS)
-        if (resp.ok) {
-          const indice = await resp.json()
-          indiceTexto = '\n\nÍndice de módulos disponíveis no app:\n' +
-            indice.modulos.map((m: { titulo: string; trilhaId: string }) => `- ${m.titulo} (trilha: ${m.trilhaId})`).join('\n')
-        }
-      } catch {
-        // segue sem índice
-      }
+    // Índice de módulos: em AMBOS os escopos agora — o assistente geral
+    // usa para direcionar aprendizado, e o assistente da GF usa para
+    // conectar um padrão visto nos dados financeiros reais a um módulo
+    // educacional relevante (pedido explícito: "usar como base os módulos
+    // e direcionar a um aprendizado mais completo").
+    const indiceTexto = await buscarIndiceModulos()
+
+    // Contexto financeiro real: só no escopo gestao-financeira, e só
+    // busca gestao_financeira_estado com o token do PRÓPRIO usuário (RLS
+    // de supabase/007_gestao_financeira_sync.sql garante que só o dono do
+    // dado é lido, mesmo que alguém tentasse manipular o request).
+    let contextoFinanceiro = ''
+    if (escopo === 'gestao-financeira') {
+      const { data: estadoGf } = await supabase
+        .from('gestao_financeira_estado')
+        .select('dados_jsonb')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      contextoFinanceiro = montarContextoFinanceiro((estadoGf?.dados_jsonb as Record<string, unknown>) ?? null)
     }
 
     const contextoModulo = moduloContexto
       ? `\n\nO usuário está atualmente na tela do módulo "${moduloContexto}" — priorize relacionar sua resposta a esse módulo quando fizer sentido.`
       : ''
 
-    const systemInstruction = SYSTEM_PROMPTS[escopo] + indiceTexto + contextoModulo
+    const systemInstruction = SYSTEM_PROMPTS[escopo] + indiceTexto + contextoFinanceiro + contextoModulo
 
     const contents = [
       ...historicoOrdenado.map((m: { papel: string; conteudo: string }) => ({
