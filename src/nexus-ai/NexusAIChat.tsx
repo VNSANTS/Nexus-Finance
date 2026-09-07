@@ -53,7 +53,7 @@ export default function NexusAIChat({ escopo = 'geral', abrirExternamente, onAbr
       {!painelDeveEstarAberto && (
         <button
           onClick={() => setAberto(true)}
-          className="fixed z-[9990] bottom-[86px] right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg bg-bg-card/60 backdrop-blur-sm"
+          className="fixed z-[70] bottom-[86px] right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg bg-bg-card/60 backdrop-blur-sm"
           aria-label="Abrir Nexus AI"
         >
           <NexusAIIcone size={44} />
@@ -66,7 +66,7 @@ export default function NexusAIChat({ escopo = 'geral', abrirExternamente, onAbr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9995] bg-black/70 backdrop-blur-sm flex items-end justify-center"
+            className="fixed inset-0 z-[10000] bg-black/70 backdrop-blur-sm flex items-end justify-center"
             onClick={fecharPainel}
           >
             <motion.div

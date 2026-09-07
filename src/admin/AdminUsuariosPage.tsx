@@ -47,7 +47,7 @@ function ModalConfirmacao({
   onCancelar: () => void
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={onCancelar}>
+    <div className="fixed inset-0 z-[9997] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={onCancelar}>
       <div
         className="w-full max-w-sm rounded-card-lg bg-bg-card border border-border p-5 flex flex-col gap-4 mb-6 sm:mb-0"
         onClick={(e) => e.stopPropagation()}
@@ -98,7 +98,7 @@ function ModalEdicao({
   const podeSalvar = nome.trim().length >= 2 && emailValido
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={onCancelar}>
+    <div className="fixed inset-0 z-[9997] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={onCancelar}>
       <div
         className="w-full max-w-sm rounded-card-lg bg-bg-card border border-border p-5 flex flex-col gap-4 mb-6 sm:mb-0"
         onClick={(e) => e.stopPropagation()}
@@ -205,7 +205,7 @@ function ModalMetricas({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={onCancelar}>
+    <div className="fixed inset-0 z-[9997] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={onCancelar}>
       <div
         className="w-full max-w-sm rounded-card-lg bg-bg-card border border-border p-5 flex flex-col gap-4 mb-6 sm:mb-0"
         onClick={(e) => e.stopPropagation()}
@@ -423,28 +423,46 @@ function ToggleAcesso({
 function PainelControleAcesso() {
   const [config, setConfig] = useState<{ cadastroFechado: boolean; modoManutencao: boolean } | null>(null)
   const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState<'cadastro' | 'manutencao' | null>(null)
 
   useEffect(() => {
-    buscarAppConfig().then((c) => {
-      setConfig(c)
-      setCarregando(false)
-    })
+    buscarAppConfig()
+      .then((c) => {
+        setConfig(c)
+        setCarregando(false)
+      })
+      .catch((e) => {
+        setErro(e instanceof Error ? e.message : 'Erro ao carregar configuração.')
+        setCarregando(false)
+      })
   }, [])
 
   async function alternar(campo: 'cadastroFechado' | 'modoManutencao', chave: 'cadastro' | 'manutencao') {
     if (!config) return
     setSalvando(chave)
+    setErro(null)
     try {
       const atualizado = await atualizarAppConfig({ [campo]: !config[campo] })
       setConfig(atualizado)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro ao salvar.')
     } finally {
       setSalvando(null)
     }
   }
 
-  if (carregando || !config) {
+  if (carregando) {
     return <div className="h-[136px] rounded-card bg-bg-card animate-pulse" />
+  }
+
+  if (erro || !config) {
+    return (
+      <div className="rounded-card bg-accent-red/10 border border-accent-red/30 px-3.5 py-3 text-xs text-accent-red">
+        Não foi possível carregar o controle de acesso: {erro ?? 'dados ausentes'}. Confirme se o SQL
+        005_controle_acesso.sql foi executado no Supabase.
+      </div>
+    )
   }
 
   return (
@@ -580,8 +598,8 @@ export default function AdminUsuariosPage() {
               key={u.id}
               usuario={u}
               pendente={pendentes.has(u.id)}
-              onAlternarPapel={() => alternarPapel(u.id, u.papel)}
-              onAlternarStatus={() => alternarStatus(u.id, u.status)}
+              onAlternarPapel={() => alternarPapel(u.id, u.papel).catch((e) => alert(e instanceof Error ? e.message : 'Erro ao alterar papel.'))}
+              onAlternarStatus={() => alternarStatus(u.id, u.status).catch((e) => alert(e instanceof Error ? e.message : 'Erro ao alterar status.'))}
               onEditar={() => setEditando(u)}
               onEditarMetricas={() => setEditandoMetricas(u)}
               onExcluir={() => setExcluindo(u)}
@@ -596,8 +614,12 @@ export default function AdminUsuariosPage() {
           carregando={pendentes.has(editando.id)}
           onCancelar={() => setEditando(null)}
           onSalvar={async (dados) => {
-            await salvarEdicao(editando.id, dados)
-            setEditando(null)
+            try {
+              await salvarEdicao(editando.id, dados)
+              setEditando(null)
+            } catch (e) {
+              alert(e instanceof Error ? e.message : 'Não foi possível salvar as alterações.')
+            }
           }}
         />
       )}
@@ -608,8 +630,12 @@ export default function AdminUsuariosPage() {
           carregando={pendentes.has(editandoMetricas.id)}
           onCancelar={() => setEditandoMetricas(null)}
           onSalvar={async (dados) => {
-            await salvarMetricas(editandoMetricas.id, dados)
-            setEditandoMetricas(null)
+            try {
+              await salvarMetricas(editandoMetricas.id, dados)
+              setEditandoMetricas(null)
+            } catch (e) {
+              alert(e instanceof Error ? e.message : 'Não foi possível salvar o progresso.')
+            }
           }}
         />
       )}
