@@ -71,6 +71,13 @@ type CorpoRequisicao = {
   sessaoId: string
   escopo?: Escopo
   moduloContexto?: string | null
+  // Usado por chamadas de IA que não são um "chat" de verdade (ex: resumo
+  // diário de mercado em src/lib/resumoDiarioIA.ts) — não grava em
+  // nexus_ai_mensagens, pra não poluir a lista de conversas do usuário com
+  // uma sessão que ele nunca abriu de propósito. Também não lê histórico
+  // (não faz sentido pra uma chamada avulsa). Default false = comportamento
+  // de chat normal, sem mudar nada pra quem já usa.
+  semHistorico?: boolean
 }
 
 type IndiceModulos = { modulos: { titulo: string; trilhaId: string }[] }
@@ -90,21 +97,39 @@ async function buscarIndiceModulos(): Promise<string> {
 // Monta um resumo compacto (não o JSON bruto inteiro, que pode ter
 // centenas de transações e estouraria o prompt) do estado financeiro real
 // da pessoa, para o escopo gestao-financeira.
+//
+// IMPORTANTE: os nomes de campo aqui precisam bater exatamente com
+// src/gestao-financeira/types.ts (Conta.saldoInicial, não "saldo";
+// Meta.valorObjetivo, não "valorAlvo"; OrcamentoCategoria.limite, não
+// "valorLimite"). Um campo errado aqui derruba TODA mensagem do escopo GF,
+// porque isso roda antes de chamar o Gemini — já aconteceu uma vez.
 function montarContextoFinanceiro(estadoGf: Record<string, unknown> | null): string {
   if (!estadoGf) {
     return '\n\nDados financeiros do usuário: ainda não há dados sincronizados (conta nova ou app ainda não sincronizou). Peça para a pessoa abrir a tela inicial da Gestão Financeira ao menos uma vez.'
   }
 
-  const contas = (estadoGf.contas as { nome: string; saldo: number; tipo: string }[]) ?? []
+  const contas = (estadoGf.contas as { id: string; nome: string; tipo: string; saldoInicial: number; arquivada: boolean }[]) ?? []
   const cartoes = (estadoGf.cartoes as { nome: string; limite: number }[]) ?? []
-  const transacoes = (estadoGf.transacoes as { descricao: string; valor: number; tipo: string; categoriaId: string; data: string }[]) ?? []
+  const transacoes = (estadoGf.transacoes as { descricao: string; valor: number; tipo: string; categoriaId: string | null; contaId: string | null; data: string }[]) ?? []
   const dividas = (estadoGf.dividas as { descricao: string; valorTotal: number; valorPago: number }[]) ?? []
-  const metas = (estadoGf.metas as { nome: string; valorAlvo: number; valorAtual: number }[]) ?? []
-  const orcamentos = (estadoGf.orcamentos as { categoriaId: string; valorLimite: number }[]) ?? []
+  const metas = (estadoGf.metas as { nome: string; valorObjetivo: number; valorAtual: number }[]) ?? []
+  const orcamentos = (estadoGf.orcamentos as { categoriaId: string; limite: number }[]) ?? []
   const categorias = (estadoGf.categorias as { id: string; nome: string }[]) ?? []
-  const nomeCategoria = (id: string) => categorias.find((c) => c.id === id)?.nome ?? id
+  const nomeCategoria = (id: string | null) => (id ? categorias.find((c) => c.id === id)?.nome ?? id : 'sem categoria')
 
-  const saldoTotal = contas.reduce((soma, c) => soma + (c.saldo ?? 0), 0)
+  // Mesma fórmula de src/gestao-financeira/selectors.ts (saldoDaConta /
+  // saldoTotalContas): saldo inicial + receitas - despesas lançadas nela.
+  const movimentacoesDaConta = (contaId: string) =>
+    transacoes
+      .filter((t) => t.contaId === contaId)
+      .reduce((s, t) => s + (t.tipo === 'receita' ? t.valor : t.tipo === 'despesa' ? -t.valor : 0), 0)
+
+  const contasAtivas = contas.filter((c) => !c.arquivada)
+  const idsContasAtivas = new Set(contasAtivas.map((c) => c.id))
+  const saldoSemConta = transacoes
+    .filter((t) => !t.contaId || !idsContasAtivas.has(t.contaId))
+    .reduce((s, t) => s + (t.tipo === 'receita' ? t.valor : t.tipo === 'despesa' ? -t.valor : 0), 0)
+  const saldoTotal = contasAtivas.reduce((soma, c) => soma + c.saldoInicial + movimentacoesDaConta(c.id), 0) + saldoSemConta
 
   const ultimasTransacoes = [...transacoes]
     .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
@@ -112,7 +137,13 @@ function montarContextoFinanceiro(estadoGf: Record<string, unknown> | null): str
 
   const partes: string[] = []
   partes.push(`Saldo total (todas as contas): R$ ${saldoTotal.toFixed(2)}`)
-  partes.push(`Contas: ${contas.length ? contas.map((c) => `${c.nome} (${c.tipo}): R$ ${c.saldo.toFixed(2)}`).join('; ') : 'nenhuma cadastrada'}`)
+  partes.push(
+    `Contas: ${
+      contasAtivas.length
+        ? contasAtivas.map((c) => `${c.nome} (${c.tipo}): R$ ${(c.saldoInicial + movimentacoesDaConta(c.id)).toFixed(2)}`).join('; ')
+        : 'nenhuma cadastrada'
+    }`
+  )
   if (cartoes.length) partes.push(`Cartões: ${cartoes.map((c) => `${c.nome} (limite R$ ${c.limite.toFixed(2)})`).join('; ')}`)
   if (dividas.length) {
     partes.push(
@@ -120,10 +151,10 @@ function montarContextoFinanceiro(estadoGf: Record<string, unknown> | null): str
     )
   }
   if (metas.length) {
-    partes.push(`Metas: ${metas.map((m) => `${m.nome}: R$ ${m.valorAtual.toFixed(2)} de R$ ${m.valorAlvo.toFixed(2)}`).join('; ')}`)
+    partes.push(`Metas: ${metas.map((m) => `${m.nome}: R$ ${m.valorAtual.toFixed(2)} de R$ ${m.valorObjetivo.toFixed(2)}`).join('; ')}`)
   }
   if (orcamentos.length) {
-    partes.push(`Orçamento por categoria: ${orcamentos.map((o) => `${nomeCategoria(o.categoriaId)}: limite R$ ${o.valorLimite.toFixed(2)}`).join('; ')}`)
+    partes.push(`Orçamento por categoria: ${orcamentos.map((o) => `${nomeCategoria(o.categoriaId)}: limite R$ ${o.limite.toFixed(2)}`).join('; ')}`)
   }
   partes.push(
     `Últimas ${ultimasTransacoes.length} transações (mais recente primeiro): ` +
@@ -158,21 +189,27 @@ Deno.serve(async (req) => {
     const { data: { user }, error: erroUsuario } = await supabase.auth.getUser()
     if (erroUsuario || !user) return respostaErro('Sessão inválida.', 401)
 
-    const { mensagem, sessaoId, escopo = 'geral', moduloContexto }: CorpoRequisicao = await req.json()
+    const { mensagem, sessaoId, escopo = 'geral', moduloContexto, semHistorico = false }: CorpoRequisicao = await req.json()
     if (!mensagem || !mensagem.trim()) return respostaErro('Mensagem vazia.', 400)
     if (!sessaoId) return respostaErro('sessaoId ausente.', 400)
 
     // Histórico da SESSÃO atual (não do usuário inteiro) — cada conversa
     // tem sua própria memória de curto prazo, sem vazar contexto de
     // conversas antigas ou do outro escopo (geral vs gestão financeira).
-    const { data: historico } = await supabase
-      .from('nexus_ai_mensagens')
-      .select('papel, conteudo')
-      .eq('user_id', user.id)
-      .eq('sessao_id', sessaoId)
-      .order('created_at', { ascending: false })
-      .limit(MAX_MENSAGENS_HISTORICO)
-    const historicoOrdenado = (historico ?? []).reverse()
+    // Pulado inteiramente quando semHistorico (chamada avulsa, sem sentido
+    // ler ou escrever num "histórico de conversa" que não existe de verdade).
+    const historicoOrdenado = semHistorico
+      ? []
+      : (
+          await supabase
+            .from('nexus_ai_mensagens')
+            .select('papel, conteudo')
+            .eq('user_id', user.id)
+            .eq('sessao_id', sessaoId)
+            .eq('escopo', escopo)
+            .order('created_at', { ascending: false })
+            .limit(MAX_MENSAGENS_HISTORICO)
+        ).data?.reverse() ?? []
 
     // Índice de módulos: em AMBOS os escopos agora — o assistente geral
     // usa para direcionar aprendizado, e o assistente da GF usa para
@@ -192,7 +229,15 @@ Deno.serve(async (req) => {
         .select('dados_jsonb')
         .eq('user_id', user.id)
         .maybeSingle()
-      contextoFinanceiro = montarContextoFinanceiro((estadoGf?.dados_jsonb as Record<string, unknown>) ?? null)
+      try {
+        contextoFinanceiro = montarContextoFinanceiro((estadoGf?.dados_jsonb as Record<string, unknown>) ?? null)
+      } catch (erroContexto) {
+        // Nunca deixa um formato de dado inesperado derrubar a conversa
+        // inteira (já aconteceu por um nome de campo errado) — sem os
+        // números reais dessa vez, mas a pessoa ainda consegue conversar.
+        console.error('Erro ao montar contexto financeiro:', erroContexto)
+        contextoFinanceiro = '\n\nDados financeiros do usuário: não foi possível ler os dados agora. Avise a pessoa e sugira tentar de novo em instantes.'
+      }
     }
 
     const contextoModulo = moduloContexto
@@ -236,11 +281,14 @@ Deno.serve(async (req) => {
     }
 
     // Salva pergunta e resposta no histórico — melhor esforço, não bloqueia
-    // a resposta pro usuário se a escrita falhar por algum motivo.
-    await supabase.from('nexus_ai_mensagens').insert([
-      { user_id: user.id, sessao_id: sessaoId, escopo, papel: 'user', conteudo: mensagem, modulo_contexto: moduloContexto ?? null },
-      { user_id: user.id, sessao_id: sessaoId, escopo, papel: 'model', conteudo: textoResposta, modulo_contexto: moduloContexto ?? null },
-    ])
+    // a resposta pro usuário se a escrita falhar por algum motivo. Pulado
+    // quando semHistorico (ver comentário acima).
+    if (!semHistorico) {
+      await supabase.from('nexus_ai_mensagens').insert([
+        { user_id: user.id, sessao_id: sessaoId, escopo, papel: 'user', conteudo: mensagem, modulo_contexto: moduloContexto ?? null },
+        { user_id: user.id, sessao_id: sessaoId, escopo, papel: 'model', conteudo: textoResposta, modulo_contexto: moduloContexto ?? null },
+      ])
+    }
 
     return respostaOk({ resposta: textoResposta })
   } catch (erro) {

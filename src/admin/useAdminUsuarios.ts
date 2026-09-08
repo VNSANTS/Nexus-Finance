@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { EdicaoMetricasAdmin, EdicaoUsuarioAdmin, FiltrosAdmin, OrdenacaoAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from './types'
-import { atualizarMetricas, atualizarPapel, atualizarStatus, editarUsuario, excluirUsuario, listarUsuarios } from './backend'
+import {
+  atualizarMetricas, atualizarPapel, atualizarStatus, confirmarUsuario, editarUsuario,
+  excluirUsuario, listarStatusAuth, listarUsuarios, reenviarConfirmacao,
+} from './backend'
 
 const FILTROS_INICIAIS: FiltrosAdmin = { busca: '', papel: 'todos', status: 'todos' }
 
@@ -23,6 +26,24 @@ export function useAdminUsuarios() {
       setErro('Não foi possível carregar os usuários. Tente novamente.')
     } finally {
       setCarregando(false)
+    }
+
+    // Status de auth.users (confirmação de e-mail, último login) chega
+    // depois, numa chamada separada — não trava a lista principal se essa
+    // Edge Function falhar ou ainda não tiver sido deployada (ver
+    // remoto.ts, listarStatusAuth). Falha em silêncio: os campos ficam
+    // undefined e a tela mostra "verificando…" indefinidamente nesse caso,
+    // sem quebrar o resto do painel.
+    try {
+      const statusAuth = await listarStatusAuth()
+      setUsuarios((prev) =>
+        prev.map((u) => {
+          const s = statusAuth.get(u.id)
+          return s ? { ...u, emailConfirmado: s.emailConfirmado, ultimoLogin: s.ultimoLogin } : u
+        })
+      )
+    } catch {
+      // sem status de auth desta vez — os campos continuam undefined
     }
   }, [])
 
@@ -91,6 +112,29 @@ export function useAdminUsuarios() {
     }
   }, [])
 
+  const reenviarEmail = useCallback(async (id: string, email: string) => {
+    marcarPendente(id, true)
+    try {
+      await reenviarConfirmacao(id, email)
+    } finally {
+      marcarPendente(id, false)
+    }
+  }, [])
+
+  const confirmarEmail = useCallback(async (id: string) => {
+    marcarPendente(id, true)
+    try {
+      const atualizado = await confirmarUsuario(id)
+      // confirmarUsuario() não repuxa auth.users (só profiles) — marca
+      // emailConfirmado otimisticamente aqui pra não esperar um novo
+      // listarStatusAuth só pra refletir a própria ação que o admin acabou
+      // de fazer.
+      setUsuarios((prev) => prev.map((u) => (u.id === id ? { ...atualizado, emailConfirmado: true, ultimoLogin: u.ultimoLogin } : u)))
+    } finally {
+      marcarPendente(id, false)
+    }
+  }, [])
+
   const usuariosFiltrados = useMemo(() => {
     const buscaNorm = filtros.busca.trim().toLowerCase()
     let lista = usuarios.filter((u) => {
@@ -121,11 +165,14 @@ export function useAdminUsuarios() {
   }, [usuarios, filtros, ordenacao])
 
   const estatisticas = useMemo(() => {
+    const LIMIAR_ONLINE_MS = 2 * 60_000
+    const agora = Date.now()
     return {
       total: usuarios.length,
       ativos: usuarios.filter((u) => u.status === 'ativo').length,
       bloqueados: usuarios.filter((u) => u.status === 'bloqueado').length,
       admins: usuarios.filter((u) => u.papel === 'admin').length,
+      online: usuarios.filter((u) => u.ultimoVistoEm && agora - new Date(u.ultimoVistoEm).getTime() < LIMIAR_ONLINE_MS).length,
     }
   }, [usuarios])
 
@@ -146,5 +193,7 @@ export function useAdminUsuarios() {
     salvarEdicao,
     salvarMetricas,
     remover,
+    reenviarEmail,
+    confirmarEmail,
   }
 }

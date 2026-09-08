@@ -18,4 +18,7 @@ export {
   excluirUsuario,
   buscarAppConfig,
   atualizarAppConfig,
+  listarStatusAuth,
+  reenviarConfirmacao,
+  confirmarUsuario,
 } from './remoto'

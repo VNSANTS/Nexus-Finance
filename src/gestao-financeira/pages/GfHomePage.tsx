@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
@@ -44,6 +44,7 @@ import GfGraficoFluxo from '../components/GfGraficoFluxo'
 import GfDonutCategorias from '../components/GfDonutCategorias'
 import GfCalendarioFinanceiro from '../components/GfCalendarioFinanceiro'
 import { gerarNotificacoes } from '../notificacoes'
+import { gerarInsightDiarioGF } from '../insightDiarioGF'
 
 // Home da Gestão Financeira — versão mobile do dashboard, com todos os
 // blocos que existem na versão desktop (fluxo completo, categorias,
@@ -79,6 +80,11 @@ export default function GfHomePage() {
     () => gerarNotificacoes(estado).filter((n) => !estado.notificacoesLidas.includes(n.id)).length,
     [estado]
   )
+
+  const [insightIA, setInsightIA] = useState<string | null>(null)
+  useEffect(() => {
+    gerarInsightDiarioGF().then(setInsightIA) // falha em silêncio (offline/Gemini fora do ar) — o card simplesmente não aparece
+  }, [])
 
   const varReceitas = variacaoPercentual(resumoAtual.receitas, resumoAnterior.receitas)
   const varDespesas = variacaoPercentual(resumoAtual.despesas, resumoAnterior.despesas)
@@ -118,6 +124,22 @@ export default function GfHomePage() {
         <h1 className="text-[19px] font-display font-extrabold text-white">Olá, {progress.perfilPessoal.nome}! 👋</h1>
         <p className="text-[13px] text-slate-500 capitalize mt-0.5">Hoje é {dataFormatada}.</p>
       </div>
+
+      {/* Card: dica do Nexus AI (gerada 1x/dia, com base nos dados financeiros reais) */}
+      {insightIA && (
+        <div className="px-4 mt-3">
+          <div
+            className="rounded-[18px] p-3.5 flex items-start gap-2.5"
+            style={{ background: 'linear-gradient(135deg, #8B5CF61A, #00D4FF1A)', border: '1px solid #8B5CF64D' }}
+          >
+            <Sparkles size={15} className="text-[#8B5CF6] shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-bold text-[#8B5CF6] mb-0.5">Dica do Nexus AI</p>
+              <p className="text-[12.5px] text-slate-200 leading-snug">{insightIA}</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Card: Saldo atual */}
       <div className="px-4 mt-4">

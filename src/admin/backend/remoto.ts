@@ -32,6 +32,7 @@ type LinhaProfile = {
   role: PapelUsuario
   status: StatusUsuario
   created_at: string
+  last_seen_at: string | null
 }
 
 type LinhaProgresso = {
@@ -87,6 +88,7 @@ function mapearLinha(linha: LinhaProfile, progresso: LinhaProgresso | undefined)
     status: linha.status,
     criadoEm: linha.created_at,
     metricas: mapearMetricas(progresso),
+    ultimoVistoEm: linha.last_seen_at,
   }
 }
 
@@ -111,7 +113,7 @@ async function buscarProgressoPorId(id: string): Promise<LinhaProgresso | undefi
 
 export async function listarUsuarios(): Promise<UsuarioAdmin[]> {
   const [{ data: perfis, error: erroPerfis }, { data: progressos, error: erroProgresso }] = await Promise.all([
-    supabase.from('profiles').select('id, email, nome, role, status, created_at').order('nome', { ascending: true }),
+    supabase.from('profiles').select('id, email, nome, role, status, created_at, last_seen_at').order('nome', { ascending: true }),
     supabase
       .from('user_progress')
       .select('user_id, xp, level, level_name, streak, badges_count, desafios_completos, modulos_concluidos, risk_profile, ultima_atividade'),
@@ -132,7 +134,7 @@ export async function atualizarPapel(id: string, papel: PapelUsuario): Promise<U
     .from('profiles')
     .update({ role: papel })
     .eq('id', id)
-    .select('id, email, nome, role, status, created_at')
+    .select('id, email, nome, role, status, created_at, last_seen_at')
     .single()
 
   if (error) throw new Error(error.message)
@@ -147,7 +149,44 @@ export async function atualizarStatus(id: string, status: StatusUsuario): Promis
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, nome, role, status, created_at')
+    .select('id, email, nome, role, status, created_at, last_seen_at')
+    .eq('id', id)
+    .single()
+
+  if (error) throw new Error(error.message)
+  return mapearLinha(data as LinhaProfile, await buscarProgressoPorId(id))
+}
+
+// Status de confirmação de e-mail + último login — vêm de auth.users, que
+// a publishable key não enxerga (só a service_role, dentro da Edge
+// Function). Chamada separada da listagem principal de propósito: assim
+// listarUsuarios continua rápida e funcionando mesmo se essa function
+// falhar/não estiver deployada ainda — a tela só mostra "carregando" nesses
+// dois campos até essa promise resolver.
+export async function listarStatusAuth(): Promise<Map<string, { emailConfirmado: boolean; ultimoLogin: string | null }>> {
+  const { status } = await chamarAdminFunction<{ status: { id: string; emailConfirmado: boolean; ultimoLogin: string | null }[] }>({
+    tipo: 'listarStatusAuth',
+  })
+  return new Map(status.map((s) => [s.id, { emailConfirmado: s.emailConfirmado, ultimoLogin: s.ultimoLogin }]))
+}
+
+// Reenvia o e-mail de confirmação de cadastro pro endereço atual do
+// usuário. Não muda nada no banco (não há o que atualizar aqui) — só
+// dispara o envio de novo.
+export async function reenviarConfirmacao(id: string, email: string): Promise<void> {
+  await chamarAdminFunction({ tipo: 'reenviarConfirmacao', alvoId: id, email })
+}
+
+// Confirma o e-mail manualmente, sem depender do usuário clicar no link
+// (ex: e-mail nunca chegou, mas o admin já verificou a pessoa por outro
+// meio). Repuxa o perfil pra manter o resto do card consistente, mesmo que
+// `emailConfirmado` em si venha só na próxima chamada de listarStatusAuth
+// (é a tela quem decide atualizar isso otimisticamente, ver useAdminUsuarios).
+export async function confirmarUsuario(id: string): Promise<UsuarioAdmin> {
+  await chamarAdminFunction({ tipo: 'confirmarUsuario', alvoId: id })
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, nome, role, status, created_at, last_seen_at')
     .eq('id', id)
     .single()
 
@@ -165,7 +204,7 @@ export async function editarUsuario(id: string, dados: EdicaoUsuarioAdmin): Prom
     .from('profiles')
     .update({ nome: dados.nome })
     .eq('id', id)
-    .select('id, email, nome, role, status, created_at')
+    .select('id, email, nome, role, status, created_at, last_seen_at')
     .single()
 
   if (error) throw new Error(error.message)
@@ -254,7 +293,7 @@ export async function atualizarMetricas(id: string, dados: EdicaoMetricasAdmin):
 
   const { data: perfil, error: erroPerfil } = await supabase
     .from('profiles')
-    .select('id, email, nome, role, status, created_at')
+    .select('id, email, nome, role, status, created_at, last_seen_at')
     .eq('id', id)
     .single()
 

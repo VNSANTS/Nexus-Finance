@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   ArrowLeft, Search, ShieldCheck, ShieldOff, Lock, Unlock, Pencil, Trash2,
   Users, UserCheck, UserX, Crown, X, Loader2, AlertTriangle, ChevronDown, Sparkles,
+  MailWarning, MailCheck, SendHorizonal, Wifi,
 } from 'lucide-react'
 import { useAdminUsuarios } from './useAdminUsuarios'
 import { buscarAppConfig, atualizarAppConfig } from './backend'
@@ -12,6 +13,17 @@ function formatarData(iso: string | null) {
   if (!iso) return 'Nunca acessou'
   const d = new Date(iso)
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
+function formatarDataHora(iso: string | null | undefined) {
+  if (!iso) return 'Nunca'
+  const d = new Date(iso)
+  return d.toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+}
+
+const LIMIAR_ONLINE_MS = 2 * 60_000 // mesmo limiar de useAdminUsuarios.ts (estatisticas.online)
+function estaOnline(usuario: UsuarioAdmin) {
+  return Boolean(usuario.ultimoVistoEm) && Date.now() - new Date(usuario.ultimoVistoEm!).getTime() < LIMIAR_ONLINE_MS
 }
 
 function iniciais(nome: string) {
@@ -268,7 +280,7 @@ function LinhaMetrica({ label, valor }: { label: string; valor: string }) {
 // --- Linha de usuário (cartão) -------------------------------------------
 
 function CartaoUsuario({
-  usuario, pendente, onAlternarPapel, onAlternarStatus, onEditar, onEditarMetricas, onExcluir,
+  usuario, pendente, onAlternarPapel, onAlternarStatus, onEditar, onEditarMetricas, onExcluir, onReenviarEmail, onConfirmarEmail,
 }: {
   usuario: UsuarioAdmin
   pendente: boolean
@@ -277,10 +289,13 @@ function CartaoUsuario({
   onEditar: () => void
   onEditarMetricas: () => void
   onExcluir: () => void
+  onReenviarEmail: () => void
+  onConfirmarEmail: () => void
 }) {
   const [expandido, setExpandido] = useState(false)
   const bloqueado = usuario.status === 'bloqueado'
   const isAdmin = usuario.papel === 'admin'
+  const online = estaOnline(usuario)
   const pct = usuario.metricas.totalModulos > 0
     ? Math.round((usuario.metricas.modulosConcluidos / usuario.metricas.totalModulos) * 100)
     : 0
@@ -291,18 +306,30 @@ function CartaoUsuario({
         onClick={() => setExpandido((v) => !v)}
         className="w-full flex items-center gap-3 px-3.5 py-3 text-left"
       >
-        <div
-          className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-sm ${
-            isAdmin ? 'bg-accent-gold/20 text-accent-gold' : 'bg-accent-cyan/15 text-accent-cyan'
-          }`}
-        >
-          {iniciais(usuario.nome)}
+        <div className="relative shrink-0">
+          <div
+            className={`w-10 h-10 rounded-full flex items-center justify-center font-display font-bold text-sm ${
+              isAdmin ? 'bg-accent-gold/20 text-accent-gold' : 'bg-accent-cyan/15 text-accent-cyan'
+            }`}
+          >
+            {iniciais(usuario.nome)}
+          </div>
+          <span
+            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-bg-card"
+            style={{ background: online ? '#22C55E' : '#64748B' }}
+            title={online ? 'Online agora' : 'Offline'}
+          />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="text-sm font-semibold text-texto truncate">{usuario.nome}</span>
             {isAdmin && <Crown size={12} className="text-accent-gold shrink-0" />}
+            {usuario.emailConfirmado === false && (
+              <span title="E-mail não validado">
+                <MailWarning size={12} className="text-accent-gold shrink-0" />
+              </span>
+            )}
           </div>
           <span className="text-xs text-texto-secundario truncate block">{usuario.email}</span>
         </div>
@@ -332,6 +359,12 @@ function CartaoUsuario({
             <LinhaMetrica label="Perfil de risco" valor={usuario.metricas.riskProfile ?? '—'} />
             <LinhaMetrica label="Cadastro" valor={formatarData(usuario.criadoEm)} />
             <LinhaMetrica label="Última atividade" valor={formatarData(usuario.metricas.ultimaAtividade)} />
+            <LinhaMetrica label="Presença" valor={online ? 'Online agora' : `Visto: ${formatarDataHora(usuario.ultimoVistoEm)}`} />
+            <LinhaMetrica
+              label="E-mail"
+              valor={usuario.emailConfirmado === undefined ? 'verificando…' : usuario.emailConfirmado ? 'Validado' : 'Não validado'}
+            />
+            <LinhaMetrica label="Último login" valor={usuario.ultimoLogin === undefined ? 'verificando…' : formatarDataHora(usuario.ultimoLogin)} />
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1">
@@ -369,6 +402,26 @@ function CartaoUsuario({
               <Sparkles size={13} />
               Progresso
             </button>
+            {usuario.emailConfirmado === false && (
+              <>
+                <button
+                  onClick={onReenviarEmail}
+                  disabled={pendente}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border border-accent-cyan/40 text-accent-cyan disabled:opacity-50"
+                >
+                  <SendHorizonal size={13} />
+                  Reenviar e-mail
+                </button>
+                <button
+                  onClick={onConfirmarEmail}
+                  disabled={pendente}
+                  className="flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-full border border-accent-green/40 text-accent-green disabled:opacity-50"
+                >
+                  <MailCheck size={13} />
+                  Confirmar manualmente
+                </button>
+              </>
+            )}
             <button
               onClick={onExcluir}
               disabled={pendente}
@@ -492,6 +545,7 @@ export default function AdminUsuariosPage() {
   const {
     usuarios, totalSemFiltro, estatisticas, carregando, erro, filtros, setFiltros,
     ordenacao, setOrdenacao, pendentes, recarregar, alternarPapel, alternarStatus, salvarEdicao, salvarMetricas, remover,
+    reenviarEmail, confirmarEmail,
   } = useAdminUsuarios()
 
   const [editando, setEditando] = useState<UsuarioAdmin | null>(null)
@@ -511,8 +565,9 @@ export default function AdminUsuariosPage() {
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <CartaoEstatistica icone={<Users size={15} />} label="Total" valor={estatisticas.total} cor="var(--accent-primaria)" />
+        <CartaoEstatistica icone={<Wifi size={15} />} label="Online agora" valor={estatisticas.online} cor="var(--accent-green)" />
         <CartaoEstatistica icone={<UserCheck size={15} />} label="Ativos" valor={estatisticas.ativos} cor="var(--accent-green)" />
         <CartaoEstatistica icone={<UserX size={15} />} label="Bloqueados" valor={estatisticas.bloqueados} cor="var(--accent-red)" />
         <CartaoEstatistica icone={<Crown size={15} />} label="Admins" valor={estatisticas.admins} cor="var(--accent-gold)" />
@@ -603,6 +658,8 @@ export default function AdminUsuariosPage() {
               onEditar={() => setEditando(u)}
               onEditarMetricas={() => setEditandoMetricas(u)}
               onExcluir={() => setExcluindo(u)}
+              onReenviarEmail={() => reenviarEmail(u.id, u.email).catch((e) => alert(e instanceof Error ? e.message : 'Erro ao reenviar e-mail.'))}
+              onConfirmarEmail={() => confirmarEmail(u.id).catch((e) => alert(e instanceof Error ? e.message : 'Erro ao confirmar usuário.'))}
             />
           ))}
         </div>

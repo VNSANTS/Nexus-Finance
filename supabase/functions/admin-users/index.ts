@@ -31,6 +31,9 @@ type Acao =
   | { tipo: 'editarEmail'; alvoId: string; novoEmail: string }
   | { tipo: 'alternarBloqueio'; alvoId: string; bloquear: boolean }
   | { tipo: 'excluirPropriaConta'; alvoId: string }
+  | { tipo: 'listarStatusAuth' }
+  | { tipo: 'reenviarConfirmacao'; alvoId: string; email: string }
+  | { tipo: 'confirmarUsuario'; alvoId: string }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -134,6 +137,41 @@ Deno.serve(async (req) => {
         if (erroPerfilUpdate) return respostaErro(erroPerfilUpdate.message, 400)
 
         return respostaOk({ status: acao.bloquear ? 'bloqueado' : 'ativo' })
+      }
+
+      // Status de confirmação de e-mail (email_confirmed_at), último login
+      // e banimento vêm de auth.users — a publishable key não enxerga essa
+      // tabela (só a service_role, por isso passa por aqui). listUsers só
+      // devolve até 1000 por página; suficiente pra esse app hoje. Se um
+      // dia passar disso, precisa paginar (page/perPage) e juntar os lotes.
+      case 'listarStatusAuth': {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+        if (error) return respostaErro(error.message, 400)
+
+        const status = data.users.map((u) => ({
+          id: u.id,
+          emailConfirmado: Boolean(u.email_confirmed_at),
+          ultimoLogin: u.last_sign_in_at ?? null,
+        }))
+        return respostaOk({ status })
+      }
+
+      // Reenvia o e-mail de confirmação de cadastro (usa a config de SMTP
+      // do próprio projeto Supabase — gratuita, mas com limite baixo no
+      // plano Free; ok pro volume de um app pessoal).
+      case 'reenviarConfirmacao': {
+        const { error } = await supabaseAdmin.auth.resend({ type: 'signup', email: acao.email })
+        if (error) return respostaErro(error.message, 400)
+        return respostaOk({ reenviado: true })
+      }
+
+      // Confirma o e-mail manualmente (sem depender do usuário clicar no
+      // link) — útil quando o e-mail de confirmação não chegou por algum
+      // motivo e o admin já verificou a identidade da pessoa por outro meio.
+      case 'confirmarUsuario': {
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(acao.alvoId, { email_confirm: true })
+        if (error) return respostaErro(error.message, 400)
+        return respostaOk({ confirmado: true })
       }
 
       default:
