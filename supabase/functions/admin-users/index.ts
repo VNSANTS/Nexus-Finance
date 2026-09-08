@@ -1,21 +1,23 @@
 // Edge Function: admin-users
 //
-// Centraliza as 3 ações que o painel admin não consegue fazer só com a
-// publishable key (porque exigem privilégio total sobre auth.users):
-//   - excluirUsuario: remove o login de verdade (auth.users), não só o
-//     perfil (public.profiles)
-//   - editarEmail: troca o e-mail de LOGIN, não só o de exibição
-//   - alternarBloqueio: usa o "ban" nativo do Supabase Auth, então um
-//     usuário bloqueado não consegue mais logar de verdade (hoje o campo
-//     `status` em profiles só é decorativo, não impede login nenhum)
+// Centraliza ações que o app não consegue fazer só com a publishable key
+// (porque exigem privilégio total sobre auth.users):
+//   - excluirUsuario (admin): remove o login de verdade (auth.users) de
+//     OUTRO usuário, não só o perfil (public.profiles)
+//   - editarEmail (admin): troca o e-mail de LOGIN de outro usuário, não
+//     só o de exibição
+//   - alternarBloqueio (admin): usa o "ban" nativo do Supabase Auth, então
+//     um usuário bloqueado não consegue mais logar de verdade
+//   - excluirPropriaConta (qualquer usuário logado): exclui A PRÓPRIA
+//     conta — única ação aqui que não exige ser admin, só exige que
+//     alvoId bata com quem está fazendo a chamada
 //
 // SEGURANÇA: esta function roda com a service_role key (acesso total),
 // mas a service_role key NUNCA sai do servidor — ela vive só nas variáveis
 // de ambiente da própria function, nunca no bundle do frontend. Todo
-// request chega aqui com o token JWT de quem está chamando; a primeira
-// coisa que a function faz é confirmar que esse usuário é admin de
-// verdade no banco (nunca confia em nada vindo do frontend, nem que a
-// pessoa diga "sou admin" — ela consulta profiles.role ela mesma).
+// request chega aqui com o token JWT de quem está chamando; a function
+// nunca confia em nada vindo do frontend sobre quem é o usuário ou se ele
+// é admin — sempre confirma direto no banco.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
@@ -28,6 +30,10 @@ type Acao =
   | { tipo: 'excluirUsuario'; alvoId: string }
   | { tipo: 'editarEmail'; alvoId: string; novoEmail: string }
   | { tipo: 'alternarBloqueio'; alvoId: string; bloquear: boolean }
+  | { tipo: 'excluirPropriaConta'; alvoId: string }
+  | { tipo: 'listarStatusAuth' }
+  | { tipo: 'reenviarConfirmacao'; alvoId: string; email: string }
+  | { tipo: 'confirmarUsuario'; alvoId: string }
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -61,6 +67,21 @@ Deno.serve(async (req) => {
       return respostaErro('Sessão inválida.', 401)
     }
 
+    const acao: Acao = await req.json()
+
+    // 'excluirPropriaConta' é a única ação que NÃO exige ser admin — só
+    // exige que a pessoa esteja excluindo a própria conta (alvoId tem que
+    // bater com o id de quem está logado). Todas as outras ações mexem em
+    // conta de terceiros e continuam exigindo role='admin' no banco.
+    if (acao.tipo === 'excluirPropriaConta') {
+      if (acao.alvoId !== user.id) {
+        return respostaErro('Só é possível excluir a própria conta.', 403)
+      }
+      const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id)
+      if (error) return respostaErro(error.message, 400)
+      return respostaOk({ excluido: true })
+    }
+
     const { data: perfil, error: erroPerfil } = await supabaseAdmin
       .from('profiles')
       .select('role')
@@ -70,8 +91,6 @@ Deno.serve(async (req) => {
     if (erroPerfil || perfil?.role !== 'admin') {
       return respostaErro('Apenas administradores podem executar essa ação.', 403)
     }
-
-    const acao: Acao = await req.json()
 
     switch (acao.tipo) {
       case 'excluirUsuario': {
@@ -118,6 +137,41 @@ Deno.serve(async (req) => {
         if (erroPerfilUpdate) return respostaErro(erroPerfilUpdate.message, 400)
 
         return respostaOk({ status: acao.bloquear ? 'bloqueado' : 'ativo' })
+      }
+
+      // Status de confirmação de e-mail (email_confirmed_at), último login
+      // e banimento vêm de auth.users — a publishable key não enxerga essa
+      // tabela (só a service_role, por isso passa por aqui). listUsers só
+      // devolve até 1000 por página; suficiente pra esse app hoje. Se um
+      // dia passar disso, precisa paginar (page/perPage) e juntar os lotes.
+      case 'listarStatusAuth': {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+        if (error) return respostaErro(error.message, 400)
+
+        const status = data.users.map((u) => ({
+          id: u.id,
+          emailConfirmado: Boolean(u.email_confirmed_at),
+          ultimoLogin: u.last_sign_in_at ?? null,
+        }))
+        return respostaOk({ status })
+      }
+
+      // Reenvia o e-mail de confirmação de cadastro (usa a config de SMTP
+      // do próprio projeto Supabase — gratuita, mas com limite baixo no
+      // plano Free; ok pro volume de um app pessoal).
+      case 'reenviarConfirmacao': {
+        const { error } = await supabaseAdmin.auth.resend({ type: 'signup', email: acao.email })
+        if (error) return respostaErro(error.message, 400)
+        return respostaOk({ reenviado: true })
+      }
+
+      // Confirma o e-mail manualmente (sem depender do usuário clicar no
+      // link) — útil quando o e-mail de confirmação não chegou por algum
+      // motivo e o admin já verificou a identidade da pessoa por outro meio.
+      case 'confirmarUsuario': {
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(acao.alvoId, { email_confirm: true })
+        if (error) return respostaErro(error.message, 400)
+        return respostaOk({ confirmado: true })
       }
 
       default:

@@ -17,9 +17,13 @@ import {
   Palette,
   Pencil,
   Plus,
+  RefreshCw,
   Share2,
+  ShieldCheck,
   Smile,
+  Sparkles,
   Star,
+  Trash2,
   Trophy,
   type LucideIcon,
 } from 'lucide-react'
@@ -30,6 +34,7 @@ import EditorFotoPerfil from '@/components/EditorFotoPerfil'
 import { ModalAvancado as SeletorCorAvancado } from '@/components/SeletorCor'
 import { corComAlfa, corOpaca } from '@/utils/cor'
 import { useUserProgress } from '@/hooks/useUserProgress'
+import { useAuth } from '@/auth/AuthContext'
 import { BADGES } from '@/data/badges'
 import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
 import { ARTES_BADGE } from '@/assets/badges'
@@ -60,7 +65,8 @@ const MAX_BIO = 60
 
 export default function PerfilPage() {
   const navigate = useNavigate()
-  const { progress, levelInfo, setPerfilPessoal, resetProgress } = useUserProgress()
+  const { progress, levelInfo, setPerfilPessoal, resetProgress, sincronizarAgora, sincronizando } = useUserProgress()
+  const { ehAdmin, sair, excluirPropriaConta } = useAuth()
 
   const modulosCompletos = Object.values(progress.abasConcluidas).filter((abas) => abas.length === 6).length
 
@@ -89,7 +95,14 @@ export default function PerfilPage() {
   const [editandoPerfil, setEditandoPerfil] = useState(false)
   const [badgeCompartilhando, setBadgeCompartilhando] = useState<(typeof BADGES)[number] | null>(null)
   const [confirmandoReset, setConfirmandoReset] = useState(false)
+  const [confirmandoSair, setConfirmandoSair] = useState(false)
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
+  const [excluindoConta, setExcluindoConta] = useState(false)
+  const [erroExclusao, setErroExclusao] = useState<string | null>(null)
+  const [textoConfirmacaoExclusao, setTextoConfirmacaoExclusao] = useState('')
   const [exportado, setExportado] = useState(false)
+  const [sincronizadoAgora, setSincronizadoAgora] = useState(false)
+  const [erroSincronizacao, setErroSincronizacao] = useState<string | null>(null)
 
   const hoje = new Date().getDate()
   const diasAtivos = Array.from({ length: progress.streak }, (_, i) => hoje - i).filter((d) => d > 0)
@@ -254,28 +267,47 @@ export default function PerfilPage() {
         <ConquistasCarrossel badges={BADGES} statsUsuario={statsUsuario} onCompartilhar={setBadgeCompartilhando} />
       </div>
 
-      {/* Nível Profissional — em breve */}
-      <div className="mb-5.5">
-        <div className="flex items-center gap-3.5 p-4 rounded-[18px]" style={{ background: 'linear-gradient(135deg, #FFC93C14, #EF44440D)', border: '1px solid #FFC93C33' }}>
-          <div className="w-11 h-11 rounded-2xl bg-accent-gold/20 flex items-center justify-center shrink-0">
-            <Lock size={19} className="text-accent-gold" />
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-1.5">
-              <p className="text-[13.5px] font-bold text-white">Nível Profissional</p>
-              <span className="text-[9px] font-bold text-accent-gold bg-accent-gold/20 px-1.5 py-0.5 rounded-full">EM BREVE</span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">
-              Prove que você sabe: 100 perguntas de altíssimo nível liberam um caminho exclusivo dentro do Nexus Finance
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Configurações */}
       <div>
         <p className="text-[12.5px] font-bold text-white mb-2.5">Configurações</p>
         <div className="flex flex-col gap-2">
+          <ConfigRow
+            icon={RefreshCw}
+            label={
+              sincronizadoAgora ? 'Progresso atualizado!' : erroSincronizacao ? erroSincronizacao : 'Sincronizar agora'
+            }
+            cor={sincronizadoAgora ? '#22C55E' : erroSincronizacao ? '#EF4444' : '#00D4FF'}
+            girando={sincronizando}
+            onClick={async () => {
+              if (sincronizando) return
+              setSincronizadoAgora(false)
+              setErroSincronizacao(null)
+              const resultado = await sincronizarAgora()
+              if (resultado.ok) {
+                setSincronizadoAgora(true)
+                setTimeout(() => setSincronizadoAgora(false), 2500)
+              } else {
+                setErroSincronizacao(resultado.erro ?? 'Erro ao sincronizar.')
+                setTimeout(() => setErroSincronizacao(null), 3500)
+              }
+            }}
+          />
+          <ConfigRow
+            icon={Sparkles}
+            label="Nexus AI"
+            cor="#00D4FF"
+            onClick={() => navigate('/nexus-ai')}
+            chevron
+          />
+          {ehAdmin && (
+            <ConfigRow
+              icon={ShieldCheck}
+              label="Painel Admin"
+              cor="#FFC93C"
+              onClick={() => navigate('/admin/usuarios')}
+              chevron
+            />
+          )}
           <ConfigRow
             icon={Bell}
             label="Notificações"
@@ -299,7 +331,8 @@ export default function PerfilPage() {
             chevron={!exportado}
           />
           <ConfigRow icon={LogOut} label="Reiniciar progresso" cor="#EF4444" onClick={() => setConfirmandoReset(true)} chevron />
-          <ConfigRow icon={Lock} label="Sair da conta" cor="#475569" desabilitado />
+          <ConfigRow icon={Lock} label="Sair da conta" cor="#94A3B8" onClick={() => setConfirmandoSair(true)} chevron />
+          <ConfigRow icon={Trash2} label="Excluir minha conta" cor="#EF4444" onClick={() => setConfirmandoExclusao(true)} chevron />
         </div>
       </div>
       </div>
@@ -363,6 +396,136 @@ export default function PerfilPage() {
                   className="flex-1 h-[46px] rounded-2xl bg-accent-red text-white text-[13px] font-bold"
                 >
                   Sim, reiniciar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal confirmar saída */}
+      <AnimatePresence>
+        {confirmandoSair && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 z-[100] flex items-end justify-center"
+            onClick={() => setConfirmandoSair(false)}
+          >
+            <motion.div
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              exit={{ y: 100 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[380px] bg-bg-card border-t border-border rounded-t-[24px] p-6 pb-8"
+            >
+              <div className="w-9 h-1 rounded-full bg-border mx-auto mb-4.5" />
+              <div className="w-[46px] h-[46px] rounded-2xl bg-slate-500/10 flex items-center justify-center mb-3.5">
+                <Lock size={21} className="text-slate-400" />
+              </div>
+              <p className="text-[15px] font-bold text-white mb-2">Sair da conta?</p>
+              <p className="text-[12.5px] text-slate-400 leading-relaxed mb-5">
+                Você precisará entrar de novo para continuar usando o app.
+              </p>
+              <div className="flex gap-2.5">
+                <button onClick={() => setConfirmandoSair(false)} className="flex-1 h-[46px] rounded-2xl border border-border text-slate-300 text-[13px] font-semibold">
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    setConfirmandoSair(false)
+                    sair()
+                  }}
+                  className="flex-1 h-[46px] rounded-2xl bg-slate-600 text-white text-[13px] font-bold"
+                >
+                  Sim, sair
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal confirmar exclusão de conta — confirmação reforçada (digitar
+          "excluir") porque é irreversível e apaga o login de verdade, não
+          só o progresso local (diferente do "Reiniciar progresso" acima). */}
+      <AnimatePresence>
+        {confirmandoExclusao && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 z-[100] flex items-end justify-center"
+            onClick={() => {
+              if (excluindoConta) return
+              setConfirmandoExclusao(false)
+              setTextoConfirmacaoExclusao('')
+              setErroExclusao(null)
+            }}
+          >
+            <motion.div
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              exit={{ y: 100 }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-[380px] bg-bg-card border-t border-border rounded-t-[24px] p-6 pb-8"
+            >
+              <div className="w-9 h-1 rounded-full bg-border mx-auto mb-4.5" />
+              <div className="w-[46px] h-[46px] rounded-2xl bg-accent-red/10 flex items-center justify-center mb-3.5">
+                <Trash2 size={21} className="text-accent-red" />
+              </div>
+              <p className="text-[15px] font-bold text-white mb-2">Excluir sua conta?</p>
+              <p className="text-[12.5px] text-slate-400 leading-relaxed mb-4">
+                Isso apaga seu login e todo o progresso salvo no servidor de forma permanente. Não pode ser desfeito.
+              </p>
+              <label className="flex flex-col gap-1.5 mb-4">
+                <span className="text-[11px] text-slate-400">
+                  Digite <span className="font-bold text-slate-200">excluir</span> para confirmar
+                </span>
+                <input
+                  value={textoConfirmacaoExclusao}
+                  onChange={(e) => setTextoConfirmacaoExclusao(e.target.value)}
+                  className="rounded-xl bg-bg border border-border px-3 py-2.5 text-sm text-white outline-none focus:border-accent-red"
+                  placeholder="excluir"
+                  autoCapitalize="none"
+                />
+              </label>
+              {erroExclusao && <p className="text-[12px] text-accent-red mb-3">{erroExclusao}</p>}
+              <div className="flex gap-2.5">
+                <button
+                  onClick={() => {
+                    setConfirmandoExclusao(false)
+                    setTextoConfirmacaoExclusao('')
+                    setErroExclusao(null)
+                  }}
+                  disabled={excluindoConta}
+                  className="flex-1 h-[46px] rounded-2xl border border-border text-slate-300 text-[13px] font-semibold disabled:opacity-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={async () => {
+                    if (textoConfirmacaoExclusao.trim().toLowerCase() !== 'excluir') {
+                      setErroExclusao('Digite "excluir" para confirmar.')
+                      return
+                    }
+                    setExcluindoConta(true)
+                    setErroExclusao(null)
+                    const resultado = await excluirPropriaConta()
+                    if (resultado.erro) {
+                      setErroExclusao(resultado.erro)
+                      setExcluindoConta(false)
+                    }
+                    // Sucesso: excluirPropriaConta já faz signOut internamente,
+                    // o RotaProtegida do App.tsx redireciona pro /login sozinho.
+                  }}
+                  disabled={excluindoConta || textoConfirmacaoExclusao.trim().toLowerCase() !== 'excluir'}
+                  className="flex-1 h-[46px] rounded-2xl bg-accent-red text-white text-[13px] font-bold disabled:opacity-50"
+                >
+                  {excluindoConta ? 'Excluindo...' : 'Excluir conta'}
                 </button>
               </div>
             </motion.div>
@@ -899,6 +1062,7 @@ function ConfigRow({
   onClick,
   chevron,
   desabilitado,
+  girando,
 }: {
   icon: LucideIcon
   label: string
@@ -907,6 +1071,7 @@ function ConfigRow({
   onClick?: () => void
   chevron?: boolean
   desabilitado?: boolean
+  girando?: boolean
 }) {
   return (
     <button
@@ -916,7 +1081,7 @@ function ConfigRow({
       style={{ opacity: desabilitado ? 0.55 : 1, cursor: onClick ? 'pointer' : 'default' }}
     >
       <div className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: `${cor}1A` }}>
-        <Icon size={15} style={{ color: cor }} />
+        <Icon size={15} style={{ color: cor }} className={girando ? 'animate-spin' : undefined} />
       </div>
       <span className={`text-[12.5px] font-semibold flex-1 ${desabilitado ? 'text-slate-500' : 'text-slate-200'}`}>{label}</span>
       {desabilitado && <span className="text-[9.5px] font-bold text-slate-500 bg-slate-500/15 px-1.5 py-0.5 rounded-full">EM BREVE</span>}

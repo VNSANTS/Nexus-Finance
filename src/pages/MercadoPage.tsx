@@ -1,28 +1,66 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { BarChart3, CalendarClock, ChevronLeft, Grid3x3, Newspaper, Star, X } from 'lucide-react'
+import { BarChart3, CalendarClock, ChevronLeft, Grid3x3, Newspaper, Sparkles, Star, X } from 'lucide-react'
 import { getIcon } from '@/components/Icon'
 import {
   buildMercados, TICKER_TAPE_ITENS, RANKING_ALTAS, RANKING_BAIXAS,
   SETORES_HEATMAP, CALENDARIO_ECONOMICO, TICKERS_DISPONIVEIS, type Mercado,
 } from '@/data/mercado'
 import { useUserProgress } from '@/hooks/useUserProgress'
+import { buscarCambioCripto, buscarCotacoesAcoes, buscarRankingReal, formatarMoeda, formatarPercent, type CambioCripto, type CotacaoAcao, type ItemRanking } from '@/lib/cotacoesReais'
+import { gerarResumoDiarioMercado } from '@/lib/resumoDiarioIA'
+
+// Aplica cotação real de câmbio/cripto (AwesomeAPI, grátis) por cima dos
+// dados de exemplo — só troca os 3 mercados que temos dado real pra eles
+// (dólar, câmbio/EUR, cripto/BTC); os demais (bolsa, Selic, FIIs etc.)
+// continuam com os valores de exemplo até termos uma fonte gratuita real.
+function aplicarCambioReal(mercados: Mercado[], cambio: CambioCripto | null): Mercado[] {
+  if (!cambio) return mercados
+  return mercados.map((m) => {
+    if (m.id === 'dolar') {
+      return { ...m, valor: formatarMoeda(cambio.usdBrl.valor), delta: formatarPercent(cambio.usdBrl.variacaoPercent), up: cambio.usdBrl.variacaoPercent >= 0 }
+    }
+    if (m.id === 'cambio') {
+      return { ...m, valor: `EUR/BRL ${formatarMoeda(cambio.eurBrl.valor)}`, delta: formatarPercent(cambio.eurBrl.variacaoPercent), up: cambio.eurBrl.variacaoPercent >= 0 }
+    }
+    if (m.id === 'cripto') {
+      return { ...m, valor: `BTC ${formatarMoeda(cambio.btcBrl.valor)}`, delta: formatarPercent(cambio.btcBrl.variacaoPercent), up: cambio.btcBrl.variacaoPercent >= 0 }
+    }
+    return m
+  })
+}
 
 export default function MercadoPage() {
-  const mercados = buildMercados()
   const [selecionado, setSelecionado] = useState<Mercado | null>(null)
   const { progress, toggleWatchlist } = useUserProgress()
+  const [cambio, setCambio] = useState<CambioCripto | null>(null)
+  const [resumoIA, setResumoIA] = useState<string | null>(null)
+
+  useEffect(() => {
+    buscarCambioCripto().then(setCambio) // falha em silêncio (fica null) — a tela usa os dados de exemplo nesse caso
+  }, [])
+
+  useEffect(() => {
+    if (cambio) gerarResumoDiarioMercado(cambio).then(setResumoIA) // idem — se falhar, o card simplesmente não aparece
+  }, [cambio])
+
+  const mercados = useMemo(() => aplicarCambioReal(buildMercados(), cambio), [cambio])
 
   if (selecionado) {
-    return <MercadoDetalhe mercado={selecionado} onBack={() => setSelecionado(null)} />
+    // Reaplica a cotação real também no mercado aberto (a lista já muda, mas
+    // o objeto "selecionado" foi capturado antes de a cotação chegar).
+    const atualizado = mercados.find((m) => m.id === selecionado.id) ?? selecionado
+    return <MercadoDetalhe mercado={atualizado} onBack={() => setSelecionado(null)} />
   }
 
   return (
     <div>
-      <TickerTape />
+      <TickerTape cambio={cambio} />
       <div className="px-4 pt-4 pb-28">
         <h1 className="text-xl font-display font-extrabold text-white">Mercado ao vivo</h1>
         <p className="text-xs text-slate-500 mt-1 mb-4.5">Toque em um mercado para ver as notícias</p>
+
+        {resumoIA && <ResumoDiarioIA texto={resumoIA} />}
 
         <div className="flex flex-col gap-3.5 mb-5">
           <RankingMercado />
@@ -64,8 +102,30 @@ export default function MercadoPage() {
   )
 }
 
-function TickerTape() {
-  const itens = [...TICKER_TAPE_ITENS, ...TICKER_TAPE_ITENS]
+function ResumoDiarioIA({ texto }: { texto: string }) {
+  return (
+    <div
+      className="rounded-[18px] p-3.5 mb-4.5"
+      style={{ background: 'linear-gradient(135deg, #8B5CF61A, #00D4FF1A)', border: '1px solid #8B5CF64D' }}
+    >
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <Sparkles size={13} className="text-accent-purple" />
+        <p className="text-[11px] font-bold text-accent-purple">Resumo do dia · Nexus AI</p>
+      </div>
+      <p className="text-[12.5px] text-slate-200 leading-snug">{texto}</p>
+    </div>
+  )
+}
+
+function TickerTape({ cambio }: { cambio: CambioCripto | null }) {
+  const base = TICKER_TAPE_ITENS.map((it) => {
+    if (!cambio) return it
+    if (it.label === 'USD') return { ...it, valor: cambio.usdBrl.valor.toFixed(2).replace('.', ','), delta: formatarPercent(cambio.usdBrl.variacaoPercent), up: cambio.usdBrl.variacaoPercent >= 0 }
+    if (it.label === 'EUR') return { ...it, valor: cambio.eurBrl.valor.toFixed(2).replace('.', ','), delta: formatarPercent(cambio.eurBrl.variacaoPercent), up: cambio.eurBrl.variacaoPercent >= 0 }
+    if (it.label === 'BTC') return { ...it, valor: formatarMoeda(cambio.btcBrl.valor), delta: formatarPercent(cambio.btcBrl.variacaoPercent), up: cambio.btcBrl.variacaoPercent >= 0 }
+    return it
+  })
+  const itens = [...base, ...base]
   return (
     <div className="overflow-hidden bg-bg-card border-b border-border py-2">
       <motion.div className="flex gap-5.5 whitespace-nowrap w-max" animate={{ x: ['0%', '-50%'] }} transition={{ duration: 22, repeat: Infinity, ease: 'linear' }}>
@@ -85,12 +145,23 @@ function TickerTape() {
 
 function RankingMercado() {
   const [aba, setAba] = useState<'altas' | 'baixas'>('altas')
-  const lista = aba === 'altas' ? RANKING_ALTAS : RANKING_BAIXAS
+  const [rankingReal, setRankingReal] = useState<{ altas: ItemRanking[]; baixas: ItemRanking[] } | null>(null)
+  useEffect(() => {
+    buscarRankingReal().then(setRankingReal) // se vier null (sem token/amostra pequena), fica nos dados de exemplo abaixo
+  }, [])
+
+  const lista: { ticker: string; preco: string; delta: string }[] = rankingReal
+    ? rankingReal[aba].map((i) => ({ ticker: i.ticker, preco: formatarMoeda(i.preco), delta: formatarPercent(i.variacaoPercent) }))
+    : aba === 'altas' ? RANKING_ALTAS : RANKING_BAIXAS
+
   return (
     <div className="card-surface rounded-[18px] p-4">
-      <div className="flex gap-1.5 mb-3">
-        <SubTab label="Maiores altas" active={aba === 'altas'} onClick={() => setAba('altas')} />
-        <SubTab label="Maiores baixas" active={aba === 'baixas'} onClick={() => setAba('baixas')} />
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex gap-1.5">
+          <SubTab label="Maiores altas" active={aba === 'altas'} onClick={() => setAba('altas')} />
+          <SubTab label="Maiores baixas" active={aba === 'baixas'} onClick={() => setAba('baixas')} />
+        </div>
+        {!rankingReal && <span className="text-[9.5px] text-slate-600 shrink-0 ml-2">exemplo</span>}
       </div>
       <div className="flex flex-col gap-2">
         {lista.map((item, i) => (
@@ -128,6 +199,20 @@ function Watchlist({ watchlist, onToggle }: { watchlist: string[]; onToggle: (t:
   const [buscando, setBuscando] = useState(false)
   const [busca, setBusca] = useState('')
   const disponiveis = TICKERS_DISPONIVEIS.filter((t) => !watchlist.includes(t) && t.toLowerCase().includes(busca.toLowerCase()))
+
+  const [cotacoes, setCotacoes] = useState<Record<string, CotacaoAcao>>({})
+  const chaveWatchlist = watchlist.join(',')
+  useEffect(() => {
+    if (watchlist.length === 0) return
+    buscarCotacoesAcoes(watchlist).then((resultado) => {
+      if (!resultado) return // API fora do ar — mantém o que já tinha (ou vazio)
+      const mapa: Record<string, CotacaoAcao> = {}
+      for (const c of resultado) mapa[c.ticker] = c
+      setCotacoes(mapa)
+    })
+    // chaveWatchlist (string) em vez de watchlist (array) — array novo por
+    // referência a cada render disparia esse efeito infinitamente
+  }, [chaveWatchlist]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="card-surface rounded-[18px] p-4">
@@ -174,17 +259,33 @@ function Watchlist({ watchlist, onToggle }: { watchlist: string[]; onToggle: (t:
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {watchlist.map((t) => (
-            <div key={t} className="flex items-center justify-between">
-              <span className="text-xs font-bold text-white">{t}</span>
-              <div className="flex items-center gap-2.5">
-                <span className="text-[11.5px] text-accent-green font-semibold">+1,2%</span>
-                <button onClick={() => onToggle(t)}>
-                  <X size={13} className="text-slate-500" />
-                </button>
+          {watchlist.map((t) => {
+            const c = cotacoes[t]
+            return (
+              <div key={t} className="flex items-center justify-between">
+                <span className="text-xs font-bold text-white">{t}</span>
+                <div className="flex items-center gap-2.5">
+                  {!c ? (
+                    <span className="text-[11px] text-slate-500">carregando…</span>
+                  ) : c.requerToken ? (
+                    <span className="text-[10.5px] text-slate-500" title="Cadastre um token grátis em brapi.dev pra ver este ativo">requer token</span>
+                  ) : c.preco === null ? (
+                    <span className="text-[11px] text-slate-500">sem dado</span>
+                  ) : (
+                    <>
+                      <span className="text-[11.5px] text-slate-300">{formatarMoeda(c.preco)}</span>
+                      <span className="text-[11.5px] font-semibold" style={{ color: (c.variacaoPercent ?? 0) >= 0 ? '#22C55E' : '#EF4444' }}>
+                        {c.variacaoPercent === null ? '—' : formatarPercent(c.variacaoPercent)}
+                      </span>
+                    </>
+                  )}
+                  <button onClick={() => onToggle(t)}>
+                    <X size={13} className="text-slate-500" />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

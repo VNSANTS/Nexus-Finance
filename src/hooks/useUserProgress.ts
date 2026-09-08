@@ -1,8 +1,10 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useReducer, useRef } from 'react'
+import { createContext, createElement, useCallback, useContext, useEffect, useReducer, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { UserProgress, ItemRevisao, Flashcard, QuizQuestion, NomeAba, PerguntaDesafio } from '@/types'
 import { TODAS_ABAS, XP_POR_ABA } from '@/types'
 import { defaultProgress, carregarProgressoSincrono, salvarProgresso } from '@/backend'
+import { buscarDoServidor, enviarParaServidor, setUsuarioAtual } from '@/backend/remoto/progressSync'
+import { useAuth } from '@/auth/AuthContext'
 
 const PERSIST_DEBOUNCE_MS = 400
 const JANELA_ANTI_GRINDING_MS = 10 * 60 * 1000
@@ -116,6 +118,11 @@ function useProgressStore() {
     salvarProgresso(stateRef.current!).catch(() => {
       // modo privado / cota cheia: o app continua funcionando em memória
     })
+    // Envio ao Supabase NÃO acontece aqui — isso salvava a cada mudança
+    // (a cada 400ms de digitação/clique), o que é chamada demais pro
+    // banco. Em vez disso, roda num timer próprio de 30s (ver useEffect
+    // "sincronizarComServidorPeriodicamente" abaixo), mandando o estado
+    // mais recente de uma vez só.
   }, [])
 
   const update = useCallback(
@@ -134,11 +141,122 @@ function useProgressStore() {
     [persistir]
   )
 
+  // Sincronização com o Supabase.
+  //
+  // Ao logar: avisa progressSync.ts quem é o usuário atual (pra
+  // enviarParaServidor saber pra qual linha escrever) e busca o progresso
+  // salvo no servidor. Se existir e tiver mais XP que o local, aplica por
+  // cima — heurística simples que evita perder progresso feito em outro
+  // aparelho sem sobrescrever à toa um progresso local mais avançado feito
+  // offline antes de logar. Depende de `userId` (string), não do objeto
+  // `sessao` inteiro — o Supabase troca a referência de `sessao` a cada
+  // refresh de token automático, e se este efeito dependesse do objeto
+  // inteiro ele dispararia de novo a cada refresh (todo objeto novo por
+  // referência conta como "mudou" pro React).
+  //
+  // A cada 30s enquanto logado: manda o progresso mais recente pro banco
+  // numa chamada só (não a cada mudança — evita chamada demais ao banco).
+  // Isso roda por cima do salvamento local (que continua instantâneo, no
+  // debounce curto de sempre) — a tela nunca espera essa parte pra
+  // responder.
+  const auth = useAuth()
+  const userId = auth.sessao?.user?.id ?? null
+  const ultimoUserIdSincronizadoRef = useRef<string | null>(null)
+
+  // Última edição do ADMIN que este aparelho já aplicou (localStorage,
+  // por usuário — não por aparelho, então cada aparelho logado nessa conta
+  // detecta a mesma edição independentemente). Comparar contra isso é o
+  // que permite diferenciar "servidor tem menos XP porque o admin reduziu
+  // de propósito" de "servidor tem menos XP porque esse aparelho progrediu
+  // offline" — os dois parecem iguais (remoto.xp < local.xp) sem essa marca.
+  const chaveMarcadorAdmin = (uid: string) => `nexus-admin-editado-em:${uid}`
+
+  useEffect(() => {
+    setUsuarioAtual(userId)
+    if (!userId) return
+
+    async function verificarEdicaoAdmin(): Promise<boolean> {
+      const remoto = await buscarDoServidor(userId!)
+      if (!remoto) return false
+
+      const marcadorAtual = localStorage.getItem(chaveMarcadorAdmin(userId!))
+      const houveEdicaoAdminNova = Boolean(remoto.adminEditadoEm) && remoto.adminEditadoEm !== marcadorAtual
+
+      if (houveEdicaoAdminNova) {
+        // Edição do admin nunca vista por este aparelho — aplica
+        // incondicionalmente (mesmo que reduza XP), igual ao botão
+        // "Sincronizar agora", e marca como já aplicada.
+        stateRef.current = remoto.progresso
+        notificar()
+        localStorage.setItem(chaveMarcadorAdmin(userId!), remoto.adminEditadoEm!)
+        return true
+      }
+
+      if (remoto.progresso.xp > stateRef.current!.xp) {
+        // Sem edição de admin nova — mantém a rede de segurança original
+        // (só aplica se o servidor tiver MAIS xp, ex: progresso feito em
+        // outro aparelho).
+        stateRef.current = remoto.progresso
+        notificar()
+      }
+      return false
+    }
+
+    if (ultimoUserIdSincronizadoRef.current !== userId) {
+      ultimoUserIdSincronizadoRef.current = userId
+      verificarEdicaoAdmin()
+    }
+
+    const intervalo = setInterval(() => {
+      // Primeiro checa se o admin editou algo desde a última vez que este
+      // aparelho olhou — se sim, aplica e PULA o envio deste ciclo (senão
+      // reenviaria o valor antigo por cima da edição que acabou de chegar).
+      // Senão, segue o fluxo normal: envia o progresso local pro servidor.
+      verificarEdicaoAdmin().then((aplicouEdicaoAdmin) => {
+        if (aplicouEdicaoAdmin) return
+        enviarParaServidor(stateRef.current!).catch(() => {
+          // sem internet momentânea: tenta de novo no próximo ciclo de 30s,
+          // localStorage já garantiu que nada se perde localmente
+        })
+      })
+    }, 30_000)
+
+    return () => clearInterval(intervalo)
+  }, [userId])
+
+  // Sincronização manual, sob demanda — botão "Sincronizar agora" no
+  // Perfil. Igual à checagem automática de edição do admin (aplica o que
+  // vier do servidor incondicionalmente), só que sob comando explícito da
+  // pessoa em vez de esperar o próximo ciclo de 30s.
+  const [sincronizando, setSincronizando] = useState(false)
+  const sincronizarAgora = useCallback(async (): Promise<{ ok: boolean; erro?: string }> => {
+    if (!userId) return { ok: false, erro: 'Você precisa estar logado para sincronizar.' }
+    setSincronizando(true)
+    try {
+      const remoto = await buscarDoServidor(userId)
+      if (remoto) {
+        stateRef.current = remoto.progresso
+        notificar()
+        if (remoto.adminEditadoEm) localStorage.setItem(chaveMarcadorAdmin(userId), remoto.adminEditadoEm)
+      }
+      return { ok: true }
+    } catch {
+      return { ok: false, erro: 'Não foi possível sincronizar agora. Verifique sua internet.' }
+    } finally {
+      setSincronizando(false)
+    }
+  }, [userId])
+
   // Garante que nada se perde quando o app vai para segundo plano. No iOS,
   // 'pagehide' é o evento confiável — 'beforeunload' não dispara.
+  // Também força o envio pro Supabase nesse momento (fora do ciclo de
+  // 30s) — sem isso, fechar o app pouco depois de progredir podia perder
+  // até 30s de progresso não sincronizado com o servidor (o localStorage
+  // continuava seguro, só o banco é que ficaria desatualizado).
   useEffect(() => {
     const flush = () => {
       if (timerRef.current) persistir()
+      enviarParaServidor(stateRef.current!).catch(() => {})
     }
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') flush()
@@ -529,6 +647,8 @@ function useProgressStore() {
     sortearPerguntasDesafio,
     removerItemRevisao,
     resetProgress,
+    sincronizarAgora,
+    sincronizando,
   }
 }
 

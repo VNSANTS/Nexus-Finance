@@ -1,4 +1,4 @@
-import type { EdicaoUsuarioAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from '../types'
+import type { EdicaoMetricasAdmin, EdicaoUsuarioAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from '../types'
 import { USUARIOS_MOCK } from '../mockUsers'
 
 // "Banco de dados" em memória. Recarrega do zero a cada refresh da página —
@@ -34,7 +34,40 @@ export async function editarUsuario(id: string, dados: EdicaoUsuarioAdmin): Prom
   return delay(alvo)
 }
 
+export async function atualizarMetricas(id: string, dados: EdicaoMetricasAdmin): Promise<UsuarioAdmin> {
+  base = base.map((u) =>
+    u.id === id
+      ? {
+          ...u,
+          metricas: {
+            ...u.metricas,
+            xp: dados.xp,
+            level: dados.level,
+            streak: dados.streak,
+            badges: dados.badges,
+            desafiosCompletos: dados.desafiosCompletos,
+          },
+        }
+      : u
+  )
+  const alvo = base.find((u) => u.id === id)
+  if (!alvo) throw new Error('Usuário não encontrado')
+  return delay(alvo)
+}
+
 export async function excluirUsuario(id: string): Promise<void> {
   base = base.filter((u) => u.id !== id)
   return delay(undefined)
+}
+
+// Mock do controle global — guardado em memória, reseta a cada refresh.
+let mockAppConfig = { cadastroFechado: false, modoManutencao: false }
+
+export async function buscarAppConfig() {
+  return delay({ ...mockAppConfig })
+}
+
+export async function atualizarAppConfig(dados: Partial<typeof mockAppConfig>) {
+  mockAppConfig = { ...mockAppConfig, ...dados }
+  return delay({ ...mockAppConfig })
 }

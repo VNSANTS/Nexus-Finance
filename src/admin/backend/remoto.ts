@@ -1,14 +1,18 @@
 import { supabase } from '@/lib/supabase'
-import type { EdicaoUsuarioAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from '../types'
+import type { EdicaoMetricasAdmin, EdicaoUsuarioAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from '../types'
 
 // Implementação real (Supabase) do backend do admin. Troque o import em
 // ./index.ts de './mock' para './remoto' quando quiser sair do modo mock —
 // nenhuma página do admin precisa mudar.
 //
-// Duas camadas de ação aqui:
+// Três camadas de ação aqui:
 //  - Promover/rebaixar admin e editar nome: update direto em `profiles`,
 //    já protegido por RLS (só admin pode fazer update em linha alheia —
 //    ver supabase/001_auth_profiles.sql).
+//  - Editar métricas (XP, level, streak, badges, desafios): update direto
+//    em `user_progress` (ver supabase/002_user_progress.sql) — RLS já
+//    permite admin escrever em qualquer linha, não precisa de Edge
+//    Function pra isso (não mexe em auth.users).
 //  - Excluir usuário, editar e-mail de LOGIN e bloquear de verdade: essas
 //    três exigem privilégio total sobre auth.users, que a publishable key
 //    não tem (de propósito). Passam pela Edge Function `admin-users`
@@ -16,11 +20,10 @@ import type { EdicaoUsuarioAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } fr
 //    service_role key só no servidor e confirma que quem está chamando é
 //    admin antes de fazer qualquer coisa.
 //
-// LIMITAÇÃO ATUAL: a tabela `profiles` só guarda id/email/nome/role/status
-// — não tem xp, level, streak, badges etc. Esses dados hoje vivem só no
-// localStorage de cada usuário (ver src/backend/local/progressStore.ts),
-// não em `user_progress_modules` no banco. Até o app passar a sincronizar
-// progresso pro Supabase de verdade, as métricas abaixo vêm zeradas.
+// `profiles` e `user_progress` são tabelas separadas (progresso é opcional
+// — usuário recém-cadastrado ainda não tem linha em user_progress até
+// sincronizar pela primeira vez), então listarUsuarios faz duas queries e
+// mescla em memória em vez de um join no Supabase JS.
 
 type LinhaProfile = {
   id: string
@@ -29,6 +32,20 @@ type LinhaProfile = {
   role: PapelUsuario
   status: StatusUsuario
   created_at: string
+  last_seen_at: string | null
+}
+
+type LinhaProgresso = {
+  user_id: string
+  xp: number
+  level: number
+  level_name: string
+  streak: number
+  badges_count: number
+  desafios_completos: number
+  modulos_concluidos: number
+  risk_profile: 'conservador' | 'moderado' | 'agressivo' | null
+  ultima_atividade: string | null
 }
 
 function metricasVazias(): UsuarioAdmin['metricas'] {
@@ -46,7 +63,23 @@ function metricasVazias(): UsuarioAdmin['metricas'] {
   }
 }
 
-function mapearLinha(linha: LinhaProfile): UsuarioAdmin {
+function mapearMetricas(linha: LinhaProgresso | undefined): UsuarioAdmin['metricas'] {
+  if (!linha) return metricasVazias()
+  return {
+    xp: linha.xp,
+    level: linha.level,
+    levelName: linha.level_name,
+    streak: linha.streak,
+    modulosConcluidos: linha.modulos_concluidos,
+    totalModulos: 66,
+    badges: linha.badges_count,
+    desafiosCompletos: linha.desafios_completos,
+    riskProfile: linha.risk_profile,
+    ultimaAtividade: linha.ultima_atividade,
+  }
+}
+
+function mapearLinha(linha: LinhaProfile, progresso: LinhaProgresso | undefined): UsuarioAdmin {
   return {
     id: linha.id,
     email: linha.email,
@@ -54,7 +87,8 @@ function mapearLinha(linha: LinhaProfile): UsuarioAdmin {
     papel: linha.role,
     status: linha.status,
     criadoEm: linha.created_at,
-    metricas: metricasVazias(),
+    metricas: mapearMetricas(progresso),
+    ultimoVistoEm: linha.last_seen_at,
   }
 }
 
@@ -68,14 +102,31 @@ async function chamarAdminFunction<T>(payload: Record<string, unknown>): Promise
   return data.dados as T
 }
 
-export async function listarUsuarios(): Promise<UsuarioAdmin[]> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, email, nome, role, status, created_at')
-    .order('nome', { ascending: true })
+async function buscarProgressoPorId(id: string): Promise<LinhaProgresso | undefined> {
+  const { data } = await supabase
+    .from('user_progress')
+    .select('user_id, xp, level, level_name, streak, badges_count, desafios_completos, modulos_concluidos, risk_profile, ultima_atividade')
+    .eq('user_id', id)
+    .maybeSingle()
+  return (data as LinhaProgresso | null) ?? undefined
+}
 
-  if (error) throw new Error(error.message)
-  return (data as LinhaProfile[]).map(mapearLinha)
+export async function listarUsuarios(): Promise<UsuarioAdmin[]> {
+  const [{ data: perfis, error: erroPerfis }, { data: progressos, error: erroProgresso }] = await Promise.all([
+    supabase.from('profiles').select('id, email, nome, role, status, created_at, last_seen_at').order('nome', { ascending: true }),
+    supabase
+      .from('user_progress')
+      .select('user_id, xp, level, level_name, streak, badges_count, desafios_completos, modulos_concluidos, risk_profile, ultima_atividade'),
+  ])
+
+  if (erroPerfis) throw new Error(erroPerfis.message)
+  // Se user_progress ainda não existir no banco (ex: SQL 002 não rodado
+  // ainda), não derruba a listagem — só mostra métricas zeradas pra todos.
+  const progressoPorId = new Map(
+    (erroProgresso ? [] : ((progressos as LinhaProgresso[] | null) ?? [])).map((p) => [p.user_id, p])
+  )
+
+  return (perfis as LinhaProfile[]).map((p) => mapearLinha(p, progressoPorId.get(p.id)))
 }
 
 export async function atualizarPapel(id: string, papel: PapelUsuario): Promise<UsuarioAdmin> {
@@ -83,11 +134,11 @@ export async function atualizarPapel(id: string, papel: PapelUsuario): Promise<U
     .from('profiles')
     .update({ role: papel })
     .eq('id', id)
-    .select('id, email, nome, role, status, created_at')
+    .select('id, email, nome, role, status, created_at, last_seen_at')
     .single()
 
   if (error) throw new Error(error.message)
-  return mapearLinha(data as LinhaProfile)
+  return mapearLinha(data as LinhaProfile, await buscarProgressoPorId(id))
 }
 
 export async function atualizarStatus(id: string, status: StatusUsuario): Promise<UsuarioAdmin> {
@@ -98,12 +149,49 @@ export async function atualizarStatus(id: string, status: StatusUsuario): Promis
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, nome, role, status, created_at')
+    .select('id, email, nome, role, status, created_at, last_seen_at')
     .eq('id', id)
     .single()
 
   if (error) throw new Error(error.message)
-  return mapearLinha(data as LinhaProfile)
+  return mapearLinha(data as LinhaProfile, await buscarProgressoPorId(id))
+}
+
+// Status de confirmação de e-mail + último login — vêm de auth.users, que
+// a publishable key não enxerga (só a service_role, dentro da Edge
+// Function). Chamada separada da listagem principal de propósito: assim
+// listarUsuarios continua rápida e funcionando mesmo se essa function
+// falhar/não estiver deployada ainda — a tela só mostra "carregando" nesses
+// dois campos até essa promise resolver.
+export async function listarStatusAuth(): Promise<Map<string, { emailConfirmado: boolean; ultimoLogin: string | null }>> {
+  const { status } = await chamarAdminFunction<{ status: { id: string; emailConfirmado: boolean; ultimoLogin: string | null }[] }>({
+    tipo: 'listarStatusAuth',
+  })
+  return new Map(status.map((s) => [s.id, { emailConfirmado: s.emailConfirmado, ultimoLogin: s.ultimoLogin }]))
+}
+
+// Reenvia o e-mail de confirmação de cadastro pro endereço atual do
+// usuário. Não muda nada no banco (não há o que atualizar aqui) — só
+// dispara o envio de novo.
+export async function reenviarConfirmacao(id: string, email: string): Promise<void> {
+  await chamarAdminFunction({ tipo: 'reenviarConfirmacao', alvoId: id, email })
+}
+
+// Confirma o e-mail manualmente, sem depender do usuário clicar no link
+// (ex: e-mail nunca chegou, mas o admin já verificou a pessoa por outro
+// meio). Repuxa o perfil pra manter o resto do card consistente, mesmo que
+// `emailConfirmado` em si venha só na próxima chamada de listarStatusAuth
+// (é a tela quem decide atualizar isso otimisticamente, ver useAdminUsuarios).
+export async function confirmarUsuario(id: string): Promise<UsuarioAdmin> {
+  await chamarAdminFunction({ tipo: 'confirmarUsuario', alvoId: id })
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, email, nome, role, status, created_at, last_seen_at')
+    .eq('id', id)
+    .single()
+
+  if (error) throw new Error(error.message)
+  return mapearLinha(data as LinhaProfile, await buscarProgressoPorId(id))
 }
 
 export async function editarUsuario(id: string, dados: EdicaoUsuarioAdmin): Promise<UsuarioAdmin> {
@@ -116,15 +204,143 @@ export async function editarUsuario(id: string, dados: EdicaoUsuarioAdmin): Prom
     .from('profiles')
     .update({ nome: dados.nome })
     .eq('id', id)
-    .select('id, email, nome, role, status, created_at')
+    .select('id, email, nome, role, status, created_at, last_seen_at')
     .single()
 
   if (error) throw new Error(error.message)
-  return mapearLinha(data as LinhaProfile)
+  return mapearLinha(data as LinhaProfile, await buscarProgressoPorId(id))
+}
+
+// Edita XP, level, streak, badges e desafios completos de um usuário.
+// Update direto em `user_progress` — RLS (ver 002_user_progress.sql) já
+// libera admin escrever em qualquer linha, não precisa de Edge Function
+// (só as ações que mexem em auth.users precisam disso).
+//
+// Se a linha ainda não existir (usuário nunca sincronizou progresso —
+// cadastro muito recente, ou ainda não abriu o app depois de logar), faz
+// upsert: cria a linha já com os valores editados pelo admin.
+// Mesma tabela de níveis usada no app (src/hooks/useUserProgress.ts,
+// LEVELS) — duplicada aqui de propósito: o admin roda como código separado
+// do app principal (bundle diferente), então importar do hook criaria uma
+// dependência cruzada desnecessária por 6 linhas de dado estático. Se a
+// tabela de níveis mudar no app, replicar a mudança aqui também.
+const LEVELS = [
+  { min: 0, name: 'Novato' },
+  { min: 300, name: 'Poupador' },
+  { min: 900, name: 'Investidor' },
+  { min: 2000, name: 'Estrategista' },
+  { min: 4000, name: 'Tubarão' },
+  { min: 8000, name: 'Nexus Master' },
+]
+
+function nomeDoNivel(xp: number): string {
+  let atual = LEVELS[0]
+  for (const l of LEVELS) {
+    if (xp >= l.min) atual = l
+  }
+  return atual.name
+}
+
+// Edita XP, level, streak, badges e desafios completos de um usuário.
+//
+// Atualiza tanto as colunas espelhadas (xp, level, level_name...) QUANTO
+// `dados_jsonb` — é esse JSON que o app do usuário de fato lê pra exibir o
+// progresso na tela (ver src/backend/remoto/progressSync.ts,
+// buscarDoServidor). Só atualizar as colunas espelhadas deixava o painel
+// admin mostrando o valor novo mas o app do usuário continuava mostrando o
+// valor antigo — a edição "não aparecia na prática".
+//
+// `levelName` sempre é recalculado a partir do XP editado (mesma régua do
+// app, LEVELS acima), nunca aceito como texto solto — evita ficar
+// mostrando "nível 6" com o nome "Novato" por inconsistência manual.
+//
+// Se a linha em user_progress ainda não existir (usuário nunca sincronizou
+// — cadastro muito recente, ou ainda não abriu o app depois de logar), faz
+// upsert criando a linha já com os valores editados, com um dados_jsonb
+// mínimo (o próximo sync do app preenche o resto dos 30+ campos).
+export async function atualizarMetricas(id: string, dados: EdicaoMetricasAdmin): Promise<UsuarioAdmin> {
+  const { data: linhaAtual } = await supabase.from('user_progress').select('dados_jsonb').eq('user_id', id).maybeSingle()
+
+  const levelName = nomeDoNivel(dados.xp)
+  const jsonBase = (linhaAtual?.dados_jsonb as Record<string, unknown> | null) ?? {}
+  const jsonAtualizado = {
+    ...jsonBase,
+    xp: dados.xp,
+    level: dados.level,
+    levelName,
+    streak: dados.streak,
+    desafiosCompletos: dados.desafiosCompletos,
+    // `badges` no UserProgress do app é um array de ids conquistados, não
+    // um contador — não dá pra "setar a quantidade" sem inventar quais
+    // badges o usuário tem. O contador exposto ao admin (badges_count)
+    // fica só na coluna espelhada, não mexe no array dentro do JSON.
+  }
+
+  const { error } = await supabase.from('user_progress').upsert(
+    {
+      user_id: id,
+      xp: dados.xp,
+      level: dados.level,
+      level_name: levelName,
+      streak: dados.streak,
+      badges_count: dados.badges,
+      desafios_completos: dados.desafiosCompletos,
+      dados_jsonb: jsonAtualizado,
+      // Marca AGORA como edição do admin — é o que faz o app do usuário
+      // (mesmo já aberto em outro aparelho) aplicar essa mudança de
+      // verdade, inclusive quando ela REDUZ o XP/nível (ver
+      // supabase/009_admin_editado_em.sql pro motivo completo).
+      admin_editado_em: new Date().toISOString(),
+    },
+    { onConflict: 'user_id' }
+  )
+  if (error) throw new Error(error.message)
+
+  const { data: perfil, error: erroPerfil } = await supabase
+    .from('profiles')
+    .select('id, email, nome, role, status, created_at, last_seen_at')
+    .eq('id', id)
+    .single()
+
+  if (erroPerfil) throw new Error(erroPerfil.message)
+  return mapearLinha(perfil as LinhaProfile, await buscarProgressoPorId(id))
 }
 
 export async function excluirUsuario(id: string): Promise<void> {
   // Remove o login de verdade (auth.users) via Edge Function; o perfil em
-  // `profiles` some sozinho por causa do ON DELETE CASCADE.
+  // `profiles` some sozinho por causa do ON DELETE CASCADE (e a linha em
+  // user_progress também, mesmo mecanismo).
   await chamarAdminFunction({ tipo: 'excluirUsuario', alvoId: id })
+}
+
+// --- Controle global de acesso (fechar cadastro / modo manutenção) --------
+// Tabela singleton (1 linha só, id=true) — ver supabase/005_controle_acesso.sql.
+// A RLS já garante que só admin consegue dar update aqui; qualquer um pode
+// ler (a tela de login precisa saber o estado antes mesmo de logar).
+
+export interface AppConfigAdmin {
+  cadastroFechado: boolean
+  modoManutencao: boolean
+}
+
+export async function buscarAppConfig(): Promise<AppConfigAdmin> {
+  const { data, error } = await supabase.from('app_config').select('cadastro_fechado, modo_manutencao').eq('id', true).single()
+  if (error) throw new Error(error.message)
+  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao }
+}
+
+export async function atualizarAppConfig(dados: Partial<AppConfigAdmin>): Promise<AppConfigAdmin> {
+  const patch: Record<string, boolean> = {}
+  if (dados.cadastroFechado !== undefined) patch.cadastro_fechado = dados.cadastroFechado
+  if (dados.modoManutencao !== undefined) patch.modo_manutencao = dados.modoManutencao
+
+  const { data, error } = await supabase
+    .from('app_config')
+    .update(patch)
+    .eq('id', true)
+    .select('cadastro_fechado, modo_manutencao')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao }
 }

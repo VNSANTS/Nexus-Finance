@@ -38,6 +38,16 @@ export interface UsuarioAdmin {
   status: StatusUsuario
   criadoEm: string // ISO date
   metricas: MetricasUsuario
+  // Campos de auth.users (só a Edge Function admin-users enxerga essa
+  // tabela — a publishable key não tem acesso). Opcionais porque vêm de uma
+  // segunda chamada separada (listarStatusAuth) que roda depois da lista
+  // principal; a tela mostra "carregando" pros usuários até isso chegar.
+  emailConfirmado?: boolean
+  ultimoLogin?: string | null
+  // "Online" é um heartbeat simples (ver src/hooks/usePresenca.ts e
+  // supabase/008_presenca.sql), não WebSocket em tempo real — calculado no
+  // frontend a partir de `ultimoVistoEm` (heartbeat nos últimos 2 min).
+  ultimoVistoEm?: string | null
 }
 
 // Payload de edição — subconjunto editável de UsuarioAdmin (id/criadoEm/
@@ -45,6 +55,17 @@ export interface UsuarioAdmin {
 export interface EdicaoUsuarioAdmin {
   nome: string
   email: string
+}
+
+// Payload de edição de métricas de progresso (XP, level, streak etc.) —
+// separado de EdicaoUsuarioAdmin porque tem sua própria função no backend
+// (atualizarMetricas) e seu próprio modal na tela.
+export interface EdicaoMetricasAdmin {
+  xp: number
+  level: number
+  streak: number
+  badges: number
+  desafiosCompletos: number
 }
 
 export interface FiltrosAdmin {

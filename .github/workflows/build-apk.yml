@@ -1,0 +1,51 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        # As mesmas env vars do deploy.yml (ver .github/workflows/deploy.yml)
+        # — sem elas o app builda mas não consegue falar com o Supabase.
+        env:
+          VITE_SUPABASE_URL: https://ygtroklufolvixwazkne.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_uRP9xxjMeC_-L6A8AWwj8g_Seonofnf
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Build APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-finance-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk

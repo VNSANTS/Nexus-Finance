@@ -5,22 +5,26 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/gerar-indice-nexus-ai.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
     "@supabase/supabase-js": "^2.115.0",
     "framer-motion": "^11.5.4",
     "html2canvas": "^1.4.1",
-    "jspdf": "^2.5.2",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.383.0",
     "react": "^18.3.1",
     "react-colorful": "^5.8.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.0",
+    "react-router-dom": "^7.18.3",
     "recharts": "^2.12.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
     "@types/node": "^26.2.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",

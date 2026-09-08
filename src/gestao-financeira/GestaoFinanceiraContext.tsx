@@ -5,6 +5,8 @@ import { CATEGORIAS_PADRAO } from './categoriasPadrao'
 import { novoMembroPrincipal, permissoesAtivas } from './permissoes'
 import { PREFERENCIAS_SEGURANCA_PADRAO } from './seguranca'
 import type { PermissoesMembro } from './types'
+import { buscarGfDoServidor, enviarGfParaServidor, setUsuarioAtualGf } from './backend/gfSync'
+import { useAuth } from '@/auth/AuthContext'
 
 // Estado 100% isolado do useUserProgress: chave própria no localStorage,
 // contexto próprio, nenhum import cruzado. É literalmente "um novo app"
@@ -295,6 +297,8 @@ const GestaoFinanceiraContext = createContext<GestaoFinanceiraContextValue | nul
 export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) {
   const [estado, dispatch] = useReducer(reducer, undefined, carregarEstado)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const estadoRef = useRef(estado)
+  estadoRef.current = estado
 
   useEffect(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
@@ -309,6 +313,63 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [estado])
+
+  // Sincronização com o Supabase — mesmo modelo de useUserProgress.ts
+  // (progresso educacional): localStorage responde na hora (efeito acima),
+  // e a cada 30s o estado completo da GF é mandado pro banco em segundo
+  // plano, numa única chamada. Ao logar, busca o que já estava salvo no
+  // servidor (útil se a pessoa trocar de aparelho) e aplica se o servidor
+  // tiver uma versão mais recente (updated_at).
+  //
+  // Diferente do progresso educacional, aqui NÃO existe edição pelo painel
+  // admin — dado financeiro pessoal é só do próprio usuário (ver RLS em
+  // supabase/007_gestao_financeira_sync.sql), então não há necessidade de
+  // "servidor pode ter valor mais atual que local por edição externa"; a
+  // única fonte de mudança é o próprio usuário no próprio aparelho.
+  const auth = useAuth()
+  const userId = auth.sessao?.user?.id ?? null
+  const jaBuscouRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    setUsuarioAtualGf(userId)
+    if (!userId) return
+
+    if (jaBuscouRef.current !== userId) {
+      jaBuscouRef.current = userId
+      buscarGfDoServidor(userId).then((remoto) => {
+        // Só aplica se o servidor tiver mais transações que o local — rede
+        // de segurança simples contra perder dados ao trocar de aparelho,
+        // sem sobrescrever à toa um estado local mais avançado.
+        if (remoto && remoto.transacoes.length > estadoRef.current.transacoes.length) {
+          dispatch({ tipo: 'RESTAURAR_BACKUP', payload: remoto })
+        }
+      })
+    }
+
+    const intervalo = setInterval(() => {
+      enviarGfParaServidor(estadoRef.current).catch(() => {
+        // sem internet momentânea: tenta de novo no próximo ciclo de 30s
+      })
+    }, 30_000)
+
+    return () => clearInterval(intervalo)
+  }, [userId])
+
+  useEffect(() => {
+    const flush = () => {
+      enviarGfParaServidor(estadoRef.current).catch(() => {})
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flush()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', flush)
+      flush()
+    }
+  }, [])
 
   const adicionarTransacao = useCallback((t: Transacao) => dispatch({ tipo: 'ADICIONAR_TRANSACAO', payload: t }), [])
   const editarTransacao = useCallback((t: Transacao) => dispatch({ tipo: 'EDITAR_TRANSACAO', payload: t }), [])

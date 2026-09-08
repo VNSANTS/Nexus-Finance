@@ -3,15 +3,33 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import type { Perfil } from './types'
 
+interface AppConfig {
+  cadastroFechado: boolean
+  modoManutencao: boolean
+}
+
 interface AuthContextValor {
   sessao: Session | null
   perfil: Perfil | null
   carregando: boolean // true só durante o carregamento inicial da sessão
+  appConfig: AppConfig | null
   entrar: (email: string, senha: string) => Promise<{ erro: string | null }>
   cadastrar: (nome: string, email: string, senha: string) => Promise<{ erro: string | null }>
+  entrarComOAuth: (provedor: ProvedorOAuth) => Promise<{ erro: string | null }>
   sair: () => Promise<void>
+  excluirPropriaConta: () => Promise<{ erro: string | null }>
+  resetarSenha: (email: string) => Promise<{ erro: string | null }>
+  atualizarSenha: (novaSenha: string) => Promise<{ erro: string | null }>
+  reenviarConfirmacaoPropria: () => Promise<{ erro: string | null }>
   ehAdmin: boolean
 }
+
+// Os 3 provedores configurados. Cada um precisa ser habilitado e
+// configurado separadamente em Supabase → Authentication → Providers
+// (client ID/secret gerados no site de cada provedor) antes do botão
+// funcionar de verdade — sem isso, o Supabase retorna erro "provider is
+// not enabled" ao clicar.
+export type ProvedorOAuth = 'google' | 'facebook' | 'github'
 
 const AuthContext = createContext<AuthContextValor | null>(null)
 
@@ -26,12 +44,25 @@ async function buscarPerfil(userId: string): Promise<Perfil | null> {
   return data as Perfil
 }
 
+async function buscarAppConfig(): Promise<AppConfig> {
+  const { data } = await supabase.from('app_config').select('cadastro_fechado, modo_manutencao').eq('id', true).maybeSingle()
+  // Se a linha não existir ainda (SQL 005 não rodado) ou a leitura falhar,
+  // assume tudo aberto — nunca trava o app por causa de uma config ausente.
+  return {
+    cadastroFechado: data?.cadastro_fechado ?? false,
+    modoManutencao: data?.modo_manutencao ?? false,
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessao, setSessao] = useState<Session | null>(null)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [carregando, setCarregando] = useState(true)
+  const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
 
   useEffect(() => {
+    buscarAppConfig().then(setAppConfig)
+
     // Carrega a sessão existente (usuário já logado antes, cookie/local
     // storage do supabase-js) uma vez ao montar o app.
     supabase.auth.getSession().then(async ({ data: { session } }) => {
@@ -59,8 +90,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const entrar = useCallback(async (email: string, senha: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha })
     if (error) return { erro: traduzirErro(error.message) }
+
+    // Modo manutenção: só admin consegue efetivamente ENTRAR. Checa depois
+    // do login (não dá pra saber o role antes de autenticar), e desloga na
+    // hora se a pessoa não for admin — a sessão nunca fica "meio aberta".
+    const configAtual = await buscarAppConfig()
+    setAppConfig(configAtual)
+    if (configAtual.modoManutencao && data.user) {
+      const p = await buscarPerfil(data.user.id)
+      if (p?.role !== 'admin') {
+        await supabase.auth.signOut()
+        return { erro: 'O app está em manutenção no momento. Tente novamente mais tarde.' }
+      }
+    }
+
     return { erro: null }
   }, [])
 
@@ -74,9 +119,87 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { erro: null }
   }, [])
 
+  const entrarComOAuth = useCallback(async (provedor: ProvedorOAuth) => {
+    // Checa cadastro fechado ANTES de redirecionar pro provedor — evita
+    // mandar a pessoa pro Google/GitHub pra só voltar com erro depois.
+    // Isto é só uma barreira de UX: a barreira real (impossível de
+    // contornar) é o trigger em auth.users (ver supabase/005_controle_acesso.sql),
+    // que também bloqueia contas OAuth novas quando cadastro_fechado=true.
+    const configAtual = await buscarAppConfig()
+    setAppConfig(configAtual)
+    if (configAtual.cadastroFechado) {
+      return { erro: 'Novos cadastros estão temporariamente pausados. Se você já tem conta, isso não te afeta — tente entrar normalmente.' }
+    }
+
+    // redirectTo garante que, depois de autorizar no Google/Facebook/etc.,
+    // a pessoa volta pro app (e não pra localhost, mesmo problema que
+    // tivemos com o e-mail de confirmação — aqui resolvido de saída
+    // porque usa a URL real do navegador, não uma configurada à parte).
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: provedor,
+      options: { redirectTo: window.location.origin + '/Nexus-Finance/' },
+    })
+    // Em fluxo OAuth, sucesso não retorna aqui — o navegador é redirecionado
+    // pro provedor (Google etc.) e depois volta pro app já logado, o
+    // onAuthStateChange (acima) capta a sessão nova sozinho. Só chega
+    // neste ponto do código se o REDIRECIONAMENTO falhou (provedor não
+    // habilitado no Supabase, bloqueador de pop-up, etc.).
+    if (error) return { erro: traduzirErro(error.message) }
+    return { erro: null }
+  }, [])
+
   const sair = useCallback(async () => {
     await supabase.auth.signOut()
   }, [])
+
+  const excluirPropriaConta = useCallback(async () => {
+    const userId = sessao?.user?.id
+    if (!userId) return { erro: 'Sessão inválida.' }
+
+    const { data, error } = await supabase.functions.invoke('admin-users', {
+      body: { tipo: 'excluirPropriaConta', alvoId: userId },
+    })
+    if (error) return { erro: traduzirErro(error.message) }
+    if (!data?.ok) return { erro: data?.erro ?? 'Não foi possível excluir a conta.' }
+
+    // A conta já foi apagada no servidor — desloga localmente pra limpar
+    // a sessão (que agora aponta pra um usuário que não existe mais).
+    await supabase.auth.signOut()
+    return { erro: null }
+  }, [sessao])
+
+  // "Esqueci minha senha" — manda o e-mail com o link de recuperação. Não
+  // avisa se o e-mail existe ou não (Supabase não retorna erro nesse caso
+  // de propósito, pra não vazar quais e-mails têm conta) — a tela sempre
+  // mostra a mesma mensagem de sucesso.
+  const resetarSenha = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/Nexus-Finance/redefinir-senha',
+    })
+    if (error) return { erro: traduzirErro(error.message) }
+    return { erro: null }
+  }, [])
+
+  // Chamado na tela /redefinir-senha depois que a pessoa clica no link do
+  // e-mail — nesse ponto o supabase-js já processou o token da URL e criou
+  // uma sessão temporária de recuperação sozinho, então só falta trocar a
+  // senha de fato.
+  const atualizarSenha = useCallback(async (novaSenha: string) => {
+    const { error } = await supabase.auth.updateUser({ password: novaSenha })
+    if (error) return { erro: traduzirErro(error.message) }
+    return { erro: null }
+  }, [])
+
+  // Reenvia a confirmação pro PRÓPRIO e-mail (diferente da versão no
+  // painel admin, que reenvia pra qualquer usuário) — `auth.resend()` não
+  // exige privilégio nenhum além de já estar logado.
+  const reenviarConfirmacaoPropria = useCallback(async () => {
+    const email = sessao?.user?.email
+    if (!email) return { erro: 'Sessão inválida.' }
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    if (error) return { erro: traduzirErro(error.message) }
+    return { erro: null }
+  }, [sessao])
 
   return (
     <AuthContext.Provider
@@ -84,9 +207,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessao,
         perfil,
         carregando,
+        appConfig,
         entrar,
         cadastrar,
+        entrarComOAuth,
         sair,
+        excluirPropriaConta,
+        resetarSenha,
+        atualizarSenha,
+        reenviarConfirmacaoPropria,
         ehAdmin: perfil?.role === 'admin',
       }}
     >
@@ -109,9 +238,20 @@ function traduzirErro(mensagem: string): string {
     'User already registered': 'Esse e-mail já está cadastrado.',
     'Password should be at least 6 characters': 'A senha precisa ter pelo menos 6 caracteres.',
     'Email not confirmed': 'Confirme seu e-mail antes de entrar (verifique sua caixa de entrada).',
+    'New password should be different from the old password.': 'A nova senha precisa ser diferente da senha atual.',
+    'Auth session missing!': 'Esse link de redefinição expirou ou já foi usado. Peça um novo.',
+  }
+  if (mensagem.toLowerCase().includes('rate limit')) {
+    return 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.'
   }
   if (mensagem.toLowerCase().includes('banned') || mensagem.toLowerCase().includes('suspended')) {
     return 'Sua conta está bloqueada. Entre em contato com o suporte.'
+  }
+  if (mensagem.toLowerCase().includes('provider is not enabled')) {
+    return 'Esse jeito de entrar ainda não está disponível. Tente com e-mail e senha.'
+  }
+  if (mensagem.includes('CADASTRO_FECHADO')) {
+    return 'Novos cadastros estão temporariamente pausados. Se você já tem conta, isso não te afeta — tente entrar normalmente.'
   }
   return mapa[mensagem] ?? mensagem
 }

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Flame, ChevronRight, RotateCw, Zap, Lock, Radar, Wallet2 } from 'lucide-react'
+import { Search, Flame, ChevronRight, RotateCw, Zap, Lock, Radar, Wallet2, Sparkles } from 'lucide-react'
 import ProgressRing from '@/components/ProgressRing'
 import TrilhaCard from '@/components/TrilhaCard'
 import NexusLogo from '@/components/NexusLogo'
 import { useUserProgress } from '@/hooks/useUserProgress'
 import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
 import type { Frase } from '@/data/frasesMotivadoras'
+import { gerarInsightDiarioHome } from '@/lib/insightDiarioIA'
 
 // As 456 frases foram movidas pra @/data/frasesMotivadoras.ts e agora são
 // carregadas sob demanda (import dinâmico logo abaixo), em vez de entrarem
@@ -45,6 +46,21 @@ export default function HomePage() {
   }, [])
 
   const frase = frases?.[fraseIndex]
+
+  const [insightIA, setInsightIA] = useState<string | null>(null)
+  useEffect(() => {
+    gerarInsightDiarioHome({
+      nome: progress.perfilPessoal.nome,
+      nivel: levelInfo.level,
+      nivelNome: levelInfo.levelName,
+      xp: progress.xp,
+      streak: progress.streak,
+      modulosCompletos,
+      totalModulos: MODULOS.length,
+      itensRevisaoPendentes: progress.itensRevisao.length,
+    }).then(setInsightIA) // se falhar (offline/Gemini fora do ar), fica null e o card some — não trava a Home
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function proximaFrase() {
     if (!frases) return
@@ -128,6 +144,19 @@ export default function HomePage() {
           </p>
         </div>
       </div>
+
+      {/* Insight do Nexus AI — 1x por dia, baseado no progresso real */}
+      {insightIA && (
+        <motion.div
+          initial={{ opacity: 0, y: -6 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex items-start gap-2.5 p-3.5 rounded-[18px]"
+          style={{ background: 'linear-gradient(135deg, #8B5CF61A, #00D4FF1A)', border: '1px solid #8B5CF64D' }}
+        >
+          <Sparkles size={15} className="text-accent-purple shrink-0 mt-0.5" />
+          <p className="text-[12.5px] text-slate-200 leading-snug">{insightIA}</p>
+        </motion.div>
+      )}
 
       {/* Desafio diário */}
       {desafioDisponivel ? (

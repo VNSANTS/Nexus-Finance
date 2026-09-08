@@ -13,3 +13,14 @@ dist-ssr/
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+
+# Android/Capacitor — a pasta android/ É versionada (projeto nativo
+# gerado por `npx cap add android`), mas os artefatos de build dela não.
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/*.iml
+android/app/release/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json

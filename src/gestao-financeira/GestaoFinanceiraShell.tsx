@@ -4,6 +4,7 @@ import { GestaoFinanceiraProvider, useGestaoFinanceira } from './GestaoFinanceir
 import GfBottomNav from './components/GfBottomNav'
 import GfPrivacyOverlay from './components/GfPrivacyOverlay'
 import GfBloqueioOverlay from './components/GfBloqueioOverlay'
+import NexusAIChat from '@/nexus-ai/NexusAIChat'
 import GfPrimeiroAcesso from './pages/GfPrimeiroAcesso'
 
 const GfHomePage = lazy(() => import('./pages/GfHomePage'))
@@ -23,6 +24,7 @@ const GfRetrospectivaPage = lazy(() => import('./pages/GfRetrospectivaPage'))
 const GfNotificacoesPage = lazy(() => import('./pages/GfNotificacoesPage'))
 const GfNotificacoesConfigPage = lazy(() => import('./pages/GfNotificacoesConfigPage'))
 const GfMaisPage = lazy(() => import('./pages/GfMaisPage'))
+const GfChatIaPage = lazy(() => import('./pages/GfChatIaPage'))
 const GfFamiliaPerfisPage = lazy(() => import('./pages/GfFamiliaPerfisPage'))
 const GfSegurancaPage = lazy(() => import('./pages/GfSegurancaPage'))
 const GfPrivacidadePage = lazy(() => import('./pages/GfPrivacidadePage'))
@@ -81,6 +83,7 @@ function GestaoFinanceiraConteudo() {
             <Route path="notificacoes" element={<GfNotificacoesPage />} />
             <Route path="notificacoes/configurar" element={<GfNotificacoesConfigPage />} />
             <Route path="mais" element={<GfMaisPage />} />
+            <Route path="chat-ia" element={<GfChatIaPage />} />
             <Route path="familia-perfis" element={<GfFamiliaPerfisPage />} />
             <Route path="seguranca" element={<GfSegurancaPage />} />
             <Route path="privacidade" element={<GfPrivacidadePage />} />
@@ -92,6 +95,7 @@ function GestaoFinanceiraConteudo() {
       <GfBottomNav />
       <GfPrivacyOverlay />
       <GfBloqueioOverlay />
+      <NexusAIChat escopo="gestao-financeira" />
     </>
   )
 }

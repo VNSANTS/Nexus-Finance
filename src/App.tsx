@@ -1,14 +1,18 @@
 import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import BottomNav from '@/components/BottomNav'
+import NexusAIChat from '@/nexus-ai/NexusAIChat'
 import FundoPersonalizado from '@/components/FundoPersonalizado'
 import Onboarding from '@/components/Onboarding'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import HomePage from '@/pages/HomePage'
 import { useUserProgress } from '@/hooks/useUserProgress'
+import { usePresenca } from '@/hooks/usePresenca'
+import { useAuth } from '@/auth/AuthContext'
+import AvisoEmailNaoConfirmado from '@/auth/AvisoEmailNaoConfirmado'
 import { useAgendadorNotificacoesAprender } from '@/lib/notificacoesAprender'
 import GfTransicao from '@/gestao-financeira/components/GfTransicao'
-import { RotaAdmin } from '@/auth/RotaProtegida'
+import { RotaAdmin, RotaProtegida } from '@/auth/RotaProtegida'
 
 // A Home entra no bundle inicial (é a primeira tela). O resto é carregado ao
 // navegar: cada tela vira um chunk próprio, então abrir o app não custa mais
@@ -29,7 +33,9 @@ const NotificacoesConfigPage = lazy(() => import('@/pages/NotificacoesConfigPage
 const PersonalizacaoPage = lazy(() => import('@/pages/PersonalizacaoPage'))
 const GestaoFinanceiraShell = lazy(() => import('@/gestao-financeira/GestaoFinanceiraShell'))
 const AdminUsuariosPage = lazy(() => import('@/admin/AdminUsuariosPage'))
+const NexusAIPage = lazy(() => import('@/pages/NexusAIPage'))
 const LoginPage = lazy(() => import('@/auth/LoginPage'))
+const RedefinirSenhaPage = lazy(() => import('@/auth/RedefinirSenhaPage'))
 
 function TelaCarregando() {
   return (
@@ -89,32 +95,43 @@ function AppRotas() {
       <ErrorBoundary>
         <Suspense fallback={<TelaCarregando />}>
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/aprender" element={<AprenderPage />} />
-            <Route path="/modulo/:id" element={<ModuloPage />} />
-            <Route path="/mercado" element={<MercadoPage />} />
-            <Route path="/biblioteca" element={<BibliotecaPage />} />
-            <Route path="/glossario" element={<GlossarioPage />} />
-            <Route path="/carteira" element={<CarteiraPage />} />
-            <Route path="/ferramentas" element={<FerramentasPage />} />
-            <Route path="/perfil" element={<PerfilPage />} />
-            <Route path="/investidor" element={<InvestidorPage />} />
-            <Route path="/revisao" element={<RevisaoPage />} />
-            <Route path="/busca" element={<BuscaPage />} />
-            <Route path="/desafio-diario" element={<DesafioDiarioPage />} />
-            <Route path="/notificacoes" element={<NotificacoesConfigPage />} />
-            <Route path="/personalizacao" element={<PersonalizacaoPage />} />
-            <Route path="/gestao-financeira/*" element={<GestaoFinanceiraShell />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/redefinir-senha" element={<RedefinirSenhaPage />} />
             <Route
-              path="/admin/usuarios"
+              path="/*"
               element={
-                <RotaAdmin>
-                  <AdminUsuariosPage />
-                </RotaAdmin>
+                <RotaProtegida>
+                  <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/aprender" element={<AprenderPage />} />
+                    <Route path="/modulo/:id" element={<ModuloPage />} />
+                    <Route path="/mercado" element={<MercadoPage />} />
+                    <Route path="/biblioteca" element={<BibliotecaPage />} />
+                    <Route path="/glossario" element={<GlossarioPage />} />
+                    <Route path="/carteira" element={<CarteiraPage />} />
+                    <Route path="/ferramentas" element={<FerramentasPage />} />
+                    <Route path="/perfil" element={<PerfilPage />} />
+                    <Route path="/investidor" element={<InvestidorPage />} />
+                    <Route path="/revisao" element={<RevisaoPage />} />
+                    <Route path="/busca" element={<BuscaPage />} />
+                    <Route path="/desafio-diario" element={<DesafioDiarioPage />} />
+                    <Route path="/notificacoes" element={<NotificacoesConfigPage />} />
+                    <Route path="/personalizacao" element={<PersonalizacaoPage />} />
+                    <Route path="/nexus-ai" element={<NexusAIPage />} />
+                    <Route path="/gestao-financeira/*" element={<GestaoFinanceiraShell />} />
+                    <Route
+                      path="/admin/usuarios"
+                      element={
+                        <RotaAdmin>
+                          <AdminUsuariosPage />
+                        </RotaAdmin>
+                      }
+                    />
+                    <Route path="*" element={<NaoEncontrada />} />
+                  </Routes>
+                </RotaProtegida>
               }
             />
-            <Route path="*" element={<NaoEncontrada />} />
           </Routes>
         </Suspense>
       </ErrorBoundary>
@@ -124,8 +141,11 @@ function AppRotas() {
 
 export default function App() {
   const { progress, setOnboardingDone } = useUserProgress()
+  const { sessao } = useAuth()
   const location = useLocation()
   const dentroDeGf = location.pathname.startsWith('/gestao-financeira')
+
+  usePresenca(sessao?.user?.id)
 
   // Roda em segundo plano (checagem a cada 60s + ao voltar o foco) enquanto
   // o app estiver aberto — ver src/lib/notificacoesAprender.ts para o motor
@@ -150,12 +170,16 @@ export default function App() {
     )
   }
 
+  const rotaSemChrome = location.pathname === '/login' || location.pathname === '/redefinir-senha'
+
   return (
     <>
       <FundoPersonalizado />
       <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
+        {!rotaSemChrome && <AvisoEmailNaoConfirmado />}
         <AppRotas />
-        {!dentroDeGf && <BottomNav />}
+        {!dentroDeGf && !rotaSemChrome && <BottomNav />}
+        {!dentroDeGf && !rotaSemChrome && <NexusAIChat />}
       </div>
     </>
   )

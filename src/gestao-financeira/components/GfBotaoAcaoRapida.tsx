@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Plus, X, TrendingUp, TrendingDown, ArrowLeftRight, CreditCard } from 'lucide-react'
+import { Plus, X, TrendingUp, TrendingDown, ArrowLeftRight, CreditCard, Sparkles } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
 
@@ -21,6 +21,7 @@ const DELAY_ABRIR_MS = 220
 const DISTANCIA_MINIMA_SELECAO = 18
 
 const ACOES: Acao[] = [
+  { id: 'nexus-ai', label: 'Nexus AI', Icon: Sparkles, cor: '#8B5CF6', x: 0, y: -210, destino: '/gestao-financeira/chat-ia?novo=true' },
   { id: 'receita', label: 'Receita', Icon: TrendingUp, cor: '#22C55E', x: -62, y: -168, destino: '/gestao-financeira/lancamentos/novo?tipo=receita' },
   { id: 'despesa-cartao', label: 'Despesa cartão', Icon: CreditCard, cor: '#00D4FF', x: 62, y: -168, destino: '/gestao-financeira/lancamentos/novo?tipo=despesa&forma=credito' },
   { id: 'transferencia', label: 'Transferência', Icon: ArrowLeftRight, cor: '#8B5CF6', x: -108, y: -76, destino: '/gestao-financeira/lancamentos/novo?tipo=transferencia' },
