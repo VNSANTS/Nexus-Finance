@@ -112,6 +112,63 @@ export interface OrcamentoCategoria {
   limite: number
 }
 
+// =============================================================================
+// Área do Investidor (carteira de investimentos REAL, dentro da Gestão
+// Financeira — diferente do /investidor educacional do app principal).
+// Ver AREA_DO_INVESTIDOR.md (doc de referência) pro escopo completo.
+// =============================================================================
+
+export type ClasseAtivo = 'renda-fixa' | 'renda-variavel' | 'cripto'
+export type IndexadorRendaFixa = 'CDI' | 'IPCA' | 'PREFIXADO' | 'SELIC'
+export type TipoAtivoRendaVariavel = 'acao' | 'fii' | 'etf'
+
+interface InvestimentoBase {
+  id: string
+  nome: string
+  quantidade: number
+  precoCompra: number // preço unitário pago, na data da aplicação
+  dataAplicacao: string // YYYY-MM-DD
+  criadoEm: string
+}
+
+export interface InvestimentoRendaFixa extends InvestimentoBase {
+  classe: 'renda-fixa'
+  indexador: IndexadorRendaFixa
+  // % do indexador (ex: 110 = "110% do CDI") quando indexador é CDI/SELIC;
+  // % ao ano acima do índice quando IPCA (ex: 6 = "IPCA + 6%"); % ao ano
+  // fixa quando PREFIXADO.
+  taxaContratada: number
+  dataVencimento: string | null
+  tesouroSlug?: string // preenchido quando veio do buscador de Tesouro Direto (brapi)
+}
+
+export interface InvestimentoRendaVariavel extends InvestimentoBase {
+  classe: 'renda-variavel'
+  ticker: string
+  tipoAtivo: TipoAtivoRendaVariavel
+}
+
+export interface InvestimentoCripto extends InvestimentoBase {
+  classe: 'cripto'
+  coingeckoId: string // ex: "bitcoin" — id que a CoinGecko espera, não o ticker
+  simbolo: string // ex: "BTC" — só pra exibição
+}
+
+export type Investimento = InvestimentoRendaFixa | InvestimentoRendaVariavel | InvestimentoCripto
+
+// Um "retrato" do patrimônio investido num dia — registrado 1x por dia (a
+// primeira vez que a Área do Investidor é aberta naquele dia), pra dar
+// dados reais ao gráfico de evolução (Tela 1). Não existe histórico
+// retroativo (o app não tinha esse dado antes de existir esse registro) —
+// o gráfico começa a ganhar forma a partir de agora.
+export interface RegistroHistoricoPatrimonio {
+  data: string // YYYY-MM-DD
+  valorTotal: number
+  rendaFixa: number
+  rendaVariavel: number
+  cripto: number
+}
+
 // Idiomas suportados na interface da Gestão Financeira. Hoje só pt-BR tem
 // tradução completa — en-US existe na estrutura (types + seletor na tela)
 // como preparação, mas a tradução de fato do app é trabalho à parte (ver
@@ -216,6 +273,8 @@ export interface GestaoFinanceiraState {
   dividas: Divida[]
   metas: Meta[]
   orcamentos: OrcamentoCategoria[]
+  investimentos: Investimento[]
+  historicoPatrimonio: RegistroHistoricoPatrimonio[]
   metaEconomiaMensal: number
   primeiroAcessoFeito: boolean
   moedaPadrao: string

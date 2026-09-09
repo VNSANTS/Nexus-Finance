@@ -60,17 +60,24 @@ export async function enviarParaServidor(progress: UserProgress): Promise<void> 
   if (error) throw new Error(error.message)
 }
 
+export interface ProgressoRemoto {
+  progresso: UserProgress
+  // Quando o admin editou por último (ver supabase/009_admin_editado_em.sql).
+  // null = nunca foi editado pelo admin.
+  adminEditadoEm: string | null
+}
+
 // Busca o progresso salvo no servidor. Retorna null se não houver linha
 // ainda (usuário novo, primeira sincronização) — o hook, nesse caso,
 // simplesmente mantém o que já tinha no localStorage e deixa o próximo save
 // criar a linha.
-export async function buscarDoServidor(userId: string): Promise<UserProgress | null> {
+export async function buscarDoServidor(userId: string): Promise<ProgressoRemoto | null> {
   const { data, error } = await supabase
     .from('user_progress')
-    .select('dados_jsonb')
+    .select('dados_jsonb, admin_editado_em')
     .eq('user_id', userId)
     .maybeSingle()
 
   if (error || !data) return null
-  return data.dados_jsonb as UserProgress
+  return { progresso: data.dados_jsonb as UserProgress, adminEditadoEm: data.admin_editado_em as string | null }
 }

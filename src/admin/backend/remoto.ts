@@ -286,6 +286,11 @@ export async function atualizarMetricas(id: string, dados: EdicaoMetricasAdmin):
       badges_count: dados.badges,
       desafios_completos: dados.desafiosCompletos,
       dados_jsonb: jsonAtualizado,
+      // Marca AGORA como edição do admin — é o que faz o app do usuário
+      // (mesmo já aberto em outro aparelho) aplicar essa mudança de
+      // verdade, inclusive quando ela REDUZ o XP/nível (ver
+      // supabase/009_admin_editado_em.sql pro motivo completo).
+      admin_editado_em: new Date().toISOString(),
     },
     { onConflict: 'user_id' }
   )

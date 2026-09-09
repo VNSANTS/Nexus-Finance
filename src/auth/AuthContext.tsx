@@ -18,6 +18,9 @@ interface AuthContextValor {
   entrarComOAuth: (provedor: ProvedorOAuth) => Promise<{ erro: string | null }>
   sair: () => Promise<void>
   excluirPropriaConta: () => Promise<{ erro: string | null }>
+  resetarSenha: (email: string) => Promise<{ erro: string | null }>
+  atualizarSenha: (novaSenha: string) => Promise<{ erro: string | null }>
+  reenviarConfirmacaoPropria: () => Promise<{ erro: string | null }>
   ehAdmin: boolean
 }
 
@@ -165,6 +168,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { erro: null }
   }, [sessao])
 
+  // "Esqueci minha senha" — manda o e-mail com o link de recuperação. Não
+  // avisa se o e-mail existe ou não (Supabase não retorna erro nesse caso
+  // de propósito, pra não vazar quais e-mails têm conta) — a tela sempre
+  // mostra a mesma mensagem de sucesso.
+  const resetarSenha = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/Nexus-Finance/redefinir-senha',
+    })
+    if (error) return { erro: traduzirErro(error.message) }
+    return { erro: null }
+  }, [])
+
+  // Chamado na tela /redefinir-senha depois que a pessoa clica no link do
+  // e-mail — nesse ponto o supabase-js já processou o token da URL e criou
+  // uma sessão temporária de recuperação sozinho, então só falta trocar a
+  // senha de fato.
+  const atualizarSenha = useCallback(async (novaSenha: string) => {
+    const { error } = await supabase.auth.updateUser({ password: novaSenha })
+    if (error) return { erro: traduzirErro(error.message) }
+    return { erro: null }
+  }, [])
+
+  // Reenvia a confirmação pro PRÓPRIO e-mail (diferente da versão no
+  // painel admin, que reenvia pra qualquer usuário) — `auth.resend()` não
+  // exige privilégio nenhum além de já estar logado.
+  const reenviarConfirmacaoPropria = useCallback(async () => {
+    const email = sessao?.user?.email
+    if (!email) return { erro: 'Sessão inválida.' }
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    if (error) return { erro: traduzirErro(error.message) }
+    return { erro: null }
+  }, [sessao])
+
   return (
     <AuthContext.Provider
       value={{
@@ -177,6 +213,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         entrarComOAuth,
         sair,
         excluirPropriaConta,
+        resetarSenha,
+        atualizarSenha,
+        reenviarConfirmacaoPropria,
         ehAdmin: perfil?.role === 'admin',
       }}
     >
@@ -199,6 +238,11 @@ function traduzirErro(mensagem: string): string {
     'User already registered': 'Esse e-mail já está cadastrado.',
     'Password should be at least 6 characters': 'A senha precisa ter pelo menos 6 caracteres.',
     'Email not confirmed': 'Confirme seu e-mail antes de entrar (verifique sua caixa de entrada).',
+    'New password should be different from the old password.': 'A nova senha precisa ser diferente da senha atual.',
+    'Auth session missing!': 'Esse link de redefinição expirou ou já foi usado. Peça um novo.',
+  }
+  if (mensagem.toLowerCase().includes('rate limit')) {
+    return 'Muitas tentativas em pouco tempo. Aguarde alguns minutos e tente de novo.'
   }
   if (mensagem.toLowerCase().includes('banned') || mensagem.toLowerCase().includes('suspended')) {
     return 'Sua conta está bloqueada. Entre em contato com o suporte.'

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { History, Plus, Send, Loader2 } from 'lucide-react'
+import { History, Plus, Send, Loader2, Settings } from 'lucide-react'
 import { useNexusAI, type EscopoNexusAI } from './useNexusAI'
 import NexusAIIcone from './NexusAIIcone'
 import NexusAIHistorico from './NexusAIHistorico'
+import NexusAIConfiguracoes from './NexusAIConfiguracoes'
 
 function BolhaMensagem({ papel, conteudo, pendente }: { papel: 'user' | 'model'; conteudo: string; pendente?: boolean }) {
   const ehUsuario = papel === 'user'
@@ -53,6 +54,7 @@ export default function NexusAIChatCorpo({
 }: NexusAIChatCorpoProps) {
   const [texto, setTexto] = useState('')
   const [historicoAberto, setHistoricoAberto] = useState(false)
+  const [configAberto, setConfigAberto] = useState(false)
   const {
     sessaoId,
     mensagens,
@@ -103,6 +105,9 @@ export default function NexusAIChatCorpo({
         </button>
         <button onClick={() => setHistoricoAberto(true)} className="text-texto-secundario p-1.5" aria-label="Histórico de conversas">
           <History size={18} />
+        </button>
+        <button onClick={() => setConfigAberto(true)} className="text-texto-secundario p-1.5" aria-label="Configurações do Nexus AI">
+          <Settings size={17} />
         </button>
         {acaoFimCabecalho}
       </div>
@@ -161,6 +166,7 @@ export default function NexusAIChatCorpo({
         sessaoAtualId={sessaoId}
         listarHistoricoSessoes={listarHistoricoSessoes}
       />
+      <NexusAIConfiguracoes aberto={configAberto} onFechar={() => setConfigAberto(false)} />
     </div>
   )
 }

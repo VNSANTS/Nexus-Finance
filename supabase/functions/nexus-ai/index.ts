@@ -23,14 +23,19 @@
 // de quem está efetivamente logado fazendo a pergunta, nunca de outro
 // usuário.
 
-import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const GEMINI_MODEL = 'gemini-3.6-flash'
+const GEMINI_MODEL_PADRAO = 'gemini-3.6-flash'
+// Lista fixa — nunca confia no que o cliente manda sem checar. Só modelos
+// Flash/Flash-Lite (família 3.x, elegíveis pro tier gratuito do Gemini;
+// modelos Pro saíram do tier grátis em 2026, por isso não entram aqui).
+const MODELOS_PERMITIDOS = new Set(['gemini-3.1-flash-lite', 'gemini-3.6-flash', 'gemini-3.8-flash'])
+const NIVEL_PENSAMENTO: Record<string, 'low' | 'medium' | 'high'> = { baixo: 'low', medio: 'medium', alto: 'high' }
 const URL_INDICE_MODULOS = 'https://vnsants.github.io/Nexus-Finance/nexus-ai-indice-modulos.json'
 const MAX_MENSAGENS_HISTORICO = 20 // últimas 20 (10 trocas) da sessão atual — memória curta o suficiente sem inflar o prompt
 const MAX_TRANSACOES_NO_PROMPT = 30 // últimas 30 transações — dá contexto real sem mandar o histórico financeiro inteiro a cada mensagem
@@ -78,6 +83,11 @@ type CorpoRequisicao = {
   // (não faz sentido pra uma chamada avulsa). Default false = comportamento
   // de chat normal, sem mudar nada pra quem já usa.
   semHistorico?: boolean
+  // Escolha da pessoa (Settings do chat, ver src/nexus-ai/preferenciasModelo.ts)
+  // — sempre validada contra MODELOS_PERMITIDOS/NIVEL_PENSAMENTO abaixo antes
+  // de repassar pro Gemini, nunca usada crua. Ausente/inválida = padrão de sempre.
+  modelo?: string
+  esforco?: string
 }
 
 type IndiceModulos = { modulos: { titulo: string; trilhaId: string }[] }
@@ -168,6 +178,21 @@ function montarContextoFinanceiro(estadoGf: Record<string, unknown> | null): str
   return '\n\nDados financeiros do usuário (use estes números reais nas suas respostas):\n' + partes.join('\n')
 }
 
+// Busca gestao_financeira_estado + monta o resumo, com o mesmo try/catch
+// de proteção de antes (nunca deixa um formato de dado inesperado derrubar
+// a conversa inteira — já aconteceu por um nome de campo errado). Extraído
+// numa função à parte pra poder rodar em paralelo com as outras buscas
+// independentes (ver Promise.all mais abaixo).
+async function buscarContextoFinanceiro(supabase: SupabaseClient, userId: string): Promise<string> {
+  const { data: estadoGf } = await supabase.from('gestao_financeira_estado').select('dados_jsonb').eq('user_id', userId).maybeSingle()
+  try {
+    return montarContextoFinanceiro((estadoGf?.dados_jsonb as Record<string, unknown>) ?? null)
+  } catch (erroContexto) {
+    console.error('Erro ao montar contexto financeiro:', erroContexto)
+    return '\n\nDados financeiros do usuário: não foi possível ler os dados agora. Avise a pessoa e sugira tentar de novo em instantes.'
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: CORS_HEADERS })
@@ -189,19 +214,23 @@ Deno.serve(async (req) => {
     const { data: { user }, error: erroUsuario } = await supabase.auth.getUser()
     if (erroUsuario || !user) return respostaErro('Sessão inválida.', 401)
 
-    const { mensagem, sessaoId, escopo = 'geral', moduloContexto, semHistorico = false }: CorpoRequisicao = await req.json()
+    const { mensagem, sessaoId, escopo = 'geral', moduloContexto, semHistorico = false, modelo, esforco }: CorpoRequisicao = await req.json()
     if (!mensagem || !mensagem.trim()) return respostaErro('Mensagem vazia.', 400)
     if (!sessaoId) return respostaErro('sessaoId ausente.', 400)
 
-    // Histórico da SESSÃO atual (não do usuário inteiro) — cada conversa
-    // tem sua própria memória de curto prazo, sem vazar contexto de
-    // conversas antigas ou do outro escopo (geral vs gestão financeira).
-    // Pulado inteiramente quando semHistorico (chamada avulsa, sem sentido
-    // ler ou escrever num "histórico de conversa" que não existe de verdade).
-    const historicoOrdenado = semHistorico
-      ? []
-      : (
-          await supabase
+    const modeloEscolhido = modelo && MODELOS_PERMITIDOS.has(modelo) ? modelo : GEMINI_MODEL_PADRAO
+    const nivelPensamento = (esforco && NIVEL_PENSAMENTO[esforco]) || NIVEL_PENSAMENTO.medio
+
+    // As 3 buscas abaixo (histórico da sessão, índice de módulos, contexto
+    // financeiro) são independentes entre si — antes rodavam uma atrás da
+    // outra (await sequencial), o que somava a latência das 3. Rodando em
+    // paralelo, o tempo total é só o da mais lenta das 3 (normalmente o
+    // índice de módulos, que é um fetch pro GitHub Pages) em vez da soma —
+    // ganho de velocidade real, sem mudar nada do que cada uma faz.
+    const [historicoOrdenado, indiceTexto, contextoFinanceiro] = await Promise.all([
+      semHistorico
+        ? Promise.resolve([])
+        : supabase
             .from('nexus_ai_mensagens')
             .select('papel, conteudo')
             .eq('user_id', user.id)
@@ -209,36 +238,21 @@ Deno.serve(async (req) => {
             .eq('escopo', escopo)
             .order('created_at', { ascending: false })
             .limit(MAX_MENSAGENS_HISTORICO)
-        ).data?.reverse() ?? []
+            .then((r) => (r.data ?? []).reverse()),
 
-    // Índice de módulos: em AMBOS os escopos agora — o assistente geral
-    // usa para direcionar aprendizado, e o assistente da GF usa para
-    // conectar um padrão visto nos dados financeiros reais a um módulo
-    // educacional relevante (pedido explícito: "usar como base os módulos
-    // e direcionar a um aprendizado mais completo").
-    const indiceTexto = await buscarIndiceModulos()
+      // Índice de módulos: em AMBOS os escopos agora — o assistente geral
+      // usa para direcionar aprendizado, e o assistente da GF usa para
+      // conectar um padrão visto nos dados financeiros reais a um módulo
+      // educacional relevante (pedido explícito: "usar como base os módulos
+      // e direcionar a um aprendizado mais completo").
+      buscarIndiceModulos(),
 
-    // Contexto financeiro real: só no escopo gestao-financeira, e só
-    // busca gestao_financeira_estado com o token do PRÓPRIO usuário (RLS
-    // de supabase/007_gestao_financeira_sync.sql garante que só o dono do
-    // dado é lido, mesmo que alguém tentasse manipular o request).
-    let contextoFinanceiro = ''
-    if (escopo === 'gestao-financeira') {
-      const { data: estadoGf } = await supabase
-        .from('gestao_financeira_estado')
-        .select('dados_jsonb')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      try {
-        contextoFinanceiro = montarContextoFinanceiro((estadoGf?.dados_jsonb as Record<string, unknown>) ?? null)
-      } catch (erroContexto) {
-        // Nunca deixa um formato de dado inesperado derrubar a conversa
-        // inteira (já aconteceu por um nome de campo errado) — sem os
-        // números reais dessa vez, mas a pessoa ainda consegue conversar.
-        console.error('Erro ao montar contexto financeiro:', erroContexto)
-        contextoFinanceiro = '\n\nDados financeiros do usuário: não foi possível ler os dados agora. Avise a pessoa e sugira tentar de novo em instantes.'
-      }
-    }
+      // Contexto financeiro real: só no escopo gestao-financeira, e só
+      // busca gestao_financeira_estado com o token do PRÓPRIO usuário (RLS
+      // de supabase/007_gestao_financeira_sync.sql garante que só o dono do
+      // dado é lido, mesmo que alguém tentasse manipular o request).
+      escopo === 'gestao-financeira' ? buscarContextoFinanceiro(supabase, user.id) : Promise.resolve(''),
+    ])
 
     const contextoModulo = moduloContexto
       ? `\n\nO usuário está atualmente na tela do módulo "${moduloContexto}" — priorize relacionar sua resposta a esse módulo quando fizer sentido.`
@@ -255,14 +269,22 @@ Deno.serve(async (req) => {
     ]
 
     const respostaGemini = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${modeloEscolhido}:generateContent?key=${geminiApiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents,
           systemInstruction: { parts: [{ text: systemInstruction }] },
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
+          generationConfig: {
+            temperature: 0.7,
+            maxOutputTokens: 1024,
+            // "Esforço" escolhido na tela de Configurações — modelos 3.x
+            // não suportam desligar completamente o "pensamento" (nem no
+            // nível mais baixo), mas "low" já reduz bastante a latência
+            // comparado ao padrão do modelo.
+            thinkingConfig: { thinkingLevel: nivelPensamento },
+          },
         }),
       }
     )

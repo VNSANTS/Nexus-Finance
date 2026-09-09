@@ -1,0 +1,21 @@
+-- =============================================================================
+-- Nexus Finance — Marca quando o ADMIN edita o progresso de um usuário
+-- =============================================================================
+-- Cole este arquivo inteiro no SQL Editor do Supabase e rode uma vez. Seguro
+-- rodar de novo.
+--
+-- POR QUE ISSO EXISTE: o app já tinha uma proteção pra não perder progresso
+-- feito offline — ao logar, só aplica o XP do servidor se for MAIOR que o
+-- local (ver useUserProgress.ts). Isso quebra silenciosamente quando é o
+-- ADMIN quem reduz o XP/nível de alguém pelo painel: o app do usuário (se
+-- já estiver aberto, ou no próximo login) vê "servidor tem menos XP que o
+-- meu" e ignora a mudança — pior, a cada 30s ele reenvia o valor antigo
+-- (maior) de volta pro servidor, desfazendo a edição do admin sozinho.
+--
+-- A correção: esta coluna marca QUANDO o admin editou por último. O app do
+-- usuário compara esse timestamp com o que ele já aplicou antes — se for
+-- mais novo, aplica a edição do admin incondicionalmente (like o botão
+-- "Sincronizar agora"), mesmo que isso reduza o XP local.
+-- =============================================================================
+
+alter table public.user_progress add column if not exists admin_editado_em timestamptz;

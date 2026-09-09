@@ -37,8 +37,8 @@ const PROVEDORES: { id: ProvedorOAuth; nome: string; icone: () => React.JSX.Elem
 ]
 
 export default function LoginPage() {
-  const { sessao, carregando, entrar, cadastrar, entrarComOAuth, appConfig } = useAuth()
-  const [modo, setModo] = useState<'entrar' | 'cadastrar'>('entrar')
+  const { sessao, carregando, entrar, cadastrar, entrarComOAuth, resetarSenha, appConfig } = useAuth()
+  const [modo, setModo] = useState<'entrar' | 'cadastrar' | 'esqueci'>('entrar')
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -46,6 +46,7 @@ export default function LoginPage() {
   const [provedorEnviando, setProvedorEnviando] = useState<ProvedorOAuth | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [avisoCadastro, setAvisoCadastro] = useState<string | null>(null)
+  const [avisoReset, setAvisoReset] = useState<string | null>(null)
 
   // Já logado — não faz sentido mostrar a tela de login de novo.
   if (!carregando && sessao) return <Navigate to="/" replace />
@@ -53,7 +54,9 @@ export default function LoginPage() {
   const cadastroFechado = appConfig?.cadastroFechado ?? false
   const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
   const podeEnviar =
-    emailValido && senha.length >= 6 && (modo === 'entrar' || (nome.trim().length >= 2 && !cadastroFechado))
+    modo === 'esqueci'
+      ? emailValido
+      : emailValido && senha.length >= 6 && (modo === 'entrar' || (nome.trim().length >= 2 && !cadastroFechado))
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -61,6 +64,15 @@ export default function LoginPage() {
     setEnviando(true)
     setErro(null)
     setAvisoCadastro(null)
+    setAvisoReset(null)
+
+    if (modo === 'esqueci') {
+      const resultado = await resetarSenha(email)
+      if (resultado.erro) setErro(resultado.erro)
+      else setAvisoReset('Se esse e-mail tiver uma conta, enviamos um link pra redefinir a senha. Confira sua caixa de entrada (e o spam).')
+      setEnviando(false)
+      return
+    }
 
     const resultado = modo === 'entrar' ? await entrar(email, senha) : await cadastrar(nome.trim(), email, senha)
 
@@ -92,35 +104,37 @@ export default function LoginPage() {
         </div>
         <h1 className="font-display font-extrabold text-2xl text-texto">Nexus Finance</h1>
         <p className="text-sm text-texto-secundario text-center">
-          {modo === 'entrar' ? 'Entre na sua conta para continuar' : 'Crie sua conta gratuita'}
+          {modo === 'entrar' ? 'Entre na sua conta para continuar' : modo === 'cadastrar' ? 'Crie sua conta gratuita' : 'Vamos recuperar seu acesso'}
         </p>
       </div>
 
-      {cadastroFechado && (
+      {cadastroFechado && modo !== 'esqueci' && (
         <p className="text-[11.5px] text-accent-gold bg-accent-gold/10 border border-accent-gold/25 rounded-xl px-3.5 py-2.5 text-center mb-4">
           Novos cadastros estão temporariamente pausados. Se você já tem conta, pode entrar normalmente.
         </p>
       )}
 
-      <div className="flex rounded-full bg-bg-card border border-border p-1 mb-6">
-        <button
-          onClick={() => { setModo('entrar'); setErro(null) }}
-          className={`flex-1 text-sm font-semibold py-2 rounded-full transition-colors ${
-            modo === 'entrar' ? 'bg-accent-cyan text-black' : 'text-texto-secundario'
-          }`}
-        >
-          Entrar
-        </button>
-        <button
-          onClick={() => { if (!cadastroFechado) { setModo('cadastrar'); setErro(null) } }}
-          disabled={cadastroFechado}
-          className={`flex-1 text-sm font-semibold py-2 rounded-full transition-colors disabled:opacity-40 ${
-            modo === 'cadastrar' ? 'bg-accent-cyan text-black' : 'text-texto-secundario'
-          }`}
-        >
-          Cadastrar
-        </button>
-      </div>
+      {modo !== 'esqueci' && (
+        <div className="flex rounded-full bg-bg-card border border-border p-1 mb-6">
+          <button
+            onClick={() => { setModo('entrar'); setErro(null) }}
+            className={`flex-1 text-sm font-semibold py-2 rounded-full transition-colors ${
+              modo === 'entrar' ? 'bg-accent-cyan text-black' : 'text-texto-secundario'
+            }`}
+          >
+            Entrar
+          </button>
+          <button
+            onClick={() => { if (!cadastroFechado) { setModo('cadastrar'); setErro(null) } }}
+            disabled={cadastroFechado}
+            className={`flex-1 text-sm font-semibold py-2 rounded-full transition-colors disabled:opacity-40 ${
+              modo === 'cadastrar' ? 'bg-accent-cyan text-black' : 'text-texto-secundario'
+            }`}
+          >
+            Cadastrar
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
         {modo === 'cadastrar' && (
@@ -152,22 +166,35 @@ export default function LoginPage() {
           </div>
         </label>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-semibold text-texto-secundario">Senha</span>
-          <div className="relative">
-            <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-texto-secundario" />
-            <input
-              value={senha}
-              onChange={(e) => setSenha(e.target.value)}
-              type="password"
-              placeholder="Mínimo 6 caracteres"
-              className="w-full rounded-xl bg-bg-card border border-border pl-10 pr-3.5 py-3 text-sm text-texto outline-none focus:border-accent-cyan"
-            />
-          </div>
-        </label>
+        {modo !== 'esqueci' && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-texto-secundario">Senha</span>
+            <div className="relative">
+              <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-texto-secundario" />
+              <input
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                className="w-full rounded-xl bg-bg-card border border-border pl-10 pr-3.5 py-3 text-sm text-texto outline-none focus:border-accent-cyan"
+              />
+            </div>
+          </label>
+        )}
+
+        {modo === 'entrar' && (
+          <button
+            type="button"
+            onClick={() => { setModo('esqueci'); setErro(null); setAvisoReset(null) }}
+            className="text-xs text-accent-cyan text-right -mt-1.5 self-end"
+          >
+            Esqueceu a senha?
+          </button>
+        )}
 
         {erro && <p className="text-xs text-accent-red text-center">{erro}</p>}
         {avisoCadastro && <p className="text-xs text-accent-green text-center">{avisoCadastro}</p>}
+        {avisoReset && <p className="text-xs text-accent-green text-center">{avisoReset}</p>}
 
         <button
           type="submit"
@@ -178,32 +205,48 @@ export default function LoginPage() {
             <Loader2 size={16} className="animate-spin" />
           ) : modo === 'entrar' ? (
             <LogIn size={16} />
-          ) : (
+          ) : modo === 'cadastrar' ? (
             <UserPlus size={16} />
+          ) : (
+            <Mail size={16} />
           )}
-          {modo === 'entrar' ? 'Entrar' : 'Criar conta'}
+          {modo === 'entrar' ? 'Entrar' : modo === 'cadastrar' ? 'Criar conta' : 'Enviar link de recuperação'}
         </button>
+
+        {modo === 'esqueci' && (
+          <button
+            type="button"
+            onClick={() => { setModo('entrar'); setErro(null); setAvisoReset(null) }}
+            className="text-xs text-texto-secundario text-center"
+          >
+            Voltar para o login
+          </button>
+        )}
       </form>
 
-      <div className="flex items-center gap-3 my-6">
-        <div className="flex-1 h-px bg-border" />
-        <span className="text-[11px] text-texto-secundario">ou continue com</span>
-        <div className="flex-1 h-px bg-border" />
-      </div>
+      {modo !== 'esqueci' && (
+        <>
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-[11px] text-texto-secundario">ou continue com</span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
 
-      <div className="grid grid-cols-3 gap-2.5">
-        {PROVEDORES.map(({ id, nome, icone: Icone }) => (
-          <button
-            key={id}
-            onClick={() => handleOAuth(id)}
-            disabled={provedorEnviando !== null}
-            aria-label={`Continuar com ${nome}`}
-            className="flex items-center justify-center rounded-xl border border-border bg-bg-card py-3 disabled:opacity-50"
-          >
-            {provedorEnviando === id ? <Loader2 size={16} className="animate-spin text-texto-secundario" /> : <Icone />}
-          </button>
-        ))}
-      </div>
+          <div className="grid grid-cols-3 gap-2.5">
+            {PROVEDORES.map(({ id, nome, icone: Icone }) => (
+              <button
+                key={id}
+                onClick={() => handleOAuth(id)}
+                disabled={provedorEnviando !== null}
+                aria-label={`Continuar com ${nome}`}
+                className="flex items-center justify-center rounded-xl border border-border bg-bg-card py-3 disabled:opacity-50"
+              >
+                {provedorEnviando === id ? <Loader2 size={16} className="animate-spin text-texto-secundario" /> : <Icone />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useReducer, useRef } from 'react'
 import type { ReactNode } from 'react'
-import type { Cartao, Categoria, Conta, Divida, GestaoFinanceiraState, Membro, Meta, OrcamentoCategoria, PreferenciasNotificacoes, PreferenciasPrivacidade, PreferenciasSeguranca, Transacao } from './types'
+import type { Cartao, Categoria, Conta, Divida, GestaoFinanceiraState, Investimento, Membro, Meta, OrcamentoCategoria, PreferenciasNotificacoes, PreferenciasPrivacidade, PreferenciasSeguranca, RegistroHistoricoPatrimonio, Transacao } from './types'
 import { CATEGORIAS_PADRAO } from './categoriasPadrao'
 import { novoMembroPrincipal, permissoesAtivas } from './permissoes'
 import { PREFERENCIAS_SEGURANCA_PADRAO } from './seguranca'
@@ -28,6 +28,8 @@ function estadoInicial(): GestaoFinanceiraState {
     dividas: [],
     metas: [],
     orcamentos: [],
+    investimentos: [],
+    historicoPatrimonio: [],
     metaEconomiaMensal: 0,
     primeiroAcessoFeito: false,
     moedaPadrao: 'BRL',
@@ -96,6 +98,10 @@ type Acao =
   | { tipo: 'EXCLUIR_CATEGORIA'; payload: { id: string } }
   | { tipo: 'DEFINIR_ORCAMENTO'; payload: OrcamentoCategoria }
   | { tipo: 'REMOVER_ORCAMENTO'; payload: { categoriaId: string } }
+  | { tipo: 'ADICIONAR_INVESTIMENTO'; payload: Investimento }
+  | { tipo: 'EDITAR_INVESTIMENTO'; payload: Investimento }
+  | { tipo: 'EXCLUIR_INVESTIMENTO'; payload: { id: string } }
+  | { tipo: 'REGISTRAR_HISTORICO_PATRIMONIO'; payload: RegistroHistoricoPatrimonio }
   | { tipo: 'DEFINIR_META_ECONOMIA'; payload: { valor: number } }
   | { tipo: 'MARCAR_PRIMEIRO_ACESSO' }
   | { tipo: 'DEFINIR_MOEDA'; payload: { moeda: string } }
@@ -164,6 +170,21 @@ function reducer(estado: GestaoFinanceiraState, acao: Acao): GestaoFinanceiraSta
     }
     case 'REMOVER_ORCAMENTO':
       return { ...estado, orcamentos: estado.orcamentos.filter((o) => o.categoriaId !== acao.payload.categoriaId) }
+
+    case 'ADICIONAR_INVESTIMENTO':
+      return { ...estado, investimentos: [...estado.investimentos, acao.payload] }
+    case 'EDITAR_INVESTIMENTO':
+      return { ...estado, investimentos: estado.investimentos.map((i) => (i.id === acao.payload.id ? acao.payload : i)) }
+    case 'EXCLUIR_INVESTIMENTO':
+      return { ...estado, investimentos: estado.investimentos.filter((i) => i.id !== acao.payload.id) }
+    case 'REGISTRAR_HISTORICO_PATRIMONIO': {
+      // Upsert por data — reabrir a tela várias vezes no mesmo dia refina o
+      // mesmo ponto em vez de duplicar. Mantém só os últimos 400 registros
+      // (~13 meses) pra não crescer sem limite no localStorage/Supabase.
+      const outros = estado.historicoPatrimonio.filter((r) => r.data !== acao.payload.data)
+      const historicoPatrimonio = [...outros, acao.payload].sort((a, b) => a.data.localeCompare(b.data)).slice(-400)
+      return { ...estado, historicoPatrimonio }
+    }
     case 'DEFINIR_META_ECONOMIA':
       return { ...estado, metaEconomiaMensal: acao.payload.valor }
     case 'MARCAR_PRIMEIRO_ACESSO':
@@ -273,6 +294,10 @@ interface GestaoFinanceiraContextValue {
   excluirCategoria: (id: string) => void
   definirOrcamento: (o: OrcamentoCategoria) => void
   removerOrcamento: (categoriaId: string) => void
+  adicionarInvestimento: (i: Investimento) => void
+  editarInvestimento: (i: Investimento) => void
+  excluirInvestimento: (id: string) => void
+  registrarHistoricoPatrimonio: (r: RegistroHistoricoPatrimonio) => void
   definirMetaEconomia: (valor: number) => void
   marcarPrimeiroAcesso: () => void
   definirMoeda: (moeda: string) => void
@@ -397,6 +422,10 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
 
   const definirOrcamento = useCallback((o: OrcamentoCategoria) => dispatch({ tipo: 'DEFINIR_ORCAMENTO', payload: o }), [])
   const removerOrcamento = useCallback((categoriaId: string) => dispatch({ tipo: 'REMOVER_ORCAMENTO', payload: { categoriaId } }), [])
+  const adicionarInvestimento = useCallback((i: Investimento) => dispatch({ tipo: 'ADICIONAR_INVESTIMENTO', payload: i }), [])
+  const editarInvestimento = useCallback((i: Investimento) => dispatch({ tipo: 'EDITAR_INVESTIMENTO', payload: i }), [])
+  const excluirInvestimento = useCallback((id: string) => dispatch({ tipo: 'EXCLUIR_INVESTIMENTO', payload: { id } }), [])
+  const registrarHistoricoPatrimonio = useCallback((r: RegistroHistoricoPatrimonio) => dispatch({ tipo: 'REGISTRAR_HISTORICO_PATRIMONIO', payload: r }), [])
   const definirMetaEconomia = useCallback((valor: number) => dispatch({ tipo: 'DEFINIR_META_ECONOMIA', payload: { valor } }), [])
   const marcarPrimeiroAcesso = useCallback(() => dispatch({ tipo: 'MARCAR_PRIMEIRO_ACESSO' }), [])
   const definirMoeda = useCallback((moeda: string) => dispatch({ tipo: 'DEFINIR_MOEDA', payload: { moeda } }), [])
@@ -452,6 +481,10 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
     excluirCategoria,
     definirOrcamento,
     removerOrcamento,
+    adicionarInvestimento,
+    editarInvestimento,
+    excluirInvestimento,
+    registrarHistoricoPatrimonio,
     definirMetaEconomia,
     marcarPrimeiroAcesso,
     definirMoeda,

@@ -163,25 +163,61 @@ function useProgressStore() {
   const userId = auth.sessao?.user?.id ?? null
   const ultimoUserIdSincronizadoRef = useRef<string | null>(null)
 
+  // Última edição do ADMIN que este aparelho já aplicou (localStorage,
+  // por usuário — não por aparelho, então cada aparelho logado nessa conta
+  // detecta a mesma edição independentemente). Comparar contra isso é o
+  // que permite diferenciar "servidor tem menos XP porque o admin reduziu
+  // de propósito" de "servidor tem menos XP porque esse aparelho progrediu
+  // offline" — os dois parecem iguais (remoto.xp < local.xp) sem essa marca.
+  const chaveMarcadorAdmin = (uid: string) => `nexus-admin-editado-em:${uid}`
+
   useEffect(() => {
     setUsuarioAtual(userId)
     if (!userId) return
 
+    async function verificarEdicaoAdmin(): Promise<boolean> {
+      const remoto = await buscarDoServidor(userId!)
+      if (!remoto) return false
+
+      const marcadorAtual = localStorage.getItem(chaveMarcadorAdmin(userId!))
+      const houveEdicaoAdminNova = Boolean(remoto.adminEditadoEm) && remoto.adminEditadoEm !== marcadorAtual
+
+      if (houveEdicaoAdminNova) {
+        // Edição do admin nunca vista por este aparelho — aplica
+        // incondicionalmente (mesmo que reduza XP), igual ao botão
+        // "Sincronizar agora", e marca como já aplicada.
+        stateRef.current = remoto.progresso
+        notificar()
+        localStorage.setItem(chaveMarcadorAdmin(userId!), remoto.adminEditadoEm!)
+        return true
+      }
+
+      if (remoto.progresso.xp > stateRef.current!.xp) {
+        // Sem edição de admin nova — mantém a rede de segurança original
+        // (só aplica se o servidor tiver MAIS xp, ex: progresso feito em
+        // outro aparelho).
+        stateRef.current = remoto.progresso
+        notificar()
+      }
+      return false
+    }
+
     if (ultimoUserIdSincronizadoRef.current !== userId) {
       ultimoUserIdSincronizadoRef.current = userId
-      buscarDoServidor(userId).then((remoto) => {
-        if (!remoto) return // usuário novo no servidor — próximo envio periódico cria a linha
-        if (remoto.xp > stateRef.current!.xp) {
-          stateRef.current = remoto
-          notificar()
-        }
-      })
+      verificarEdicaoAdmin()
     }
 
     const intervalo = setInterval(() => {
-      enviarParaServidor(stateRef.current!).catch(() => {
-        // sem internet momentânea: tenta de novo no próximo ciclo de 30s,
-        // localStorage já garantiu que nada se perde localmente
+      // Primeiro checa se o admin editou algo desde a última vez que este
+      // aparelho olhou — se sim, aplica e PULA o envio deste ciclo (senão
+      // reenviaria o valor antigo por cima da edição que acabou de chegar).
+      // Senão, segue o fluxo normal: envia o progresso local pro servidor.
+      verificarEdicaoAdmin().then((aplicouEdicaoAdmin) => {
+        if (aplicouEdicaoAdmin) return
+        enviarParaServidor(stateRef.current!).catch(() => {
+          // sem internet momentânea: tenta de novo no próximo ciclo de 30s,
+          // localStorage já garantiu que nada se perde localmente
+        })
       })
     }, 30_000)
 
@@ -189,11 +225,9 @@ function useProgressStore() {
   }, [userId])
 
   // Sincronização manual, sob demanda — botão "Sincronizar agora" no
-  // Perfil. Diferente da busca automática ao logar (que só aplica se o
-  // servidor tiver MAIS xp, como rede de segurança contra perder progresso
-  // offline), esta aplica o que vier do servidor incondicionalmente —
-  // fazendo sentido justamente para trazer uma edição do admin, que pode
-  // ter aumentado OU diminuído qualquer campo.
+  // Perfil. Igual à checagem automática de edição do admin (aplica o que
+  // vier do servidor incondicionalmente), só que sob comando explícito da
+  // pessoa em vez de esperar o próximo ciclo de 30s.
   const [sincronizando, setSincronizando] = useState(false)
   const sincronizarAgora = useCallback(async (): Promise<{ ok: boolean; erro?: string }> => {
     if (!userId) return { ok: false, erro: 'Você precisa estar logado para sincronizar.' }
@@ -201,8 +235,9 @@ function useProgressStore() {
     try {
       const remoto = await buscarDoServidor(userId)
       if (remoto) {
-        stateRef.current = remoto
+        stateRef.current = remoto.progresso
         notificar()
+        if (remoto.adminEditadoEm) localStorage.setItem(chaveMarcadorAdmin(userId), remoto.adminEditadoEm)
       }
       return { ok: true }
     } catch {
