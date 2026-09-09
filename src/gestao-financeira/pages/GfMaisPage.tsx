@@ -28,7 +28,7 @@ const ITENS = [
   { label: 'Contas & Cartões', desc: 'Bancos, carteiras e cartões', Icon: Landmark, cor: '#FFC93C', to: '/gestao-financeira/contas-cartoes' },
   { label: 'Metas', desc: 'Objetivos e progresso', Icon: PiggyBank, cor: '#8B5CF6', to: '/gestao-financeira/metas' },
   { label: 'Orçamento', desc: 'Limites por categoria', Icon: PieChart, cor: '#00D4FF', to: '/gestao-financeira/orcamento' },
-  { label: 'Área do Investidor', desc: 'Carteira e mercado', Icon: Radar, cor: '#EC4899', to: null },
+  { label: 'Área do Investidor', desc: 'Carteira e mercado', Icon: Radar, cor: '#EC4899', to: '/gestao-financeira/investidor' },
   { label: 'Categorias', desc: 'Organize receitas e despesas', Icon: Tag, cor: '#3B82F6', to: '/gestao-financeira/categorias' },
   { label: 'Notificações', desc: 'Lembretes e alertas', Icon: Bell, cor: '#FFC93C', to: '/gestao-financeira/notificacoes' },
   { label: 'Nexus AI', desc: 'Assistente financeiro', Icon: Bot, cor: '#8B5CF6', to: '/gestao-financeira/chat-ia' },
