@@ -31,6 +31,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registro manual (em vez do script auto-injetado) para poder
+      // expor um botão "Verificar atualização" em Perfil: com injeção
+      // automática não temos acesso programático ao SW, então o app só
+      // atualiza sozinho quando o SW acontece de checar por conta própria
+      // — na prática, muita gente só via a versão nova desinstalando e
+      // reinstalando o app. Ver src/hooks/useAtualizacaoApp.ts.
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon-512-maskable.png'],
       workbox: {
         // Força o novo Service Worker a assumir imediatamente (sem esperar

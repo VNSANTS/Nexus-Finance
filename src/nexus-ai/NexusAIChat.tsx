@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion'
 import { X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthContext'
 import NexusAIIcone from './NexusAIIcone'
@@ -35,6 +35,15 @@ export default function NexusAIChat({ escopo = 'geral', abrirExternamente, onAbr
   const [aberto, setAberto] = useState(false)
   const moduloAtualId = useModuloAtualId()
 
+  // Posição do botão flutuante — arrastável livremente pela tela. Guardado
+  // só em memória (useMotionValue), de propósito: ao fechar e reabrir o
+  // app, sempre volta pro canto padrão (bottom-right). Não persiste em
+  // localStorage nem em estado global.
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const arrastandoRef = useRef(false)
+  const [foiArrastado, setFoiArrastado] = useState(false)
+
   // Sem sessão (não deveria acontecer, já que RotaProtegida cobre o app
   // inteiro, mas a tela de /login em si não tem sessão) — não mostra o FAB.
   if (!sessao) return null
@@ -49,15 +58,39 @@ export default function NexusAIChat({ escopo = 'geral', abrirExternamente, onAbr
 
   return (
     <>
-      {/* Botão flutuante — fica acima do BottomNav, canto inferior direito */}
+      {/* Botão flutuante — posição padrão no canto inferior direito, acima
+          do BottomNav, mas arrastável pra qualquer lugar da tela. x/y são
+          um deslocamento (delta) a partir dessa posição padrão, então ao
+          fechar e reabrir o app o botão volta sempre pro lugar de origem —
+          nada é salvo em disco de propósito. */}
       {!painelDeveEstarAberto && (
-        <button
-          onClick={() => setAberto(true)}
-          className="fixed z-[70] bottom-[86px] right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg bg-bg-card/60 backdrop-blur-sm"
+        <motion.button
+          drag
+          dragMomentum={false}
+          dragElastic={0.05}
+          dragConstraints={{ top: -window.innerHeight + 140, left: -Math.min(window.innerWidth, 480) + 72, right: 0, bottom: 0 }}
+          style={{ x, y }}
+          onDragStart={() => {
+            arrastandoRef.current = true
+            setFoiArrastado(true)
+          }}
+          onDragEnd={() => {
+            // Pequeno delay pra o onClick (que dispara logo depois do
+            // pointerup) checar arrastandoRef antes dele ser zerado.
+            setTimeout(() => {
+              arrastandoRef.current = false
+            }, 0)
+          }}
+          onClick={() => {
+            if (arrastandoRef.current) return
+            setAberto(true)
+          }}
+          className="fixed z-[70] bottom-[86px] right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg bg-bg-card/60 backdrop-blur-sm touch-none"
           aria-label="Abrir Nexus AI"
+          title={foiArrastado ? undefined : 'Segure e arraste para mover'}
         >
           <NexusAIIcone size={44} />
-        </button>
+        </motion.button>
       )}
 
       <AnimatePresence>

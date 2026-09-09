@@ -18,6 +18,7 @@ import {
   Pencil,
   Plus,
   RefreshCw,
+  Rocket,
   Share2,
   ShieldCheck,
   Smile,
@@ -34,6 +35,7 @@ import EditorFotoPerfil from '@/components/EditorFotoPerfil'
 import { ModalAvancado as SeletorCorAvancado } from '@/components/SeletorCor'
 import { corComAlfa, corOpaca } from '@/utils/cor'
 import { useUserProgress } from '@/hooks/useUserProgress'
+import { useAtualizacaoApp } from '@/hooks/useAtualizacaoApp'
 import { useAuth } from '@/auth/AuthContext'
 import { BADGES } from '@/data/badges'
 import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
@@ -67,6 +69,14 @@ export default function PerfilPage() {
   const navigate = useNavigate()
   const { progress, levelInfo, setPerfilPessoal, resetProgress, sincronizarAgora, sincronizando } = useUserProgress()
   const { ehAdmin, sair, excluirPropriaConta } = useAuth()
+  const {
+    atualizacaoDisponivel,
+    verificando: verificandoAtualizacao,
+    semAtualizacao,
+    erro: erroAtualizacao,
+    verificarAgora: verificarAtualizacaoAgora,
+    aplicarAtualizacao,
+  } = useAtualizacaoApp()
 
   const modulosCompletos = Object.values(progress.abasConcluidas).filter((abas) => abas.length === 6).length
 
@@ -290,6 +300,27 @@ export default function PerfilPage() {
                 setErroSincronizacao(resultado.erro ?? 'Erro ao sincronizar.')
                 setTimeout(() => setErroSincronizacao(null), 3500)
               }
+            }}
+          />
+          <ConfigRow
+            icon={Rocket}
+            label={
+              atualizacaoDisponivel
+                ? 'Atualização disponível — tocar para instalar'
+                : erroAtualizacao
+                ? erroAtualizacao
+                : semAtualizacao
+                ? 'Você já está na versão mais recente'
+                : 'Verificar atualização do app'
+            }
+            cor={atualizacaoDisponivel ? '#FFC93C' : erroAtualizacao ? '#EF4444' : semAtualizacao ? '#22C55E' : '#00D4FF'}
+            girando={verificandoAtualizacao}
+            onClick={() => {
+              if (atualizacaoDisponivel) {
+                aplicarAtualizacao()
+                return
+              }
+              verificarAtualizacaoAgora()
             }}
           />
           <ConfigRow
