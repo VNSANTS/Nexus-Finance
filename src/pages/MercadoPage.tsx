@@ -7,7 +7,7 @@ import {
   SETORES_HEATMAP, CALENDARIO_ECONOMICO, TICKERS_DISPONIVEIS, type Mercado,
 } from '@/data/mercado'
 import { useUserProgress } from '@/hooks/useUserProgress'
-import { buscarCambioCripto, buscarCotacoesAcoes, buscarRankingReal, formatarMoeda, formatarPercent, type CambioCripto, type CotacaoAcao, type ItemRanking } from '@/lib/cotacoesReais'
+import { buscarCambioCripto, buscarCotacoesAcoes, buscarRankingReal, buscarSetoresIA, buscarCalendarioIA, formatarMoeda, formatarPercent, type CambioCripto, type CotacaoAcao, type ItemRanking, type SetorMercado, type EventoCalendario } from '@/lib/cotacoesReais'
 import { gerarResumoDiarioMercado } from '@/lib/resumoDiarioIA'
 
 // Aplica cotação real de câmbio/cripto (AwesomeAPI, grátis) por cima dos
@@ -293,20 +293,29 @@ function Watchlist({ watchlist, onToggle }: { watchlist: string[]; onToggle: (t:
 }
 
 function HeatmapSetores() {
+  const [setoresIA, setSetoresIA] = useState<SetorMercado[] | null>(null)
+  useEffect(() => {
+    buscarSetoresIA().then(setSetoresIA) // se falhar, fica null e usa os dados de exemplo abaixo
+  }, [])
+
   function corPorVariacao(v: number) {
     if (v > 1) return '#22C55E'
     if (v > 0) return '#22C55E99'
     if (v > -1) return '#EF444499'
     return '#EF4444'
   }
+  const setores = setoresIA ?? SETORES_HEATMAP
   return (
     <div className="card-surface rounded-[18px] p-4">
-      <div className="flex items-center gap-1.5 mb-3">
-        <Grid3x3 size={14} className="text-slate-400" />
-        <p className="text-[12.5px] font-bold text-white">Heatmap de setores</p>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1.5">
+          <Grid3x3 size={14} className="text-slate-400" />
+          <p className="text-[12.5px] font-bold text-white">Heatmap de setores</p>
+        </div>
+        {!setoresIA && <span className="text-[9.5px] text-slate-600">exemplo</span>}
       </div>
       <div className="grid grid-cols-3 gap-1.5">
-        {SETORES_HEATMAP.map((s, i) => (
+        {setores.map((s, i) => (
           <div key={i} className="p-3 rounded-xl text-center" style={{ background: `${corPorVariacao(s.variacao)}33`, border: `1px solid ${corPorVariacao(s.variacao)}66` }}>
             <p className="text-[10px] text-white font-semibold leading-tight">{s.nome}</p>
             <p className="text-[11px] font-extrabold mt-0.5" style={{ color: corPorVariacao(s.variacao) }}>
@@ -321,14 +330,22 @@ function HeatmapSetores() {
 }
 
 function CalendarioEconomico() {
+  const [eventosIA, setEventosIA] = useState<EventoCalendario[] | null>(null)
+  useEffect(() => {
+    buscarCalendarioIA().then(setEventosIA)
+  }, [])
+  const eventos = eventosIA ?? CALENDARIO_ECONOMICO
   return (
     <div className="card-surface rounded-[18px] p-4">
-      <div className="flex items-center gap-1.5 mb-3">
-        <CalendarClock size={14} className="text-slate-400" />
-        <p className="text-[12.5px] font-bold text-white">Calendário econômico da semana</p>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-1.5">
+          <CalendarClock size={14} className="text-slate-400" />
+          <p className="text-[12.5px] font-bold text-white">Calendário econômico da semana</p>
+        </div>
+        {!eventosIA && <span className="text-[9.5px] text-slate-600">exemplo</span>}
       </div>
       <div className="flex flex-col gap-2">
-        {CALENDARIO_ECONOMICO.map((ev, i) => (
+        {eventos.map((ev, i) => (
           <div key={i} className="flex items-center gap-2.5">
             <span className="text-[10.5px] font-bold text-slate-500 w-[30px]">{ev.dia}</span>
             <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: ev.relevancia === 'alta' ? '#EF4444' : '#FFC93C' }} />

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/auth/AuthContext'
+import { lerPreferenciasModelo } from './preferenciasModelo'
 
 export type EscopoNexusAI = 'geral' | 'gestao-financeira'
 
@@ -120,8 +121,9 @@ export function useNexusAI(escopo: EscopoNexusAI = 'geral') {
       setEnviando(true)
 
       try {
+        const { modelo, esforco } = lerPreferenciasModelo()
         const { data, error } = await supabase.functions.invoke('nexus-ai', {
-          body: { mensagem: textoLimpo, sessaoId, escopo: escopoRef.current, moduloContexto: moduloContexto ?? null },
+          body: { mensagem: textoLimpo, sessaoId, escopo: escopoRef.current, moduloContexto: moduloContexto ?? null, modelo, esforco },
         })
 
         if (error || !data?.ok) {

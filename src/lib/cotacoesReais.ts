@@ -65,23 +65,63 @@ export interface CotacaoAcao {
   requerToken: boolean
 }
 
+// Cache de 1h por conjunto de tickers pedidos à IA — evita bater na cota
+// gratuita do Gemini Search toda vez que a tela reabre. Fica em memória
+// (não localStorage) porque o valor já é uma cotação "ao vivo" da hora;
+// persistir entre sessões só envelheceria o dado sem necessidade.
+const cacheCotacoesIA = new Map<string, { dados: Map<string, { preco: number | null; variacaoPercent: number | null }>; buscadoEm: number }>()
+const TTL_CACHE_IA_MS = 60 * 60_000 // 1h — pedido explícito do usuário
+
+async function buscarCotacoesViaIA(tickers: string[]): Promise<Map<string, { preco: number | null; variacaoPercent: number | null }>> {
+  const chave = [...tickers].sort().join(',')
+  const cache = cacheCotacoesIA.get(chave)
+  if (cache && Date.now() - cache.buscadoEm < TTL_CACHE_IA_MS) return cache.dados
+
+  const mapa = new Map<string, { preco: number | null; variacaoPercent: number | null }>()
+  try {
+    const { data, error } = await supabase.functions.invoke('mercado-ia', { body: { tickers } })
+    if (!error && data?.ok) {
+      for (const c of data.dados.cotacoes as { ticker: string; preco: number | null; variacaoPercent: number | null }[]) {
+        mapa.set(c.ticker, { preco: c.preco, variacaoPercent: c.variacaoPercent })
+      }
+    }
+  } catch {
+    // Gemini fora do ar / cota estourada — mapa fica vazio, quem chamou mantém "requer token"
+  }
+  cacheCotacoesIA.set(chave, { dados: mapa, buscadoEm: Date.now() })
+  return mapa
+}
+
 /**
- * Busca cotação real de ações/FIIs da B3 (via brapi.dev, proxy na Edge
- * Function). Tickers que a brapi não libera sem token configurado voltam
- * com `requerToken: true` em vez de erro — a tela decide como exibir isso
- * (ex: "cadastre um token grátis pra ver este ativo").
+ * Busca cotação real de ações/FIIs da B3: primeiro via brapi.dev (grátis,
+ * rápido — ver Edge Function mercado-cotacoes), e pros tickers que ela não
+ * libera sem token, tenta um fallback via IA com busca real (Gemini
+ * Google Search grounding, cacheado 1h) antes de desistir e devolver
+ * `requerToken: true`. Assim, tickers fora dos 4 grátis da brapi (ex:
+ * VGIR11, MXRF11) ainda conseguem cotação real sem precisar configurar
+ * nenhum token.
  */
 export async function buscarCotacoesAcoes(tickers: string[]): Promise<CotacaoAcao[] | null> {
   if (tickers.length === 0) return []
+  let cotacoes: CotacaoAcao[]
   try {
-    const { data, error } = await supabase.functions.invoke('mercado-cotacoes', {
-      body: { tickers },
-    })
+    const { data, error } = await supabase.functions.invoke('mercado-cotacoes', { body: { tickers } })
     if (error || !data?.ok) return null
-    return data.dados.cotacoes as CotacaoAcao[]
+    cotacoes = data.dados.cotacoes as CotacaoAcao[]
   } catch {
     return null
   }
+
+  const faltando = cotacoes.filter((c) => c.requerToken).map((c) => c.ticker)
+  if (faltando.length === 0) return cotacoes
+
+  const viaIA = await buscarCotacoesViaIA(faltando)
+  return cotacoes.map((c) => {
+    if (!c.requerToken) return c
+    const daIA = viaIA.get(c.ticker)
+    if (!daIA || daIA.preco === null) return c // IA também não achou — mantém "requer token" pra tela explicar
+    return { ticker: c.ticker, preco: daIA.preco, variacaoPercent: daIA.variacaoPercent, requerToken: false }
+  })
 }
 
 export function formatarMoeda(valor: number): string {
@@ -90,6 +130,45 @@ export function formatarMoeda(valor: number): string {
 
 export function formatarPercent(v: number): string {
   return `${v >= 0 ? '+' : ''}${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
+}
+
+// =============================================================================
+// Setores (heatmap) e calendário econômico — sem fonte gratuita direta
+// conhecida pra isso, então usam o fallback de IA com busca real
+// (Edge Function mercado-ia, tipo 'setores'/'calendario'). Mesmo cache de
+// 1h em memória dos outros fallbacks de IA desta sessão.
+// =============================================================================
+
+export interface SetorMercado { nome: string; variacao: number }
+export interface EventoCalendario { dia: string; evento: string; relevancia: 'alta' | 'media' }
+
+let cacheSetores: { dados: SetorMercado[]; buscadoEm: number } | null = null
+let cacheCalendario: { dados: EventoCalendario[]; buscadoEm: number } | null = null
+
+export async function buscarSetoresIA(): Promise<SetorMercado[] | null> {
+  if (cacheSetores && Date.now() - cacheSetores.buscadoEm < TTL_CACHE_IA_MS) return cacheSetores.dados
+  try {
+    const { data, error } = await supabase.functions.invoke('mercado-ia', { body: { tipo: 'setores' } })
+    if (error || !data?.ok) return null
+    const setores = data.dados.setores as SetorMercado[]
+    cacheSetores = { dados: setores, buscadoEm: Date.now() }
+    return setores
+  } catch {
+    return null
+  }
+}
+
+export async function buscarCalendarioIA(): Promise<EventoCalendario[] | null> {
+  if (cacheCalendario && Date.now() - cacheCalendario.buscadoEm < TTL_CACHE_IA_MS) return cacheCalendario.dados
+  try {
+    const { data, error } = await supabase.functions.invoke('mercado-ia', { body: { tipo: 'calendario' } })
+    if (error || !data?.ok) return null
+    const eventos = data.dados.eventos as EventoCalendario[]
+    cacheCalendario = { dados: eventos, buscadoEm: Date.now() }
+    return eventos
+  } catch {
+    return null
+  }
 }
 
 // =============================================================================

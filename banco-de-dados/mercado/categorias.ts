@@ -237,4 +237,4 @@ export const CALENDARIO_ECONOMICO = [
   { dia: 'Sex', evento: 'PIB trimestral (Brasil)', relevancia: 'media' as const },
 ]
 
-export const TICKERS_DISPONIVEIS = ['PETR4', 'ITUB4', 'MXRF11', 'VALE3', 'BBAS3', 'MGLU3', 'HGLG11', 'WEGE3', 'ABEV3', 'TAEE11']
+export const TICKERS_DISPONIVEIS = ['PETR4', 'ITUB4', 'MXRF11', 'VGIR11', 'VALE3', 'BBAS3', 'MGLU3', 'HGLG11', 'WEGE3', 'ABEV3', 'TAEE11']
