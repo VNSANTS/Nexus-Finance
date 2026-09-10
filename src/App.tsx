@@ -175,7 +175,7 @@ export default function App() {
     return (
       <>
         <FundoPersonalizado />
-        <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent" style={{ transform: 'translateZ(0)' }}>
+        <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
           <Onboarding onFinalizar={setOnboardingDone} />
         </div>
       </>
@@ -187,7 +187,7 @@ export default function App() {
   return (
     <>
       <FundoPersonalizado />
-      <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent" style={{ transform: 'translateZ(0)' }}>
+      <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
         {!rotaSemChrome && <AvisoEmailNaoConfirmado />}
         <AppRotas />
         {!dentroDeGf && !rotaSemChrome && <BottomNav />}
