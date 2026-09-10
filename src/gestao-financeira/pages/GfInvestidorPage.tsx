@@ -217,7 +217,6 @@ export default function GfInvestidorPage() {
       <button
         onClick={() => setTela({ nome: 'form', editando: null })}
         className="fixed bottom-24 right-4 w-14 h-14 rounded-full bg-accent-cyan text-black flex items-center justify-center shadow-lg z-20"
-        style={{ maxWidth: 480 }}
         aria-label="Adicionar investimento"
       >
         <Plus size={24} />

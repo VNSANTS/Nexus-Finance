@@ -74,6 +74,11 @@ export interface Transacao {
   // sem valor padrão retroativo — lançamentos antigos ficam sem dono e
   // continuam aparecendo normalmente em todo o app.
   membroId?: string | null
+  // Local da compra (texto livre digitado pela pessoa, ex: "Mercado Extra -
+  // Centro" ou vindo de uma importação de extrato quando o banco inclui o
+  // nome do estabelecimento no histórico). Não é geolocalização/GPS — só
+  // um texto opcional pra lembrar onde foi.
+  localizacao?: string | null
 }
 
 export interface Divida {

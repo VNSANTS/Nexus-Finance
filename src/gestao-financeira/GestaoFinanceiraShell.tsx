@@ -17,6 +17,7 @@ const GfCategoriasPage = lazy(() => import('./pages/GfCategoriasPage'))
 const GfConfiguracoesGeraisPage = lazy(() => import('./pages/GfConfiguracoesGeraisPage'))
 const GfAcessibilidadePage = lazy(() => import('./pages/GfAcessibilidadePage'))
 const GfInvestidorPage = lazy(() => import('./pages/GfInvestidorPage'))
+const ImportarExtratoPage = lazy(() => import('./importarExtrato/ImportarExtratoPage'))
 const GfRelatoriosPage = lazy(() => import('./pages/GfRelatoriosPage'))
 const GfMovimentacoesPage = lazy(() => import('./pages/GfMovimentacoesPage'))
 const GfDetalheMovimentacaoPage = lazy(() => import('./pages/GfDetalheMovimentacaoPage'))
@@ -68,6 +69,7 @@ function GestaoFinanceiraConteudo() {
             <Route index element={<GfHomePage />} />
             <Route path="lancamentos" element={<GfLancamentosPage />} />
             <Route path="lancamentos/novo" element={<GfLancamentosPage novoAberto />} />
+            <Route path="importar-extrato" element={<ImportarExtratoPage />} />
             <Route path="contas-cartoes" element={<GfContasCartoesPage />} />
             <Route path="dividas" element={<GfDividasPage />} />
             <Route path="metas" element={<GfMetasPage />} />

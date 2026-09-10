@@ -108,6 +108,12 @@ export default function LoginPage() {
         </p>
       </div>
 
+      {appConfig?.modoManutencao && (
+        <p className="text-[11.5px] text-accent-red bg-accent-red/10 border border-accent-red/25 rounded-xl px-3.5 py-2.5 text-center mb-4">
+          O app está em manutenção no momento — só administradores conseguem entrar agora. Se você estava usando o app, foi desconectado(a) por isso.
+        </p>
+      )}
+
       {cadastroFechado && modo !== 'esqueci' && (
         <p className="text-[11.5px] text-accent-gold bg-accent-gold/10 border border-accent-gold/25 rounded-xl px-3.5 py-2.5 text-center mb-4">
           Novos cadastros estão temporariamente pausados. Se você já tem conta, pode entrar normalmente.

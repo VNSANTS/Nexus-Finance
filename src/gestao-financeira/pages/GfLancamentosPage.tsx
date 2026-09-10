@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ListChecks, Search, CalendarDays, Trash2, X } from 'lucide-react'
+import { ListChecks, Search, CalendarDays, Trash2, X, FileDown } from 'lucide-react'
 import GfHeader from '../components/GfHeader'
 import GfCalendarioFinanceiro from '../components/GfCalendarioFinanceiro'
 import GfFormLancamento from '../components/GfFormLancamento'
@@ -88,13 +88,22 @@ export default function GfLancamentosPage({ novoAberto }: Props) {
         corIcone="#00D4FF"
         voltarPara="/gestao-financeira"
         acoes={
-          <button
-            onClick={() => setCalendarioAberto((v) => !v)}
-            className="w-9 h-9 rounded-xl card-surface border border-border flex items-center justify-center text-accent-cyan"
-            aria-label="Abrir calendário"
-          >
-            <CalendarDays size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/gestao-financeira/importar-extrato')}
+              className="w-9 h-9 rounded-xl card-surface border border-border flex items-center justify-center text-accent-cyan"
+              aria-label="Importar extrato"
+            >
+              <FileDown size={16} />
+            </button>
+            <button
+              onClick={() => setCalendarioAberto((v) => !v)}
+              className="w-9 h-9 rounded-xl card-surface border border-border flex items-center justify-center text-accent-cyan"
+              aria-label="Abrir calendário"
+            >
+              <CalendarDays size={16} />
+            </button>
+          </div>
         }
       />
 
@@ -173,8 +182,8 @@ export default function GfLancamentosPage({ novoAberto }: Props) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[13px] text-white font-semibold truncate">{t.descricao || cat?.nome || 'Lançamento'}</p>
-                  <p className="text-[11px] text-slate-500">
-                    {t.hora} {cat && `· ${cat.nome}`}
+                  <p className="text-[11px] text-slate-500 truncate">
+                    {t.hora} {cat && `· ${cat.nome}`} {t.localizacao && `· ${t.localizacao}`}
                   </p>
                 </div>
                 <span className={`text-[13px] font-bold shrink-0 ${positivo ? 'text-accent-green' : t.tipo === 'despesa' ? 'text-accent-red' : 'text-[#8B5CF6]'}`}>

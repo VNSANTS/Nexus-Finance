@@ -23,7 +23,6 @@ interface AuthContextValor {
   reenviarConfirmacaoPropria: () => Promise<{ erro: string | null }>
   ehAdmin: boolean
 }
-
 // Os 3 provedores configurados. Cada um precisa ser habilitado e
 // configurado separadamente em Supabase → Authentication → Providers
 // (client ID/secret gerados no site de cada provedor) antes do botão
@@ -88,6 +87,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => listener.subscription.unsubscribe()
   }, [])
+
+  // Modo manutenção — reforço: o check de entrar() só pega quem está
+  // LOGANDO agora. Isso aqui cobre quem JÁ estava com o app aberto quando
+  // o admin ativou o modo manutenção — reconsulta a cada 25s e desloga na
+  // hora quem não é admin, sem esperar a pessoa fechar e abrir o app de
+  // novo. Pedido explícito: ninguém além de admin usa o app em manutenção,
+  // nem quem já estava logado.
+  useEffect(() => {
+    const intervalo = setInterval(async () => {
+      const configAtual = await buscarAppConfig()
+      setAppConfig(configAtual)
+    }, 25_000)
+    return () => clearInterval(intervalo)
+  }, [])
+
+  useEffect(() => {
+    if (appConfig?.modoManutencao && sessao && perfil && perfil.role !== 'admin') {
+      supabase.auth.signOut()
+    }
+  }, [appConfig, sessao, perfil])
 
   const entrar = useCallback(async (email: string, senha: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha })

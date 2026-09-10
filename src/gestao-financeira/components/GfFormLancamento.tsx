@@ -43,6 +43,7 @@ export default function GfFormLancamento({ tipoInicial, formaInicial, transacaoE
     transacaoEditando ? transacaoEditando.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''
   )
   const [descricao, setDescricao] = useState(transacaoEditando?.descricao ?? '')
+  const [localizacao, setLocalizacao] = useState(transacaoEditando?.localizacao ?? '')
   const [categoriaId, setCategoriaId] = useState<string | null>(transacaoEditando?.categoriaId ?? null)
   const [contaId, setContaId] = useState<string | null>(
     transacaoEditando?.contaId ?? estado.contas.find((c) => c.principal)?.id ?? estado.contas[0]?.id ?? null
@@ -80,6 +81,7 @@ export default function GfFormLancamento({ tipoInicial, formaInicial, transacaoE
       data: dataHora.data,
       hora: dataHora.hora,
       descricao: descricao.trim(),
+      localizacao: localizacao.trim() || null,
       categoriaId,
       contaId,
       cartaoId: formaPagamento === 'credito' ? cartaoId : null,
@@ -126,6 +128,17 @@ export default function GfFormLancamento({ tipoInicial, formaInicial, transacaoE
           value={descricao}
           onChange={(e) => setDescricao(e.target.value)}
           placeholder="Ex: Supermercado, salário..."
+          className="w-full card-surface rounded-2xl px-4 py-3 text-[13px] text-white placeholder:text-slate-600 border border-border focus:outline-none focus:border-accent-cyan"
+        />
+      </div>
+
+      {/* Localização (opcional) */}
+      <div>
+        <label className="text-[11.5px] text-slate-500 font-medium mb-1.5 block">Local da compra (opcional)</label>
+        <input
+          value={localizacao}
+          onChange={(e) => setLocalizacao(e.target.value)}
+          placeholder="Ex: Mercado Extra - Centro"
           className="w-full card-surface rounded-2xl px-4 py-3 text-[13px] text-white placeholder:text-slate-600 border border-border focus:outline-none focus:border-accent-cyan"
         />
       </div>

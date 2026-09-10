@@ -30,7 +30,12 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const GEMINI_MODEL_PADRAO = 'gemini-3.6-flash'
+// gemini-3.6-flash tem um bug documentado publicamente de falhas aleatórias
+// "Invalid Argument" desde o lançamento (não é algo que dá pra corrigir
+// daqui, é instabilidade do próprio modelo do lado do Google) — por isso o
+// padrão agora é o Flash-Lite, mais maduro/estável, e também mais rápido
+// (pedido explícito: "modelo fraco que responda rápido").
+const GEMINI_MODEL_PADRAO = 'gemini-3.1-flash-lite'
 // Lista fixa — nunca confia no que o cliente manda sem checar. Só modelos
 // Flash/Flash-Lite (família 3.x, elegíveis pro tier gratuito do Gemini;
 // modelos Pro saíram do tier grátis em 2026, por isso não entram aqui).
@@ -219,7 +224,14 @@ Deno.serve(async (req) => {
     if (!sessaoId) return respostaErro('sessaoId ausente.', 400)
 
     const modeloEscolhido = modelo && MODELOS_PERMITIDOS.has(modelo) ? modelo : GEMINI_MODEL_PADRAO
-    const nivelPensamento = (esforco && NIVEL_PENSAMENTO[esforco]) || NIVEL_PENSAMENTO.medio
+    // 'baixo' (padrão) não manda thinkingConfig nenhum — deixa o modelo no
+    // comportamento natural dele. Setar explicitamente um nível mínimo de
+    // "pensamento" exige devolver de volta um "thought signature" em
+    // conversas de várias mensagens, que hoje não guardamos no histórico
+    // (só o texto) — arriscava gerar exatamente o tipo de erro 400
+    // aleatório que a pessoa reportou. Só aplica quando ela pede
+    // explicitamente mais esforço (medio/alto).
+    const nivelPensamento = esforco === 'medio' || esforco === 'alto' ? NIVEL_PENSAMENTO[esforco] : null
 
     // As 3 buscas abaixo (histórico da sessão, índice de módulos, contexto
     // financeiro) são independentes entre si — antes rodavam uma atrás da
@@ -279,11 +291,10 @@ Deno.serve(async (req) => {
           generationConfig: {
             temperature: 0.7,
             maxOutputTokens: 1024,
-            // "Esforço" escolhido na tela de Configurações — modelos 3.x
-            // não suportam desligar completamente o "pensamento" (nem no
-            // nível mais baixo), mas "low" já reduz bastante a latência
-            // comparado ao padrão do modelo.
-            thinkingConfig: { thinkingLevel: nivelPensamento },
+            // "Esforço" escolhido na tela de Configurações — só mandado
+            // quando a pessoa pede explicitamente mais que o padrão (ver
+            // comentário acima de por que 'baixo' fica de fora).
+            ...(nivelPensamento ? { thinkingConfig: { thinkingLevel: nivelPensamento } } : {}),
           },
         }),
       }

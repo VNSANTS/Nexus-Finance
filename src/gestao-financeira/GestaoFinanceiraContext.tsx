@@ -79,6 +79,7 @@ function carregarEstado(): GestaoFinanceiraState {
 
 type Acao =
   | { tipo: 'ADICIONAR_TRANSACAO'; payload: Transacao }
+  | { tipo: 'IMPORTAR_TRANSACOES'; payload: Transacao[] }
   | { tipo: 'EDITAR_TRANSACAO'; payload: Transacao }
   | { tipo: 'EXCLUIR_TRANSACAO'; payload: { id: string } }
   | { tipo: 'ADICIONAR_CONTA'; payload: Conta }
@@ -124,6 +125,8 @@ function reducer(estado: GestaoFinanceiraState, acao: Acao): GestaoFinanceiraSta
   switch (acao.tipo) {
     case 'ADICIONAR_TRANSACAO':
       return { ...estado, transacoes: [acao.payload, ...estado.transacoes] }
+    case 'IMPORTAR_TRANSACOES':
+      return { ...estado, transacoes: [...acao.payload, ...estado.transacoes] }
     case 'EDITAR_TRANSACAO':
       return { ...estado, transacoes: estado.transacoes.map((t) => (t.id === acao.payload.id ? acao.payload : t)) }
     case 'EXCLUIR_TRANSACAO':
@@ -275,6 +278,7 @@ interface GestaoFinanceiraContextValue {
   // administra a família.
   permissoes: PermissoesMembro
   adicionarTransacao: (t: Transacao) => void
+  importarTransacoes: (ts: Transacao[]) => void
   editarTransacao: (t: Transacao) => void
   excluirTransacao: (id: string) => void
   adicionarConta: (c: Conta) => void
@@ -397,6 +401,7 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
   }, [])
 
   const adicionarTransacao = useCallback((t: Transacao) => dispatch({ tipo: 'ADICIONAR_TRANSACAO', payload: t }), [])
+  const importarTransacoes = useCallback((ts: Transacao[]) => dispatch({ tipo: 'IMPORTAR_TRANSACOES', payload: ts }), [])
   const editarTransacao = useCallback((t: Transacao) => dispatch({ tipo: 'EDITAR_TRANSACAO', payload: t }), [])
   const excluirTransacao = useCallback((id: string) => dispatch({ tipo: 'EXCLUIR_TRANSACAO', payload: { id } }), [])
 
@@ -462,6 +467,7 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
     estado,
     permissoes,
     adicionarTransacao,
+    importarTransacoes,
     editarTransacao,
     excluirTransacao,
     adicionarConta,

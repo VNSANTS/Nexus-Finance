@@ -31,13 +31,6 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Registro manual (em vez do script auto-injetado) para poder
-      // expor um botão "Verificar atualização" em Perfil: com injeção
-      // automática não temos acesso programático ao SW, então o app só
-      // atualiza sozinho quando o SW acontece de checar por conta própria
-      // — na prática, muita gente só via a versão nova desinstalando e
-      // reinstalando o app. Ver src/hooks/useAtualizacaoApp.ts.
-      injectRegister: false,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon-512-maskable.png'],
       workbox: {
         // Força o novo Service Worker a assumir imediatamente (sem esperar
@@ -47,6 +40,11 @@ export default defineConfig({
         // reloads manuais para o usuário ver as mudanças mais recentes.
         skipWaiting: true,
         clientsClaim: true,
+        // Some caches antigos que ficariam órfãos depois de skipWaiting —
+        // reforço extra pra nenhum asset velho (ex: uma versão antiga de
+        // um SVG de badge) conseguir ficar "preso" no cache do navegador
+        // depois de uma atualização.
+        cleanupOutdatedCaches: true,
         // O conteúdo dos módulos é dividido em dezenas de chunks pequenos.
         // Precachear todos deixaria a instalação do PWA lenta demais, então
         // eles entram no cache conforme o usuário abre cada módulo.
