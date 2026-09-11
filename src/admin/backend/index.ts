@@ -18,6 +18,7 @@ export {
   excluirUsuario,
   buscarAppConfig,
   atualizarAppConfig,
+  forcarAtualizacaoTodos,
   listarStatusAuth,
   reenviarConfirmacao,
   confirmarUsuario,

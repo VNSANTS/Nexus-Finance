@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom'
 import {
   ArrowLeft, Search, ShieldCheck, ShieldOff, Lock, Unlock, Pencil, Trash2,
   Users, UserCheck, UserX, Crown, X, Loader2, AlertTriangle, ChevronDown, Sparkles,
-  MailWarning, MailCheck, SendHorizonal, Wifi,
+  MailWarning, MailCheck, SendHorizonal, Wifi, RefreshCw,
 } from 'lucide-react'
 import { useAdminUsuarios } from './useAdminUsuarios'
-import { buscarAppConfig, atualizarAppConfig } from './backend'
+import { buscarAppConfig, atualizarAppConfig, forcarAtualizacaoTodos } from './backend'
 import type { EdicaoMetricasAdmin, EdicaoUsuarioAdmin, OrdenacaoAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from './types'
 
 function formatarData(iso: string | null) {
@@ -531,13 +531,55 @@ function PainelControleAcesso() {
       />
       <ToggleAcesso
         titulo="Modo manutenção"
-        descricao="Só administradores conseguem entrar. Sessões já abertas de outros usuários continuam funcionando."
+        descricao="Só administradores conseguem entrar. Quem já estava logado é desconectado automaticamente."
         ativo={config.modoManutencao}
         cor="var(--accent-red)"
         carregando={salvando === 'manutencao'}
         onToggle={() => alternar('modoManutencao', 'manutencao')}
       />
+      <BotaoForcarAtualizacao />
     </div>
+  )
+}
+
+function BotaoForcarAtualizacao() {
+  const [enviando, setEnviando] = useState(false)
+  const [feito, setFeito] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
+
+  async function disparar() {
+    if (enviando) return
+    if (!window.confirm('Forçar todo mundo com o app aberto a recarregar com a versão mais nova agora?')) return
+    setEnviando(true)
+    setErro(null)
+    try {
+      await forcarAtualizacaoTodos()
+      setFeito(true)
+      setTimeout(() => setFeito(false), 3000)
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro ao forçar atualização.')
+      setTimeout(() => setErro(null), 3500)
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={disparar}
+      disabled={enviando}
+      className="flex items-center justify-between rounded-card bg-bg-card border border-border px-3.5 py-3 disabled:opacity-60"
+    >
+      <div className="text-left">
+        <p className="text-[13px] font-semibold text-texto">
+          {feito ? 'Atualização disparada!' : erro ?? 'Forçar atualização pra todo mundo'}
+        </p>
+        <p className="text-[11px] text-texto-secundario">
+          Todo aparelho com o app aberto recarrega sozinho com a versão mais nova em até ~25s.
+        </p>
+      </div>
+      <RefreshCw size={16} className={`shrink-0 text-accent-cyan ${enviando ? 'animate-spin' : ''}`} />
+    </button>
   )
 }
 

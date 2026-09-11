@@ -31,6 +31,12 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // false porque o registro do Service Worker é feito manualmente via
+      // useRegisterSW() em src/hooks/useAtualizacaoApp.ts (dá controle sobre
+      // quando aplicar a atualização, com um botão pra pessoa escolher, em
+      // vez do injetado automático do plugin) — os dois juntos registrariam
+      // o SW duas vezes.
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon-512-maskable.png'],
       workbox: {
         // Força o novo Service Worker a assumir imediatamente (sem esperar

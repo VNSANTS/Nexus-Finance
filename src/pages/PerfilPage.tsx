@@ -34,6 +34,7 @@ import EditorFotoPerfil from '@/components/EditorFotoPerfil'
 import { ModalAvancado as SeletorCorAvancado } from '@/components/SeletorCor'
 import { corComAlfa, corOpaca } from '@/utils/cor'
 import { useUserProgress } from '@/hooks/useUserProgress'
+import { useAtualizacaoApp } from '@/hooks/useAtualizacaoApp'
 import { useAuth } from '@/auth/AuthContext'
 import { BADGES } from '@/data/badges'
 import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
@@ -66,6 +67,7 @@ const MAX_BIO = 60
 export default function PerfilPage() {
   const navigate = useNavigate()
   const { progress, levelInfo, setPerfilPessoal, resetProgress, sincronizarAgora, sincronizando } = useUserProgress()
+  const { aplicarAtualizacao } = useAtualizacaoApp()
   const { ehAdmin, sair, excluirPropriaConta } = useAuth()
 
   const modulosCompletos = Object.values(progress.abasConcluidas).filter((abas) => abas.length === 6).length
@@ -291,6 +293,12 @@ export default function PerfilPage() {
                 setTimeout(() => setErroSincronizacao(null), 3500)
               }
             }}
+          />
+          <ConfigRow
+            icon={Download}
+            label="Forçar atualização do app"
+            cor="#00D4FF"
+            onClick={aplicarAtualizacao}
           />
           <ConfigRow
             icon={Sparkles}

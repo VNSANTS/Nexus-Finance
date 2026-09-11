@@ -1,11 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { forcarAtualizacaoCompleta } from '@/lib/forcarAtualizacao'
 import type { Perfil } from './types'
+
+const CHAVE_MARCADOR_ATUALIZACAO = 'nexus-forcar-atualizacao-em'
 
 interface AppConfig {
   cadastroFechado: boolean
   modoManutencao: boolean
+  // Quando o admin força uma atualização geral (ver AdminUsuariosPage) —
+  // todo aparelho com o app aberto detecta que esse timestamp é mais novo
+  // que o último que viu (ver efeito abaixo) e recarrega sozinho com a
+  // versão mais nova, sem precisar que a pessoa toque em nada.
+  forcarAtualizacaoEm: string | null
 }
 
 interface AuthContextValor {
@@ -44,12 +52,17 @@ async function buscarPerfil(userId: string): Promise<Perfil | null> {
 }
 
 async function buscarAppConfig(): Promise<AppConfig> {
-  const { data } = await supabase.from('app_config').select('cadastro_fechado, modo_manutencao').eq('id', true).maybeSingle()
+  const { data } = await supabase
+    .from('app_config')
+    .select('cadastro_fechado, modo_manutencao, forcar_atualizacao_em')
+    .eq('id', true)
+    .maybeSingle()
   // Se a linha não existir ainda (SQL 005 não rodado) ou a leitura falhar,
   // assume tudo aberto — nunca trava o app por causa de uma config ausente.
   return {
     cadastroFechado: data?.cadastro_fechado ?? false,
     modoManutencao: data?.modo_manutencao ?? false,
+    forcarAtualizacaoEm: data?.forcar_atualizacao_em ?? null,
   }
 }
 
@@ -107,6 +120,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase.auth.signOut()
     }
   }, [appConfig, sessao, perfil])
+
+  // Atualização forçada pelo admin (ver AdminUsuariosPage): compara o
+  // timestamp mais recente vindo do servidor com o último que este
+  // aparelho já viu (localStorage). Só age se for genuinamente mais novo
+  // E já existia um marcador antes — evita forçar um recarregamento
+  // desnecessário logo no primeiro carregamento de um aparelho novo, que
+  // nunca tinha marcador nenhum ainda.
+  useEffect(() => {
+    if (!appConfig?.forcarAtualizacaoEm) return
+    const marcador = localStorage.getItem(CHAVE_MARCADOR_ATUALIZACAO)
+    if (marcador === null) {
+      localStorage.setItem(CHAVE_MARCADOR_ATUALIZACAO, appConfig.forcarAtualizacaoEm)
+      return
+    }
+    if (appConfig.forcarAtualizacaoEm !== marcador) {
+      localStorage.setItem(CHAVE_MARCADOR_ATUALIZACAO, appConfig.forcarAtualizacaoEm)
+      forcarAtualizacaoCompleta()
+    }
+  }, [appConfig])
 
   const entrar = useCallback(async (email: string, senha: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha })

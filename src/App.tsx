@@ -175,7 +175,16 @@ export default function App() {
     return (
       <>
         <FundoPersonalizado />
-        <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
+        {/* h-dvh + overflow-hidden (em vez de min-h-dvh): o container NUNCA
+            cresce com o conteúdo, sempre exatamente a altura da tela. Isso é
+            o que faz o `transform` abaixo funcionar direito pros elementos
+            fixed (Onboarding usa "Pular"/"Próximo" fixos na base) — sem
+            isso, um "fixed" dentro de um container mais alto que a tela
+            gruda no fim do CONTAINER, não no fim da TELA visível. */}
+        <div
+          className="max-w-[480px] mx-auto h-dvh relative bg-transparent overflow-hidden"
+          style={{ transform: 'translateZ(0)' }}
+        >
           <Onboarding onFinalizar={setOnboardingDone} />
         </div>
       </>
@@ -187,9 +196,20 @@ export default function App() {
   return (
     <>
       <FundoPersonalizado />
-      <div className="max-w-[480px] mx-auto min-h-dvh relative bg-transparent">
-        {!rotaSemChrome && <AvisoEmailNaoConfirmado />}
-        <AppRotas />
+      {/* Mesma lógica do onboarding acima: h-dvh fixo + transform cria o
+          "containing block" certo pros elementos fixed (BottomNav, botão do
+          Nexus AI, avisos) — presos à TELA visível e limitados aos 480px do
+          app, nunca "fugindo" pro resto de uma janela larga (PC) nem
+          escorregando pro fim do conteúdo quando a página é longa. O
+          conteúdo em si (AppRotas) rola numa div interna separada. */}
+      <div
+        className="max-w-[480px] mx-auto h-dvh relative bg-transparent overflow-hidden"
+        style={{ transform: 'translateZ(0)' }}
+      >
+        <div className="h-full overflow-y-auto">
+          {!rotaSemChrome && <AvisoEmailNaoConfirmado />}
+          <AppRotas />
+        </div>
         {!dentroDeGf && !rotaSemChrome && <BottomNav />}
         {!dentroDeGf && !rotaSemChrome && <NexusAIChat />}
       </div>

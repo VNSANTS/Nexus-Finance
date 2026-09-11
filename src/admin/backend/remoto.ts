@@ -321,15 +321,20 @@ export async function excluirUsuario(id: string): Promise<void> {
 export interface AppConfigAdmin {
   cadastroFechado: boolean
   modoManutencao: boolean
+  forcarAtualizacaoEm: string | null
 }
 
 export async function buscarAppConfig(): Promise<AppConfigAdmin> {
-  const { data, error } = await supabase.from('app_config').select('cadastro_fechado, modo_manutencao').eq('id', true).single()
+  const { data, error } = await supabase
+    .from('app_config')
+    .select('cadastro_fechado, modo_manutencao, forcar_atualizacao_em')
+    .eq('id', true)
+    .single()
   if (error) throw new Error(error.message)
-  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao }
+  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao, forcarAtualizacaoEm: data.forcar_atualizacao_em }
 }
 
-export async function atualizarAppConfig(dados: Partial<AppConfigAdmin>): Promise<AppConfigAdmin> {
+export async function atualizarAppConfig(dados: Partial<Omit<AppConfigAdmin, 'forcarAtualizacaoEm'>>): Promise<AppConfigAdmin> {
   const patch: Record<string, boolean> = {}
   if (dados.cadastroFechado !== undefined) patch.cadastro_fechado = dados.cadastroFechado
   if (dados.modoManutencao !== undefined) patch.modo_manutencao = dados.modoManutencao
@@ -338,9 +343,27 @@ export async function atualizarAppConfig(dados: Partial<AppConfigAdmin>): Promis
     .from('app_config')
     .update(patch)
     .eq('id', true)
-    .select('cadastro_fechado, modo_manutencao')
+    .select('cadastro_fechado, modo_manutencao, forcar_atualizacao_em')
     .single()
 
   if (error) throw new Error(error.message)
-  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao }
+  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao, forcarAtualizacaoEm: data.forcar_atualizacao_em }
+}
+
+// Força todo mundo com o app aberto (ou que abrir daqui a pouco) a
+// recarregar com a versão mais nova — cada aparelho detecta esse timestamp
+// mudando via polling em AuthContext.tsx (mesmo padrão do modo manutenção)
+// e roda um reset completo do Service Worker + caches sozinho, sem precisar
+// que a pessoa faça nada. Resolve o PWA instalado que "não pega" a
+// atualização mesmo depois de várias tentativas manuais.
+export async function forcarAtualizacaoTodos(): Promise<AppConfigAdmin> {
+  const { data, error } = await supabase
+    .from('app_config')
+    .update({ forcar_atualizacao_em: new Date().toISOString() })
+    .eq('id', true)
+    .select('cadastro_fechado, modo_manutencao, forcar_atualizacao_em')
+    .single()
+
+  if (error) throw new Error(error.message)
+  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao, forcarAtualizacaoEm: data.forcar_atualizacao_em }
 }
