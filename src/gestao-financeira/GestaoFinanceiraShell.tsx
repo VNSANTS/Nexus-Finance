@@ -17,6 +17,7 @@ const GfCategoriasPage = lazy(() => import('./pages/GfCategoriasPage'))
 const GfConfiguracoesGeraisPage = lazy(() => import('./pages/GfConfiguracoesGeraisPage'))
 const GfAcessibilidadePage = lazy(() => import('./pages/GfAcessibilidadePage'))
 const GfInvestidorPage = lazy(() => import('./pages/GfInvestidorPage'))
+const GfWhatsAppPage = lazy(() => import('./pages/GfWhatsAppPage'))
 const ImportarExtratoPage = lazy(() => import('./importarExtrato/ImportarExtratoPage'))
 const GfRelatoriosPage = lazy(() => import('./pages/GfRelatoriosPage'))
 const GfMovimentacoesPage = lazy(() => import('./pages/GfMovimentacoesPage'))
@@ -78,6 +79,7 @@ function GestaoFinanceiraConteudo() {
             <Route path="configuracoes-gerais" element={<GfConfiguracoesGeraisPage />} />
             <Route path="acessibilidade" element={<GfAcessibilidadePage />} />
             <Route path="investidor" element={<GfInvestidorPage />} />
+            <Route path="whatsapp" element={<GfWhatsAppPage />} />
             <Route path="relatorios" element={<GfRelatoriosPage />} />
             <Route path="movimentacoes" element={<GfMovimentacoesPage />} />
             <Route path="movimentacoes/:id" element={<GfDetalheMovimentacaoPage />} />

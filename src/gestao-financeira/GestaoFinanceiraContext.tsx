@@ -80,6 +80,7 @@ function carregarEstado(): GestaoFinanceiraState {
 type Acao =
   | { tipo: 'ADICIONAR_TRANSACAO'; payload: Transacao }
   | { tipo: 'IMPORTAR_TRANSACOES'; payload: Transacao[] }
+  | { tipo: 'MESCLAR_TRANSACOES_EXTERNAS'; payload: Transacao[] }
   | { tipo: 'EDITAR_TRANSACAO'; payload: Transacao }
   | { tipo: 'EXCLUIR_TRANSACAO'; payload: { id: string } }
   | { tipo: 'ADICIONAR_CONTA'; payload: Conta }
@@ -126,6 +127,11 @@ function reducer(estado: GestaoFinanceiraState, acao: Acao): GestaoFinanceiraSta
     case 'ADICIONAR_TRANSACAO':
       return { ...estado, transacoes: [acao.payload, ...estado.transacoes] }
     case 'IMPORTAR_TRANSACOES':
+      return { ...estado, transacoes: [...acao.payload, ...estado.transacoes] }
+    case 'MESCLAR_TRANSACOES_EXTERNAS':
+      // Junta transações que vieram de fora (ex: o bot do WhatsApp
+      // adicionando direto no servidor) sem duplicar as que o próprio
+      // aparelho já tem — id é sempre único, então dedup por id é seguro.
       return { ...estado, transacoes: [...acao.payload, ...estado.transacoes] }
     case 'EDITAR_TRANSACAO':
       return { ...estado, transacoes: estado.transacoes.map((t) => (t.id === acao.payload.id ? acao.payload : t)) }
@@ -375,7 +381,27 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
       })
     }
 
-    const intervalo = setInterval(() => {
+    const intervalo = setInterval(async () => {
+      // Busca o remoto ANTES de enviar — se alguém de fora (ex: o bot do
+      // WhatsApp) adicionou transação direto no servidor, mescla por id
+      // antes de reenviar, senão o push abaixo apagaria essa transação
+      // sem querer (mesma classe de bug já corrigida pro XP do admin).
+      try {
+        const remoto = await buscarGfDoServidor(userId)
+        if (remoto) {
+          const idsLocais = new Set(estadoRef.current.transacoes.map((t) => t.id))
+          const novasDeFora = remoto.transacoes.filter((t) => !idsLocais.has(t.id))
+          if (novasDeFora.length > 0) {
+            dispatch({ tipo: 'MESCLAR_TRANSACOES_EXTERNAS', payload: novasDeFora })
+            // Deixa o dispatch acima aplicar antes de enviar — o próximo
+            // ciclo de 30s já envia com as novas incluídas; não força um
+            // envio imediato aqui pra não brigar com o re-render do estado.
+            return
+          }
+        }
+      } catch {
+        // sem internet / erro momentâneo — segue pro envio normal abaixo
+      }
       enviarGfParaServidor(estadoRef.current).catch(() => {
         // sem internet momentânea: tenta de novo no próximo ciclo de 30s
       })
