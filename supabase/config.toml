@@ -1,0 +1,13 @@
+# Configuração local do Supabase CLI pra este projeto.
+#
+# A Meta (WhatsApp) chama a Edge Function whatsapp-webhook diretamente,
+# sem nenhum cabeçalho de autenticação do Supabase (ela não sabe nada sobre
+# isso) — por padrão, toda Edge Function exige um JWT válido no header
+# Authorization, então sem essa linha a chamada da Meta é rejeitada com 401
+# antes até de chegar no nosso código (é exatamente o erro "Não foi
+# possível validar a URL de callback" que aparece no painel da Meta).
+# A segurança dessa function não depende de JWT mesmo — ela verifica a
+# assinatura HMAC (X-Hub-Signature-256) do próprio corpo da requisição,
+# que é o jeito certo de confirmar que quem chamou foi a Meta de verdade.
+[functions.whatsapp-webhook]
+verify_jwt = false

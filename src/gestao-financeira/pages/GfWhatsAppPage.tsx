@@ -20,6 +20,7 @@ export default function GfWhatsAppPage() {
   const [codigo, setCodigo] = useState<string | null>(null)
   const [copiado, setCopiado] = useState(false)
   const [processando, setProcessando] = useState(false)
+  const [erro, setErro] = useState<string | null>(null)
 
   const userId = sessao?.user?.id
 
@@ -30,7 +31,8 @@ export default function GfWhatsAppPage() {
       .select('whatsapp_telefone, whatsapp_codigo_vinculo, whatsapp_codigo_expira_em')
       .eq('id', userId)
       .single()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) setErro('Não consegui carregar o status do WhatsApp — veja o erro abaixo.')
         setTelefoneVinculado(data?.whatsapp_telefone ?? null)
         const aindaValido = data?.whatsapp_codigo_expira_em && new Date(data.whatsapp_codigo_expira_em) > new Date()
         setCodigo(aindaValido ? data!.whatsapp_codigo_vinculo : null)
@@ -41,13 +43,15 @@ export default function GfWhatsAppPage() {
   async function gerarNovoCodigo() {
     if (!userId) return
     setProcessando(true)
+    setErro(null)
     const novoCodigo = gerarCodigo()
     const expiraEm = new Date(Date.now() + 10 * 60_000).toISOString() // 10 min de validade
     const { error } = await supabase
       .from('profiles')
       .update({ whatsapp_codigo_vinculo: novoCodigo, whatsapp_codigo_expira_em: expiraEm })
       .eq('id', userId)
-    if (!error) setCodigo(novoCodigo)
+    if (error) setErro(error.message)
+    else setCodigo(novoCodigo)
     setProcessando(false)
   }
 
@@ -55,8 +59,10 @@ export default function GfWhatsAppPage() {
     if (!userId) return
     if (!window.confirm('Desconectar seu WhatsApp do Nexus Finance? Você pode vincular de novo quando quiser.')) return
     setProcessando(true)
+    setErro(null)
     const { error } = await supabase.from('profiles').update({ whatsapp_telefone: null }).eq('id', userId)
-    if (!error) setTelefoneVinculado(null)
+    if (error) setErro(error.message)
+    else setTelefoneVinculado(null)
     setProcessando(false)
   }
 
@@ -136,6 +142,12 @@ export default function GfWhatsAppPage() {
               <button onClick={gerarNovoCodigo} disabled={processando} className="w-full text-xs text-slate-500 disabled:opacity-50">
                 Gerar um código novo
               </button>
+            )}
+
+            {erro && (
+              <p className="text-[11.5px] text-accent-red text-center mt-3 px-2">
+                Erro: {erro}. Se a mensagem falar de uma coluna que não existe, é porque o SQL 011 ainda não rodou no Supabase.
+              </p>
             )}
           </>
         )}
