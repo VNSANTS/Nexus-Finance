@@ -129,9 +129,10 @@ function reducer(estado: GestaoFinanceiraState, acao: Acao): GestaoFinanceiraSta
     case 'IMPORTAR_TRANSACOES':
       return { ...estado, transacoes: [...acao.payload, ...estado.transacoes] }
     case 'MESCLAR_TRANSACOES_EXTERNAS':
-      // Junta transações que vieram de fora (ex: o bot do WhatsApp
-      // adicionando direto no servidor) sem duplicar as que o próprio
-      // aparelho já tem — id é sempre único, então dedup por id é seguro.
+      // Junta transações que vieram de fora (ex: outro dispositivo ou
+      // integração externa adicionando direto no servidor) sem duplicar as
+      // que o próprio aparelho já tem — id é sempre único, então dedup por
+      // id é seguro.
       return { ...estado, transacoes: [...acao.payload, ...estado.transacoes] }
     case 'EDITAR_TRANSACAO':
       return { ...estado, transacoes: estado.transacoes.map((t) => (t.id === acao.payload.id ? acao.payload : t)) }
@@ -382,10 +383,11 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
     }
 
     const intervalo = setInterval(async () => {
-      // Busca o remoto ANTES de enviar — se alguém de fora (ex: o bot do
-      // WhatsApp) adicionou transação direto no servidor, mescla por id
-      // antes de reenviar, senão o push abaixo apagaria essa transação
-      // sem querer (mesma classe de bug já corrigida pro XP do admin).
+      // Busca o remoto ANTES de enviar — se alguém de fora (ex: outro
+      // dispositivo ou integração externa) adicionou transação direto no
+      // servidor, mescla por id antes de reenviar, senão o push abaixo
+      // apagaria essa transação sem querer (mesma classe de bug já
+      // corrigida pro XP do admin).
       try {
         const remoto = await buscarGfDoServidor(userId)
         if (remoto) {
