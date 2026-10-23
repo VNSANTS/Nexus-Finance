@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // porque usa a URL real do navegador, não uma configurada à parte).
     const { error } = await supabase.auth.signInWithOAuth({
       provider: provedor,
-      options: { redirectTo: window.location.origin + '/Nexus-Finance/' },
+      options: { redirectTo: window.location.origin + '/' },
     })
     // Em fluxo OAuth, sucesso não retorna aqui — o navegador é redirecionado
     // pro provedor (Google etc.) e depois volta pro app já logado, o
@@ -225,7 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // mostra a mesma mensagem de sucesso.
   const resetarSenha = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/Nexus-Finance/redefinir-senha',
+      redirectTo: window.location.origin + '/redefinir-senha',
     })
     if (error) return { erro: traduzirErro(error.message) }
     return { erro: null }
