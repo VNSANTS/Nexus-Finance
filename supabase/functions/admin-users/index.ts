@@ -100,10 +100,10 @@ Deno.serve(async (req) => {
     if (acoesComAlvo.includes(acaoRecord.tipo as string) && (typeof acaoRecord.alvoId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(acaoRecord.alvoId as string))) {
       return respostaErro('Identificador de usuário inválido.', 400, req)
     }
-    if (acaoRecord.tipo === 'editarEmail' && (typeof acaoRecord.novoEmail !== 'string' || (acaoRecord.novoEmail as string).length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(acaoRecord.novoEmail as string))) {
+    if (acaoRecord.tipo === 'editarEmail' && (typeof acaoRecord.novoEmail !== 'string' || (acaoRecord.novoEmail as string).length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acaoRecord.novoEmail as string))) {
       return respostaErro('E-mail inválido.', 400, req)
     }
-    if (acaoRecord.tipo === 'reenviarConfirmacao' && (typeof acaoRecord.email !== 'string' || (acaoRecord.email as string).length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(acaoRecord.email as string))) {
+    if (acaoRecord.tipo === 'reenviarConfirmacao' && (typeof acaoRecord.email !== 'string' || (acaoRecord.email as string).length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(acaoRecord.email as string))) {
       return respostaErro('E-mail inválido.', 400, req)
     }
     if (acaoRecord.tipo === 'alternarBloqueio' && typeof acaoRecord.bloquear !== 'boolean') {
