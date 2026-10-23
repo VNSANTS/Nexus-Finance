@@ -21,9 +21,21 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const ORIGENS_PERMITIDAS = new Set([
+  'https://vnsants.github.io',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+])
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get('Origin')
+  const originPermitida = origin && ORIGENS_PERMITIDAS.has(origin) ? origin : 'https://vnsants.github.io'
+  return {
+    'Access-Control-Allow-Origin': originPermitida,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  }
 }
 
 type Acao =
@@ -37,13 +49,21 @@ type Acao =
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS })
+    return new Response('ok', { headers: corsHeaders(req) })
+  }
+
+  const origin = req.headers.get('Origin')
+  if (origin && !ORIGENS_PERMITIDAS.has(origin)) {
+    return new Response('Origem não permitida.', { status: 403 })
+  }
+  if (req.method !== 'POST') {
+    return new Response('Método não permitido.', { status: 405, headers: { Allow: 'POST, OPTIONS' } })
   }
 
   try {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) {
-      return respostaErro('Não autenticado.', 401)
+      return respostaErro('Não autenticado.', 401, req)
     }
 
     // Cliente "de serviço" (privilégio total) — só usado depois de
@@ -64,10 +84,31 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: erroUsuario } = await supabaseUsuario.auth.getUser()
     if (erroUsuario || !user) {
-      return respostaErro('Sessão inválida.', 401)
+      return respostaErro('Sessão inválida.', 401, req)
     }
 
-    const acao: Acao = await req.json()
+    const acaoDesconhecida: unknown = await req.json()
+    if (!acaoDesconhecida || typeof acaoDesconhecida !== 'object' || Array.isArray(acaoDesconhecida)) {
+      return respostaErro('Corpo da requisição inválido.', 400, req)
+    }
+    const acao = acaoDesconhecida as Partial<Acao> & Record<string, unknown>
+    const tiposPermitidos = ['excluirUsuario', 'editarEmail', 'alternarBloqueio', 'excluirPropriaConta', 'listarStatusAuth', 'reenviarConfirmacao', 'confirmarUsuario']
+    if (typeof acao.tipo !== 'string' || !tiposPermitidos.includes(acao.tipo)) {
+      return respostaErro('Ação inválida.', 400, req)
+    }
+    const acoesComAlvo = ['excluirUsuario', 'editarEmail', 'alternarBloqueio', 'excluirPropriaConta', 'reenviarConfirmacao', 'confirmarUsuario']
+    if (acoesComAlvo.includes(acao.tipo) && (typeof acao.alvoId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(acao.alvoId))) {
+      return respostaErro('Identificador de usuário inválido.', 400, req)
+    }
+    if (acao.tipo === 'editarEmail' && (typeof acao.novoEmail !== 'string' || acao.novoEmail.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(acao.novoEmail))) {
+      return respostaErro('E-mail inválido.', 400, req)
+    }
+    if (acao.tipo === 'reenviarConfirmacao' && (typeof acao.email !== 'string' || acao.email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(acao.email))) {
+      return respostaErro('E-mail inválido.', 400, req)
+    }
+    if (acao.tipo === 'alternarBloqueio' && typeof acao.bloquear !== 'boolean') {
+      return respostaErro('Estado de bloqueio inválido.', 400, req)
+    }
 
     // 'excluirPropriaConta' é a única ação que NÃO exige ser admin — só
     // exige que a pessoa esteja excluindo a própria conta (alvoId tem que
@@ -75,11 +116,11 @@ Deno.serve(async (req) => {
     // conta de terceiros e continuam exigindo role='admin' no banco.
     if (acao.tipo === 'excluirPropriaConta') {
       if (acao.alvoId !== user.id) {
-        return respostaErro('Só é possível excluir a própria conta.', 403)
+        return respostaErro('Só é possível excluir a própria conta.', 403, req)
       }
       const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id)
-      if (error) return respostaErro(error.message, 400)
-      return respostaOk({ excluido: true })
+      if (error) return respostaErro(error.message, 400, req)
+      return respostaOk({ excluido: true }, req)
     }
 
     const { data: perfil, error: erroPerfil } = await supabaseAdmin
@@ -89,7 +130,7 @@ Deno.serve(async (req) => {
       .single()
 
     if (erroPerfil || perfil?.role !== 'admin') {
-      return respostaErro('Apenas administradores podem executar essa ação.', 403)
+      return respostaErro('Apenas administradores podem executar essa ação.', 403, req)
     }
 
     switch (acao.tipo) {
@@ -98,8 +139,8 @@ Deno.serve(async (req) => {
         // public.profiles.id (ver supabase/001_auth_profiles.sql) já
         // remove o perfil automaticamente junto.
         const { error } = await supabaseAdmin.auth.admin.deleteUser(acao.alvoId)
-        if (error) return respostaErro(error.message, 400)
-        return respostaOk({ excluido: true })
+        if (error) return respostaErro(error.message, 400, req)
+        return respostaOk({ excluido: true }, req)
       }
 
       case 'editarEmail': {
@@ -108,16 +149,16 @@ Deno.serve(async (req) => {
         const { error: erroAuth } = await supabaseAdmin.auth.admin.updateUserById(acao.alvoId, {
           email: acao.novoEmail,
         })
-        if (erroAuth) return respostaErro(erroAuth.message, 400)
+        if (erroAuth) return respostaErro(erroAuth.message, 400, req)
 
         // Mantém profiles.email em sincronia com o e-mail de login.
         const { error: erroPerfilUpdate } = await supabaseAdmin
           .from('profiles')
           .update({ email: acao.novoEmail })
           .eq('id', acao.alvoId)
-        if (erroPerfilUpdate) return respostaErro(erroPerfilUpdate.message, 400)
+        if (erroPerfilUpdate) return respostaErro(erroPerfilUpdate.message, 400, req)
 
-        return respostaOk({ email: acao.novoEmail })
+        return respostaOk({ email: acao.novoEmail }, req)
       }
 
       case 'alternarBloqueio': {
@@ -128,15 +169,15 @@ Deno.serve(async (req) => {
         const { error: erroAuth } = await supabaseAdmin.auth.admin.updateUserById(acao.alvoId, {
           ban_duration: acao.bloquear ? '876000h' : 'none',
         })
-        if (erroAuth) return respostaErro(erroAuth.message, 400)
+        if (erroAuth) return respostaErro(erroAuth.message, 400, req)
 
         const { error: erroPerfilUpdate } = await supabaseAdmin
           .from('profiles')
           .update({ status: acao.bloquear ? 'bloqueado' : 'ativo' })
           .eq('id', acao.alvoId)
-        if (erroPerfilUpdate) return respostaErro(erroPerfilUpdate.message, 400)
+        if (erroPerfilUpdate) return respostaErro(erroPerfilUpdate.message, 400, req)
 
-        return respostaOk({ status: acao.bloquear ? 'bloqueado' : 'ativo' })
+        return respostaOk({ status: acao.bloquear ? 'bloqueado' : 'ativo' }, req)
       }
 
       // Status de confirmação de e-mail (email_confirmed_at), último login
@@ -146,14 +187,14 @@ Deno.serve(async (req) => {
       // dia passar disso, precisa paginar (page/perPage) e juntar os lotes.
       case 'listarStatusAuth': {
         const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-        if (error) return respostaErro(error.message, 400)
+        if (error) return respostaErro(error.message, 400, req)
 
         const status = data.users.map((u) => ({
           id: u.id,
           emailConfirmado: Boolean(u.email_confirmed_at),
           ultimoLogin: u.last_sign_in_at ?? null,
         }))
-        return respostaOk({ status })
+        return respostaOk({ status }, req)
       }
 
       // Reenvia o e-mail de confirmação de cadastro (usa a config de SMTP
@@ -161,8 +202,8 @@ Deno.serve(async (req) => {
       // plano Free; ok pro volume de um app pessoal).
       case 'reenviarConfirmacao': {
         const { error } = await supabaseAdmin.auth.resend({ type: 'signup', email: acao.email })
-        if (error) return respostaErro(error.message, 400)
-        return respostaOk({ reenviado: true })
+        if (error) return respostaErro(error.message, 400, req)
+        return respostaOk({ reenviado: true }, req)
       }
 
       // Confirma o e-mail manualmente (sem depender do usuário clicar no
@@ -170,28 +211,28 @@ Deno.serve(async (req) => {
       // motivo e o admin já verificou a identidade da pessoa por outro meio.
       case 'confirmarUsuario': {
         const { error } = await supabaseAdmin.auth.admin.updateUserById(acao.alvoId, { email_confirm: true })
-        if (error) return respostaErro(error.message, 400)
-        return respostaOk({ confirmado: true })
+        if (error) return respostaErro(error.message, 400, req)
+        return respostaOk({ confirmado: true }, req)
       }
 
       default:
-        return respostaErro('Ação desconhecida.', 400)
+        return respostaErro('Ação desconhecida.', 400, req)
     }
   } catch (erro) {
-    return respostaErro(erro instanceof Error ? erro.message : 'Erro interno.', 500)
+    console.error('Erro inesperado na admin-users:', erro)\n    return respostaErro('Erro interno.', 500, req)
   }
 })
 
-function respostaOk(dados: unknown) {
+function respostaOk(dados: unknown, req: Request) {
   return new Response(JSON.stringify({ ok: true, dados }), {
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     status: 200,
   })
 }
 
-function respostaErro(mensagem: string, status: number) {
+function respostaErro(mensagem: string, status: number, req: Request) {
   return new Response(JSON.stringify({ ok: false, erro: mensagem }), {
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     status,
   })
 }
