@@ -10,8 +10,6 @@ import { useUserProgress } from '@/hooks/useUserProgress'
 import { usePresenca } from '@/hooks/usePresenca'
 import { useAuth } from '@/auth/AuthContext'
 import AvisoEmailNaoConfirmado from '@/auth/AvisoEmailNaoConfirmado'
-import InstalarAppObrigatorio from '@/components/InstalarAppObrigatorio'
-import { usePwaInstall } from '@/hooks/usePwaInstall'
 import { useAgendadorNotificacoesAprender } from '@/lib/notificacoesAprender'
 import GfTransicao from '@/gestao-financeira/components/GfTransicao'
 import { RotaAdmin, RotaProtegida } from '@/auth/RotaProtegida'
@@ -144,7 +142,6 @@ function AppRotas() {
 export default function App() {
   const { progress, setOnboardingDone } = useUserProgress()
   const { sessao } = useAuth()
-  const { ehStandalone } = usePwaInstall()
   const location = useLocation()
   const dentroDeGf = location.pathname.startsWith('/gestao-financeira')
 
@@ -156,13 +153,6 @@ export default function App() {
   // Precisa ficar ANTES de qualquer return condicional abaixo (regra dos
   // hooks: sempre chamados na mesma ordem, nunca só às vezes).
   useAgendadorNotificacoesAprender(progress, progress.preferenciasNotificacoesAprender)
-
-  // Bloqueio obrigatório: ninguém vê o resto do app (nem o login) sem
-  // instalar primeiro. Único jeito de passar por aqui é rodando em modo
-  // standalone (app instalado) — ver src/hooks/usePwaInstall.ts.
-  if (!ehStandalone) {
-    return <InstalarAppObrigatorio />
-  }
 
   // Antes usava `bg-bg` (Tailwind, var(--cor-bg)) aqui — opaco, cobria o
   // `body` por baixo. O `body` já provê o fundo geral do app via
