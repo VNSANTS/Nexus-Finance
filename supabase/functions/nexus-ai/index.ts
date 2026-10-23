@@ -206,6 +206,25 @@ Deno.serve(async (req) => {
       return respostaErro('Contexto de módulo inválido.', 400, req)
     }
 
+    // Limite atômico por usuário/minuto, persistido no banco.
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!serviceRoleKey) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY ausente; bloqueando chamada de IA por segurança.')
+      return respostaErro('Serviço temporariamente indisponível.', 503, req)
+    }
+    const rateLimitClient = createClient(Deno.env.get('SUPABASE_URL')!, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    })
+    const { data: permitido, error: erroLimite } = await rateLimitClient.rpc('consume_edge_function_rate_limit', {
+      p_user_id: user.id,
+      p_function_name: 'nexus-ai',
+    })
+    if (erroLimite) {
+      console.error('Falha ao verificar limite nexus-ai:', erroLimite.message)
+      return respostaErro('Serviço temporariamente indisponível.', 503, req)
+    }
+    if (permitido !== true) return respostaErro('Limite de 20 mensagens por minuto atingido. Aguarde um minuto e tente novamente.', 429, req)
+
     // Histórico da SESSÃO atual (não do usuário inteiro) — cada conversa
     // tem sua própria memória de curto prazo, sem vazar contexto de
     // conversas antigas ou do outro escopo (geral vs gestão financeira).
