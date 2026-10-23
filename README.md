@@ -120,6 +120,9 @@ O projeto usa Capacitor com uma URL remota para carregar a aplicação web. Isso
 
 ### Checklist para a Google Play
 
+Checklist detalhado de preparação e pendências: [docs/GOOGLE_PLAY_PREPARACAO.md](docs/GOOGLE_PLAY_PREPARACAO.md).
+
+
 - [ ] Criar a conta de desenvolvedor Google Play e concluir as verificações exigidas.
 - [ ] Confirmar o nome público, ícone, capturas de tela, descrição curta e descrição completa.
 - [ ] Publicar uma política de privacidade acessível por URL e coerente com os dados realmente coletados.
