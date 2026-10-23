@@ -223,7 +223,8 @@ Deno.serve(async (req) => {
         return respostaErro('Ação desconhecida.', 400, req)
     }
   } catch (erro) {
-    console.error('Erro inesperado na admin-users:', erro)\n    return respostaErro('Erro interno.', 500, req)
+    console.error('Erro inesperado na admin-users:', erro)
+    return respostaErro('Erro interno.', 500, req)
   }
 })
 
