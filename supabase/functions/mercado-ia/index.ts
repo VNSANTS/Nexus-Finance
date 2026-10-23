@@ -18,9 +18,21 @@
 // telas simplesmente voltam a mostrar "sem dado" até o mês seguinte (erro
 // tratado, nunca trava o app).
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const ORIGENS_PERMITIDAS = new Set([
+  'https://vnsants.github.io',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+])
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get('Origin')
+  const originPermitida = origin && ORIGENS_PERMITIDAS.has(origin) ? origin : 'https://vnsants.github.io'
+  return {
+    'Access-Control-Allow-Origin': originPermitida,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  }
 }
 const GEMINI_MODEL = 'gemini-3.6-flash'
 const MAX_TICKERS_POR_CHAMADA = 6 // mantém o prompt pequeno e a busca rápida/barata
@@ -32,24 +44,36 @@ type EventoCalendarioIA = { dia: string; evento: string; relevancia: 'alta' | 'm
 const SETORES_PADRAO = ['Bancos', 'Commodities', 'Energia', 'Varejo', 'Tecnologia', 'Saúde', 'Industrial', 'Imobiliário', 'Telecom']
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) })
+
+  const origin = req.headers.get('Origin')
+  if (origin && !ORIGENS_PERMITIDAS.has(origin)) return new Response('Origem não permitida.', { status: 403 })
+  if (req.method !== 'POST') return new Response('Método não permitido.', { status: 405, headers: { Allow: 'POST, OPTIONS' } })
 
   try {
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return respostaErro('Não autenticado.', 401)
+    if (!authHeader) return respostaErro('Não autenticado.', 401, req)
 
     const { createClient } = await import('jsr:@supabase/supabase-js@2')
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } },
     })
     const { data: { user }, error: erroUsuario } = await supabase.auth.getUser()
-    if (erroUsuario || !user) return respostaErro('Sessão inválida.', 401)
+    if (erroUsuario || !user) return respostaErro('Sessão inválida.', 401, req)
 
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
-    if (!geminiApiKey) return respostaErro('IA de mercado ainda não está configurada.', 500)
+    if (!geminiApiKey) return respostaErro('IA de mercado ainda não está configurada.', 500, req)
 
-    const corpo: { tipo?: 'cotacoes' | 'setores' | 'calendario'; tickers?: string[] } = await req.json()
+    const corpoDesconhecido: unknown = await req.json()
+    if (!corpoDesconhecido || typeof corpoDesconhecido !== 'object' || Array.isArray(corpoDesconhecido)) {
+      return respostaErro('Corpo da requisição inválido.', 400, req)
+    }
+    const corpo = corpoDesconhecido as { tipo?: 'cotacoes' | 'setores' | 'calendario'; tickers?: unknown }
     const tipo = corpo.tipo ?? 'cotacoes'
+    if (!['cotacoes', 'setores', 'calendario'].includes(tipo)) return respostaErro('Tipo de consulta inválido.', 400, req)
+    if (tipo === 'cotacoes' && (!Array.isArray(corpo.tickers) || corpo.tickers.length === 0 || corpo.tickers.length > MAX_TICKERS_POR_CHAMADA || corpo.tickers.some((t) => typeof t !== 'string' || !/^[A-Za-z0-9.\-]{1,12}$/.test(t)))) {
+      return respostaErro('Lista de tickers inválida (máximo de 6).', 400, req)
+    }
 
     if (tipo === 'setores') {
       const prompt =
@@ -59,8 +83,8 @@ Deno.serve(async (req) => {
         `Responda SOMENTE com um JSON válido, sem markdown, sem texto antes ou depois, no formato exato: ` +
         `[{"nome":"Bancos","variacao":1.8}]. Inclua todos os ${SETORES_PADRAO.length} setores pedidos, nessa ordem.`
       const cotacoes = await chamarGeminiJSON<SetorIA[]>(geminiApiKey, prompt)
-      if (!cotacoes) return respostaErro('Não consegui buscar os setores agora.', 502)
-      return respostaOk({ setores: cotacoes })
+      if (!cotacoes) return respostaErro('Não consegui buscar os setores agora.', 502, req)
+      return respostaOk({ setores: cotacoes }, req)
     }
 
     if (tipo === 'calendario') {
@@ -71,13 +95,13 @@ Deno.serve(async (req) => {
         `[{"dia":"Seg","evento":"Ata do Copom","relevancia":"alta"}]. "dia" é a abreviação em português (Seg/Ter/Qua/Qui/Sex). ` +
         `"relevancia" é só "alta" ou "media".`
       const eventos = await chamarGeminiJSON<EventoCalendarioIA[]>(geminiApiKey, prompt)
-      if (!eventos) return respostaErro('Não consegui buscar o calendário agora.', 502)
-      return respostaOk({ eventos })
+      if (!eventos) return respostaErro('Não consegui buscar o calendário agora.', 502, req)
+      return respostaOk({ eventos }, req)
     }
 
     const tickers = corpo.tickers ?? []
     const tickersLimpos = [...new Set(tickers.map((t) => t.trim().toUpperCase()).filter(Boolean))].slice(0, MAX_TICKERS_POR_CHAMADA)
-    if (tickersLimpos.length === 0) return respostaErro('Envie ao menos um ticker.', 400)
+    if (tickersLimpos.length === 0) return respostaErro('Envie ao menos um ticker.', 400, req)
 
     const prompt =
       `Busque agora na web a cotação atual (preço em reais e variação percentual do dia) de cada um destes ` +
@@ -87,11 +111,11 @@ Deno.serve(async (req) => {
       `Se não achar um ativo específico, use null em "preco" e "variacaoPercent" pra ele, mas ainda assim inclua no array.`
 
     const cotacoes = await chamarGeminiJSON<CotacaoIA[]>(geminiApiKey, prompt)
-    if (!cotacoes) return respostaErro('Não consegui buscar essas cotações agora.', 502)
-    return respostaOk({ cotacoes })
+    if (!cotacoes) return respostaErro('Não consegui buscar essas cotações agora.', 502, req)
+    return respostaOk({ cotacoes }, req)
   } catch (erro) {
     console.error('Erro inesperado na mercado-ia:', erro)
-    return respostaErro('Erro interno.', 500)
+    return respostaErro('Erro interno.', 500, req)
   }
 })
 
@@ -130,9 +154,9 @@ function parsearJsonDaResposta(texto: string): unknown | null {
   }
 }
 
-function respostaOk(dados: unknown) {
-  return new Response(JSON.stringify({ ok: true, dados }), { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, status: 200 })
+function respostaOk(dados: unknown, req: Request) {
+  return new Response(JSON.stringify({ ok: true, dados }), { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }, status: 200 })
 }
-function respostaErro(mensagem: string, status: number) {
-  return new Response(JSON.stringify({ ok: false, erro: mensagem }), { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }, status })
+function respostaErro(mensagem: string, status: number, req: Request) {
+  return new Response(JSON.stringify({ ok: false, erro: mensagem }), { headers: { ...corsHeaders(req), 'Content-Type': 'application/json' }, status })
 }
