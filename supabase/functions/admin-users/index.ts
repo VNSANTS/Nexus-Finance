@@ -91,6 +91,17 @@ Deno.serve(async (req) => {
       return respostaErro('Sessão inválida.', 401, req)
     }
 
+    // Limite persistente por usuário/minuto para proteger ações administrativas.
+    const { data: permitido, error: erroLimite } = await supabaseAdmin.rpc('consume_edge_function_rate_limit', {
+      p_user_id: user.id,
+      p_function_name: 'admin-users',
+    })
+    if (erroLimite) {
+      console.error('Falha ao verificar limite admin-users:', erroLimite.message)
+      return respostaErro('Serviço temporariamente indisponível.', 503, req)
+    }
+    if (permitido !== true) return respostaErro('Limite de 10 ações por minuto atingido. Aguarde um minuto e tente novamente.', 429, req)
+
     const acaoDesconhecida: unknown = await req.json()
     if (!acaoDesconhecida || typeof acaoDesconhecida !== 'object' || Array.isArray(acaoDesconhecida)) {
       return respostaErro('Corpo da requisição inválido.', 400, req)
