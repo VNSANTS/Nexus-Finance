@@ -91,24 +91,26 @@ Deno.serve(async (req) => {
     if (!acaoDesconhecida || typeof acaoDesconhecida !== 'object' || Array.isArray(acaoDesconhecida)) {
       return respostaErro('Corpo da requisição inválido.', 400, req)
     }
-    const acao = acaoDesconhecida as Partial<Acao> & Record<string, unknown>
+    const acaoRecord = acaoDesconhecida as Record<string, unknown>
     const tiposPermitidos = ['excluirUsuario', 'editarEmail', 'alternarBloqueio', 'excluirPropriaConta', 'listarStatusAuth', 'reenviarConfirmacao', 'confirmarUsuario']
-    if (typeof acao.tipo !== 'string' || !tiposPermitidos.includes(acao.tipo)) {
+    if (typeof acaoRecord.tipo !== 'string' || !tiposPermitidos.includes(acaoRecord.tipo as string)) {
       return respostaErro('Ação inválida.', 400, req)
     }
     const acoesComAlvo = ['excluirUsuario', 'editarEmail', 'alternarBloqueio', 'excluirPropriaConta', 'reenviarConfirmacao', 'confirmarUsuario']
-    if (acoesComAlvo.includes(acao.tipo) && (typeof acao.alvoId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(acao.alvoId))) {
+    if (acoesComAlvo.includes(acaoRecord.tipo as string) && (typeof acaoRecord.alvoId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(acaoRecord.alvoId as string))) {
       return respostaErro('Identificador de usuário inválido.', 400, req)
     }
-    if (acao.tipo === 'editarEmail' && (typeof acao.novoEmail !== 'string' || acao.novoEmail.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(acao.novoEmail))) {
+    if (acaoRecord.tipo === 'editarEmail' && (typeof acaoRecord.novoEmail !== 'string' || (acaoRecord.novoEmail as string).length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(acaoRecord.novoEmail as string))) {
       return respostaErro('E-mail inválido.', 400, req)
     }
-    if (acao.tipo === 'reenviarConfirmacao' && (typeof acao.email !== 'string' || acao.email.length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(acao.email))) {
+    if (acaoRecord.tipo === 'reenviarConfirmacao' && (typeof acaoRecord.email !== 'string' || (acaoRecord.email as string).length > 254 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(acaoRecord.email as string))) {
       return respostaErro('E-mail inválido.', 400, req)
     }
-    if (acao.tipo === 'alternarBloqueio' && typeof acao.bloquear !== 'boolean') {
+    if (acaoRecord.tipo === 'alternarBloqueio' && typeof acaoRecord.bloquear !== 'boolean') {
       return respostaErro('Estado de bloqueio inválido.', 400, req)
     }
+
+    const acao = acaoDesconhecida as Acao
 
     // 'excluirPropriaConta' é a única ação que NÃO exige ser admin — só
     // exige que a pessoa esteja excluindo a própria conta (alvoId tem que
@@ -119,7 +121,7 @@ Deno.serve(async (req) => {
         return respostaErro('Só é possível excluir a própria conta.', 403, req)
       }
       const { error } = await supabaseAdmin.auth.admin.deleteUser(user.id)
-      if (error) return respostaErro(error.message, 400, req)
+      if (error) return respostaErro('Não foi possível concluir a operação.', 400, req)
       return respostaOk({ excluido: true }, req)
     }
 
@@ -139,7 +141,7 @@ Deno.serve(async (req) => {
         // public.profiles.id (ver supabase/001_auth_profiles.sql) já
         // remove o perfil automaticamente junto.
         const { error } = await supabaseAdmin.auth.admin.deleteUser(acao.alvoId)
-        if (error) return respostaErro(error.message, 400, req)
+        if (error) return respostaErro('Não foi possível concluir a operação.', 400, req)
         return respostaOk({ excluido: true }, req)
       }
 
@@ -149,14 +151,14 @@ Deno.serve(async (req) => {
         const { error: erroAuth } = await supabaseAdmin.auth.admin.updateUserById(acao.alvoId, {
           email: acao.novoEmail,
         })
-        if (erroAuth) return respostaErro(erroAuth.message, 400, req)
+        if (erroAuth) return respostaErro('Não foi possível atualizar a conta.', 400, req)
 
         // Mantém profiles.email em sincronia com o e-mail de login.
         const { error: erroPerfilUpdate } = await supabaseAdmin
           .from('profiles')
           .update({ email: acao.novoEmail })
           .eq('id', acao.alvoId)
-        if (erroPerfilUpdate) return respostaErro(erroPerfilUpdate.message, 400, req)
+        if (erroPerfilUpdate) return respostaErro('Não foi possível atualizar o perfil.', 400, req)
 
         return respostaOk({ email: acao.novoEmail }, req)
       }
@@ -169,13 +171,13 @@ Deno.serve(async (req) => {
         const { error: erroAuth } = await supabaseAdmin.auth.admin.updateUserById(acao.alvoId, {
           ban_duration: acao.bloquear ? '876000h' : 'none',
         })
-        if (erroAuth) return respostaErro(erroAuth.message, 400, req)
+        if (erroAuth) return respostaErro('Não foi possível atualizar a conta.', 400, req)
 
         const { error: erroPerfilUpdate } = await supabaseAdmin
           .from('profiles')
           .update({ status: acao.bloquear ? 'bloqueado' : 'ativo' })
           .eq('id', acao.alvoId)
-        if (erroPerfilUpdate) return respostaErro(erroPerfilUpdate.message, 400, req)
+        if (erroPerfilUpdate) return respostaErro('Não foi possível atualizar o perfil.', 400, req)
 
         return respostaOk({ status: acao.bloquear ? 'bloqueado' : 'ativo' }, req)
       }
@@ -187,7 +189,7 @@ Deno.serve(async (req) => {
       // dia passar disso, precisa paginar (page/perPage) e juntar os lotes.
       case 'listarStatusAuth': {
         const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 })
-        if (error) return respostaErro(error.message, 400, req)
+        if (error) return respostaErro('Não foi possível concluir a operação.', 400, req)
 
         const status = data.users.map((u) => ({
           id: u.id,
@@ -202,7 +204,7 @@ Deno.serve(async (req) => {
       // plano Free; ok pro volume de um app pessoal).
       case 'reenviarConfirmacao': {
         const { error } = await supabaseAdmin.auth.resend({ type: 'signup', email: acao.email })
-        if (error) return respostaErro(error.message, 400, req)
+        if (error) return respostaErro('Não foi possível concluir a operação.', 400, req)
         return respostaOk({ reenviado: true }, req)
       }
 
@@ -211,7 +213,7 @@ Deno.serve(async (req) => {
       // motivo e o admin já verificou a identidade da pessoa por outro meio.
       case 'confirmarUsuario': {
         const { error } = await supabaseAdmin.auth.admin.updateUserById(acao.alvoId, { email_confirm: true })
-        if (error) return respostaErro(error.message, 400, req)
+        if (error) return respostaErro('Não foi possível concluir a operação.', 400, req)
         return respostaOk({ confirmado: true }, req)
       }
 
