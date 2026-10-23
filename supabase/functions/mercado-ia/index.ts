@@ -77,6 +77,25 @@ Deno.serve(async (req) => {
       return respostaErro('Lista de tickers inválida (máximo de 6).', 400, req)
     }
 
+    // Limite persistente e atômico para proteger a cota de buscas do Gemini.
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!serviceRoleKey) {
+      console.error('SUPABASE_SERVICE_ROLE_KEY ausente; bloqueando chamada de IA por segurança.')
+      return respostaErro('Serviço temporariamente indisponível.', 503, req)
+    }
+    const rateLimitClient = createClient(Deno.env.get('SUPABASE_URL')!, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    })
+    const { data: permitido, error: erroLimite } = await rateLimitClient.rpc('consume_edge_function_rate_limit', {
+      p_user_id: user.id,
+      p_function_name: 'mercado-ia',
+    })
+    if (erroLimite) {
+      console.error('Falha ao verificar limite mercado-ia:', erroLimite.message)
+      return respostaErro('Serviço temporariamente indisponível.', 503, req)
+    }
+    if (permitido !== true) return respostaErro('Limite de 10 consultas por minuto atingido. Aguarde um minuto e tente novamente.', 429, req)
+
     if (tipo === 'setores') {
       const prompt =
         `Busque agora na web o desempenho de hoje (variação percentual, positiva ou negativa) da bolsa brasileira (B3) ` +
