@@ -82,6 +82,22 @@ Deno.serve(async (req) => {
     const { data: { user }, error: erroUsuario } = await supabase.auth.getUser()
     if (erroUsuario || !user) return respostaErro('Sessão inválida.', 401, req)
 
+    // Limite persistente por usuário/minuto para proteger a cota da API externa.
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!serviceRoleKey) return respostaErro('Serviço temporariamente indisponível.', 503, req)
+    const rateLimitClient = createClient(Deno.env.get('SUPABASE_URL')!, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    })
+    const { data: permitido, error: erroLimite } = await rateLimitClient.rpc('consume_edge_function_rate_limit', {
+      p_user_id: user.id,
+      p_function_name: 'mercado-cotacoes',
+    })
+    if (erroLimite) {
+      console.error('Falha ao verificar limite mercado-cotacoes:', erroLimite.message)
+      return respostaErro('Serviço temporariamente indisponível.', 503, req)
+    }
+    if (permitido !== true) return respostaErro('Limite de 30 consultas por minuto atingido. Aguarde um minuto e tente novamente.', 429, req)
+
     const corpoDesconhecido: unknown = await req.json()
     if (!corpoDesconhecido || typeof corpoDesconhecido !== 'object' || Array.isArray(corpoDesconhecido)) {
       return respostaErro('Corpo da requisição inválido.', 400, req)
