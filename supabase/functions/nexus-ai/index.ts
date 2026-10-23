@@ -113,6 +113,7 @@ function montarContextoFinanceiro(estadoGf: Record<string, unknown> | null): str
   const categorias = (estadoGf.categorias as { id: string; nome: string }[]) ?? []
   const nomeCategoria = (id: string) => categorias.find((c) => c.id === id)?.nome ?? id
 
+  // Proteção contra undefined no reduce
   const saldoTotal = contas.reduce((soma, c) => soma + (c.saldo ?? 0), 0)
 
   const ultimasTransacoes = [...transacoes]
@@ -120,25 +121,25 @@ function montarContextoFinanceiro(estadoGf: Record<string, unknown> | null): str
     .slice(0, MAX_TRANSACOES_NO_PROMPT)
 
   const partes: string[] = []
-  partes.push(`Saldo total (todas as contas): R$ ${saldoTotal.toFixed(2)}`)
-  partes.push(`Contas: ${contas.length ? contas.map((c) => `${c.nome} (${c.tipo}): R$ ${c.saldo.toFixed(2)}`).join('; ') : 'nenhuma cadastrada'}`)
-  if (cartoes.length) partes.push(`Cartões: ${cartoes.map((c) => `${c.nome} (limite R$ ${c.limite.toFixed(2)})`).join('; ')}`)
+  partes.push(`Saldo total (todas as contas): R$ ${(saldoTotal ?? 0).toFixed(2)}`)
+  partes.push(`Contas: ${contas.length ? contas.map((c) => `${c.nome} (${c.tipo}): R$ ${(c.saldo ?? 0).toFixed(2)}`).join('; ') : 'nenhuma cadastrada'}`)
+  if (cartoes.length) partes.push(`Cartões: ${cartoes.map((c) => `${c.nome} (limite R$ ${(c.limite ?? 0).toFixed(2)})`).join('; ')}`)
   if (dividas.length) {
     partes.push(
-      `Dívidas: ${dividas.map((d) => `${d.descricao}: pago R$ ${d.valorPago.toFixed(2)} de R$ ${d.valorTotal.toFixed(2)}`).join('; ')}`
+      `Dívidas: ${dividas.map((d) => `${d.descricao}: pago R$ ${(d.valorPago ?? 0).toFixed(2)} de R$ ${(d.valorTotal ?? 0).toFixed(2)}`).join('; ')}`
     )
   }
   if (metas.length) {
-    partes.push(`Metas: ${metas.map((m) => `${m.nome}: R$ ${m.valorAtual.toFixed(2)} de R$ ${m.valorAlvo.toFixed(2)}`).join('; ')}`)
+    partes.push(`Metas: ${metas.map((m) => `${m.nome}: R$ ${(m.valorAtual ?? 0).toFixed(2)} de R$ ${(m.valorAlvo ?? 0).toFixed(2)}`).join('; ')}`)
   }
   if (orcamentos.length) {
-    partes.push(`Orçamento por categoria: ${orcamentos.map((o) => `${nomeCategoria(o.categoriaId)}: limite R$ ${o.valorLimite.toFixed(2)}`).join('; ')}`)
+    partes.push(`Orçamento por categoria: ${orcamentos.map((o) => `${nomeCategoria(o.categoriaId)}: limite R$ ${(o.valorLimite ?? 0).toFixed(2)}`).join('; ')}`)
   }
   partes.push(
     `Últimas ${ultimasTransacoes.length} transações (mais recente primeiro): ` +
       (ultimasTransacoes.length
         ? ultimasTransacoes
-            .map((t) => `[${t.data}] ${t.tipo} "${t.descricao}" R$ ${t.valor.toFixed(2)} (${nomeCategoria(t.categoriaId)})`)
+            .map((t) => `[${t.data}] ${t.tipo} "${t.descricao}" R$ ${(t.valor ?? 0).toFixed(2)} (${nomeCategoria(t.categoriaId)})`)
             .join(' | ')
         : 'nenhuma transação ainda')
   )
