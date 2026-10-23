@@ -23,9 +23,21 @@
 // Sem fazer isso, o app continua funcionando normalmente, só limitado aos
 // 4 tickers de teste.
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const ORIGENS_PERMITIDAS = new Set([
+  'https://vnsants.github.io',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+])
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get('Origin')
+  const originPermitida = origin && ORIGENS_PERMITIDAS.has(origin) ? origin : 'https://vnsants.github.io'
+  return {
+    'Access-Control-Allow-Origin': originPermitida,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  }
 }
 
 // Únicos tickers que a brapi.dev libera sem token e sem limite de uso.
@@ -42,28 +54,41 @@ type CotacaoResultado = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS })
+    return new Response('ok', { headers: corsHeaders(req) })
+  }
+
+  const origin = req.headers.get('Origin')
+  if (origin && !ORIGENS_PERMITIDAS.has(origin)) {
+    return new Response('Origem não permitida.', { status: 403 })
+  }
+  if (req.method !== 'POST') {
+    return new Response('Método não permitido.', { status: 405, headers: { Allow: 'POST, OPTIONS' } })
   }
 
   try {
     // Exige sessão válida (não precisa ser admin) — só pra evitar que a
     // cota mensal da brapi.dev seja consumida por alguém fora do app.
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return respostaErro('Não autenticado.', 401)
+    if (!authHeader) return respostaErro('Não autenticado.', 401, req)
 
     const { createClient } = await import('jsr:@supabase/supabase-js@2')
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } },
     })
     const { data: { user }, error: erroUsuario } = await supabase.auth.getUser()
-    if (erroUsuario || !user) return respostaErro('Sessão inválida.', 401)
+    if (erroUsuario || !user) return respostaErro('Sessão inválida.', 401, req)
 
-    const { tickers }: CorpoRequisicao = await req.json()
-    if (!Array.isArray(tickers) || tickers.length === 0) {
-      return respostaErro('Envie ao menos um ticker.', 400)
+    const corpoDesconhecido: unknown = await req.json()
+    if (!corpoDesconhecido || typeof corpoDesconhecido !== 'object' || Array.isArray(corpoDesconhecido)) {
+      return respostaErro('Corpo da requisição inválido.', 400, req)
     }
-    // Máximo de 20 por chamada — evita URL gigante e abuso da cota.
-    const tickersLimpos = [...new Set(tickers.map((t) => t.trim().toUpperCase()).filter(Boolean))].slice(0, 20)
+    const { tickers } = corpoDesconhecido as Partial<CorpoRequisicao>
+    if (!Array.isArray(tickers) || tickers.length === 0 || tickers.some((t) => typeof t !== 'string')) {
+      return respostaErro('Envie uma lista válida de tickers.', 400, req)
+    }
+    if (tickers.length > 20) return respostaErro('Máximo de 20 tickers por chamada.', 400, req)
+    const tickersLimpos = [...new Set(tickers.map((t) => t.trim().toUpperCase()).filter((t) => /^[A-Z0-9]{4,12}$/.test(t)))]
+    if (tickersLimpos.length === 0) return respostaErro('Nenhum ticker válido foi informado.', 400, req)
 
     const brapiToken = Deno.env.get('BRAPI_TOKEN')
 
@@ -109,23 +134,23 @@ Deno.serve(async (req) => {
       }
     }
 
-    return respostaOk({ cotacoes: resultados, temToken: Boolean(brapiToken) })
+    return respostaOk({ cotacoes: resultados, temToken: Boolean(brapiToken) }, req)
   } catch (erro) {
     console.error('Erro inesperado na mercado-cotacoes:', erro)
-    return respostaErro('Erro interno.', 500)
+    return respostaErro('Erro interno.', 500, req)
   }
 })
 
-function respostaOk(dados: unknown) {
+function respostaOk(dados: unknown, req: Request) {
   return new Response(JSON.stringify({ ok: true, dados }), {
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     status: 200,
   })
 }
 
-function respostaErro(mensagem: string, status: number) {
+function respostaErro(mensagem: string, status: number, req: Request) {
   return new Response(JSON.stringify({ ok: false, erro: mensagem }), {
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     status,
   })
 }
