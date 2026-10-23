@@ -34,3 +34,23 @@ jobs:
         uses: github/codeql-action/analyze@v3
         with:
           category: '/language:javascript-typescript'
+
+  edge-functions-check:
+    name: Validate Supabase Edge Functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Edge Functions
+        run: |
+          deno check supabase/functions/admin-users/index.ts
+          deno check supabase/functions/nexus-ai/index.ts
+          deno check supabase/functions/mercado-ia/index.ts
+          deno check supabase/functions/mercado-cotacoes/index.ts
