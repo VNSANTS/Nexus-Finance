@@ -1,9 +1,36 @@
-import { useEffect, useRef, useState } from 'react'
-import { History, Plus, Send, Loader2, Settings } from 'lucide-react'
+import { useEffect, useRef, useState, Fragment } from 'react'
+import { History, Plus, Send, Loader2 } from 'lucide-react'
 import { useNexusAI, type EscopoNexusAI } from './useNexusAI'
 import NexusAIIcone from './NexusAIIcone'
 import NexusAIHistorico from './NexusAIHistorico'
-import NexusAIConfiguracoes from './NexusAIConfiguracoes'
+
+// Markdown mínimo, só o que o Gemini costuma gerar nas respostas do
+// Nexus AI: **negrito** e listas com "- item" por linha. Não é um parser
+// de markdown completo de propósito — trazer uma biblioteca inteira pra
+// isso seria peso desnecessário no bundle pra um uso tão pontual.
+function renderizarTextoComMarkdown(texto: string) {
+  const linhas = texto.split('\n')
+
+  function renderizarNegrito(trecho: string, chavePrefixo: string) {
+    const partes = trecho.split(/(\*\*[^*]+\*\*)/g)
+    return partes.map((parte, i) => {
+      const match = parte.match(/^\*\*([^*]+)\*\*$/)
+      if (match) return <strong key={`${chavePrefixo}-${i}`}>{match[1]}</strong>
+      return <Fragment key={`${chavePrefixo}-${i}`}>{parte}</Fragment>
+    })
+  }
+
+  return linhas.map((linha, i) => {
+    const ehItemLista = /^[-*]\s+/.test(linha.trim())
+    const conteudoLinha = ehItemLista ? linha.trim().replace(/^[-*]\s+/, '') : linha
+    return (
+      <div key={i} className={ehItemLista ? 'pl-3.5 relative' : undefined}>
+        {ehItemLista && <span className="absolute left-0">•</span>}
+        {renderizarNegrito(conteudoLinha, String(i))}
+      </div>
+    )
+  })
+}
 
 function BolhaMensagem({ papel, conteudo, pendente }: { papel: 'user' | 'model'; conteudo: string; pendente?: boolean }) {
   const ehUsuario = papel === 'user'
@@ -19,8 +46,10 @@ function BolhaMensagem({ papel, conteudo, pendente }: { papel: 'user' | 'model';
             <Loader2 size={13} className="animate-spin" />
             Pensando...
           </span>
-        ) : (
+        ) : ehUsuario ? (
           conteudo
+        ) : (
+          <div className="flex flex-col gap-1">{renderizarTextoComMarkdown(conteudo)}</div>
         )}
       </div>
     </div>
@@ -54,7 +83,6 @@ export default function NexusAIChatCorpo({
 }: NexusAIChatCorpoProps) {
   const [texto, setTexto] = useState('')
   const [historicoAberto, setHistoricoAberto] = useState(false)
-  const [configAberto, setConfigAberto] = useState(false)
   const {
     sessaoId,
     mensagens,
@@ -105,9 +133,6 @@ export default function NexusAIChatCorpo({
         </button>
         <button onClick={() => setHistoricoAberto(true)} className="text-texto-secundario p-1.5" aria-label="Histórico de conversas">
           <History size={18} />
-        </button>
-        <button onClick={() => setConfigAberto(true)} className="text-texto-secundario p-1.5" aria-label="Configurações do Nexus AI">
-          <Settings size={17} />
         </button>
         {acaoFimCabecalho}
       </div>
@@ -166,7 +191,6 @@ export default function NexusAIChatCorpo({
         sessaoAtualId={sessaoId}
         listarHistoricoSessoes={listarHistoricoSessoes}
       />
-      <NexusAIConfiguracoes aberto={configAberto} onFechar={() => setConfigAberto(false)} />
     </div>
   )
 }

@@ -36,7 +36,7 @@ interface AuthContextValor {
 // (client ID/secret gerados no site de cada provedor) antes do botão
 // funcionar de verdade — sem isso, o Supabase retorna erro "provider is
 // not enabled" ao clicar.
-export type ProvedorOAuth = 'google' | 'facebook' | 'github'
+export type ProvedorOAuth = 'google' | 'github'
 
 const AuthContext = createContext<AuthContextValor | null>(null)
 
@@ -182,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { erro: 'Novos cadastros estão temporariamente pausados. Se você já tem conta, isso não te afeta — tente entrar normalmente.' }
     }
 
-    // redirectTo garante que, depois de autorizar no Google/Facebook/etc.,
+    // redirectTo garante que, depois de autorizar no Google/GitHub/etc.,
     // a pessoa volta pro app (e não pra localhost, mesmo problema que
     // tivemos com o e-mail de confirmação — aqui resolvido de saída
     // porque usa a URL real do navegador, não uma configurada à parte).

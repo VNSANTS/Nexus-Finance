@@ -11,17 +11,18 @@ export const moduloEducacaoFinanceira: Modulo = {
 
   aprender: {
     oQueE:
-      'Educação financeira é a capacidade de entender e usar bem diferentes habilidades relacionadas a dinheiro: orçar, poupar, investir e se proteger de dívidas ruins. Não é sobre decorar fórmulas complexas — é sobre tomar decisões melhores com o dinheiro que você já tem, por menor que seja.',
+      'Educação financeira é muito mais do que saber fazer contas ou entender termos complicados sobre dinheiro. É desenvolver conhecimentos e hábitos que ajudam você a tomar decisões mais conscientes sobre o que ganha, o que gasta e o que pretende construir no futuro. Isso envolve aprender a organizar o orçamento, controlar os gastos, poupar, investir com consciência e usar o crédito de forma responsável, evitando decisões que possam comprometer sua vida financeira. No fim, o objetivo não é simplesmente ter mais dinheiro. É aprender a fazer melhores escolhas com o dinheiro que você tem, seja qual for a sua renda, para alcançar seus objetivos e construir uma vida financeira mais equilibrada e segura.',
     porQueImporta:
-      'Mais de 60% das famílias brasileiras estão endividadas, boa parte em dívidas caras como cartão rotativo e cheque especial, que podem passar de 400% ao ano em juros. Isso não acontece só por ganhar pouco — é falta de base. Aprender o essencial muda a trajetória financeira de uma vida inteira.',
+      'Milhões de brasileiros convivem com dívidas todos os meses. E o problema não está apenas em quanto uma pessoa ganha, mas também em como ela lida com o dinheiro, o crédito e as decisões financeiras do dia a dia. Cartão de crédito, empréstimos e outras formas de crédito podem ser úteis quando usados com planejamento, mas também podem se tornar um problema quando os juros e as parcelas começam a comprometer a renda. É justamente aí que a educação financeira faz diferença. Aprender o básico, como, organizar o orçamento, entender os juros, controlar os gastos, criar uma reserva e avaliar uma dívida antes de assumi-la, pode mudar a forma como você toma decisões financeiras. Você não precisa ser especialista em economia para cuidar melhor do seu dinheiro. Precisa apenas conhecer os princípios certos e saber aplicá-los no dia a dia. Porque pequenas decisões financeiras, repetidas ao longo dos anos, podem mudar completamente o seu futuro..',
     naPratica:
-      'O rotativo do cartão girava perto de 400-450% ao ano em 2025-2026, enquanto a Selic (referência segura) estava em torno de 10-11% ao ano no mesmo período — uma dívida de cartão cresce até 40x mais rápido que um investimento seguro. Investindo R$ 200/mês a 0,8% ao mês por 20 anos, o total ultrapassa R$ 115 mil, só com constância.',
+      'Os juros podem fazer uma diferença enorme na sua vida financeira. Enquanto investimentos podem fazer seu dinheiro crescer com o tempo, uma dívida cara faz o caminho contrário: quanto mais tempo ela permanece, maior pode ser o custo. O cartão de crédito é um bom exemplo. O Banco Central mostra que o crédito rotativo está entre as modalidades de crédito com juros mais elevados para pessoas físicas. Desde 2024, porém, os juros e encargos do rotativo e do parcelamento da fatura estão limitados a 100% do valor original da dívida. Agora pense no outro lado. Se você investir R$ 200 por mês durante 20 anos, obtendo uma rentabilidade média de 0,8% ao mês, poderá acumular cerca de R$ 144 mil, considerando juros compostos e aportes mensais constantes. Você teria colocado R$ 48 mil do próprio bolso. O restante viria do crescimento acumulado ao longo do tempo. É essa a força dos juros compostos: o tempo pode trabalhar a seu favor ou contra você. A diferença está nas escolhas que você faz hoje.',
     passoAPasso: [
-      'Anote todos os gastos por 30 dias, mesmo o cafezinho',
-      'Separe em essenciais, desejos e dívidas',
-      'Identifique dívidas com juro acima de 100% a.a. — são prioridade',
-      'Defina a meta de guardar 10% da renda todo mês',
-      'Abra conta em corretora/banco digital sem tarifa',
+      'Anote todos os seus gastos por 30 dias — até aquele cafezinho. Pequenas despesas também ajudam a revelar para onde seu dinheiro está indo.',
+      'Organize os gastos em três grupos: essenciais, desejos e dívidas. Assim, fica mais fácil identificar o que é necessário e o que pode ser reduzido.',
+      'Liste suas dívidas e comece pelas mais caras. Compare as taxas de juros e priorize aquelas que consomem mais dinheiro ao longo do tempo.',
+      'Defina uma meta de poupança mensal. Se sua realidade permitir, comece tentando guardar 10% da renda e ajuste esse percentual conforme seu orçamento.',
+      'Escolha uma instituição financeira adequada aos seus objetivos. Compare tarifas, serviços, segurança e opções de investimento antes de abrir uma conta.',
+      'Escolha uma instituição financeira adequada aos seus objetivos. Compare tarifas, serviços, segurança e opções de investimento antes de abrir uma conta.',
     ],
     errosComuns: [
       "Achar que é 'só para quem tem dinheiro sobrando'",

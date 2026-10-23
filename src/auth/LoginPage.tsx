@@ -15,13 +15,6 @@ function IconeGoogle() {
     </svg>
   )
 }
-function IconeFacebook() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 18 18">
-      <path fill="#1877F2" d="M18 9a9 9 0 1 0-10.4 8.9v-6.3H5.3V9h2.3V7.02c0-2.27 1.35-3.52 3.42-3.52.99 0 2.03.18 2.03.18v2.23h-1.14c-1.13 0-1.48.7-1.48 1.42V9h2.52l-.4 2.6h-2.12v6.3A9 9 0 0 0 18 9Z" />
-    </svg>
-  )
-}
 function IconeGitHub() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -32,7 +25,6 @@ function IconeGitHub() {
 
 const PROVEDORES: { id: ProvedorOAuth; nome: string; icone: () => React.JSX.Element }[] = [
   { id: 'google', nome: 'Google', icone: IconeGoogle },
-  { id: 'facebook', nome: 'Facebook', icone: IconeFacebook },
   { id: 'github', nome: 'GitHub', icone: IconeGitHub },
 ]
 
@@ -238,7 +230,7 @@ export default function LoginPage() {
             <div className="flex-1 h-px bg-border" />
           </div>
 
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
             {PROVEDORES.map(({ id, nome, icone: Icone }) => (
               <button
                 key={id}
