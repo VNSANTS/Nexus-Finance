@@ -1,0 +1,82 @@
+name: Android Release AAB
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || (echo "::error::Configure ANDROID_KEYSTORE_BASE64 in GitHub Actions secrets." && exit 1)
+          test -n "$KEYSTORE_PASSWORD" || (echo "::error::Configure ANDROID_KEYSTORE_PASSWORD in GitHub Actions secrets." && exit 1)
+          test -n "$KEY_ALIAS" || (echo "::error::Configure ANDROID_KEY_ALIAS in GitHub Actions secrets." && exit 1)
+          test -n "$KEY_PASSWORD" || (echo "::error::Configure ANDROID_KEY_PASSWORD in GitHub Actions secrets." && exit 1)
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build web app
+        env:
+          VITE_SUPABASE_URL: https://ygtroklufolvixwazkne.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY" || (echo "::error::Configure VITE_SUPABASE_PUBLISHABLE_KEY in GitHub Actions secrets." && exit 1)
+          npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nexus-release.keystore"
+          test -s "$RUNNER_TEMP/nexus-release.keystore"
+
+      - name: Build signed release bundle
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nexus-release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleRelease
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-finance-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Clean signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/nexus-release.keystore"
