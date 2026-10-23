@@ -25,9 +25,21 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const ORIGENS_PERMITIDAS = new Set([
+  'https://vnsants.github.io',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+])
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get('Origin')
+  const originPermitida = origin && ORIGENS_PERMITIDAS.has(origin) ? origin : 'https://vnsants.github.io'
+  return {
+    'Access-Control-Allow-Origin': originPermitida,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  }
 }
 
 const GEMINI_MODEL = 'gemini-3.6-flash'
@@ -149,28 +161,48 @@ function montarContextoFinanceiro(estadoGf: Record<string, unknown> | null): str
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: CORS_HEADERS })
+    return new Response('ok', { headers: corsHeaders(req) })
+  }
+
+  const origin = req.headers.get('Origin')
+  if (origin && !ORIGENS_PERMITIDAS.has(origin)) {
+    return new Response('Origem não permitida.', { status: 403 })
+  }
+  if (req.method !== 'POST') {
+    return new Response('Método não permitido.', { status: 405, headers: { Allow: 'POST, OPTIONS' } })
   }
 
   try {
     const geminiApiKey = Deno.env.get('GEMINI_API_KEY')
     if (!geminiApiKey) {
-      return respostaErro('Nexus AI ainda não está configurado (chave ausente no servidor).', 500)
+      return respostaErro('Nexus AI ainda não está configurado (chave ausente no servidor).', 500, req)
     }
 
     const authHeader = req.headers.get('Authorization')
-    if (!authHeader) return respostaErro('Não autenticado.', 401)
+    if (!authHeader) return respostaErro('Não autenticado.', 401, req)
 
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } },
     })
 
     const { data: { user }, error: erroUsuario } = await supabase.auth.getUser()
-    if (erroUsuario || !user) return respostaErro('Sessão inválida.', 401)
+    if (erroUsuario || !user) return respostaErro('Sessão inválida.', 401, req)
 
-    const { mensagem, sessaoId, escopo = 'geral', moduloContexto }: CorpoRequisicao = await req.json()
-    if (!mensagem || !mensagem.trim()) return respostaErro('Mensagem vazia.', 400)
-    if (!sessaoId) return respostaErro('sessaoId ausente.', 400)
+    const corpoDesconhecido: unknown = await req.json()
+    if (!corpoDesconhecido || typeof corpoDesconhecido !== 'object' || Array.isArray(corpoDesconhecido)) {
+      return respostaErro('Corpo da requisição inválido.', 400, req)
+    }
+    const corpo = corpoDesconhecido as Partial<CorpoRequisicao>
+    const { mensagem, sessaoId, escopo = 'geral', moduloContexto } = corpo
+    if (typeof mensagem !== 'string' || !mensagem.trim()) return respostaErro('Mensagem vazia.', 400, req)
+    if (mensagem.length > 4000) return respostaErro('A mensagem excede o limite de 4.000 caracteres.', 413, req)
+    if (typeof sessaoId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(sessaoId)) {
+      return respostaErro('Identificador de sessão inválido.', 400, req)
+    }
+    if (escopo !== 'geral' && escopo !== 'gestao-financeira') return respostaErro('Escopo inválido.', 400, req)
+    if (moduloContexto != null && (typeof moduloContexto !== 'string' || moduloContexto.length > 120)) {
+      return respostaErro('Contexto de módulo inválido.', 400, req)
+    }
 
     // Histórico da SESSÃO atual (não do usuário inteiro) — cada conversa
     // tem sua própria memória de curto prazo, sem vazar contexto de
@@ -235,14 +267,14 @@ Deno.serve(async (req) => {
     if (!respostaGemini.ok) {
       const detalhe = await respostaGemini.text()
       console.error('Erro Gemini:', detalhe)
-      return respostaErro('O Nexus AI não conseguiu responder agora. Tente novamente em instantes.', 502)
+      return respostaErro('O Nexus AI não conseguiu responder agora. Tente novamente em instantes.', 502, req)
     }
 
     const dadosGemini = await respostaGemini.json()
     const textoResposta: string | undefined = dadosGemini?.candidates?.[0]?.content?.parts?.[0]?.text
 
     if (!textoResposta) {
-      return respostaErro('O Nexus AI não conseguiu gerar uma resposta. Tente reformular a pergunta.', 502)
+      return respostaErro('O Nexus AI não conseguiu gerar uma resposta. Tente reformular a pergunta.', 502, req)
     }
 
     // Salva pergunta e resposta no histórico — melhor esforço, não bloqueia
@@ -252,23 +284,23 @@ Deno.serve(async (req) => {
       { user_id: user.id, sessao_id: sessaoId, escopo, papel: 'model', conteudo: textoResposta, modulo_contexto: moduloContexto ?? null },
     ])
 
-    return respostaOk({ resposta: textoResposta })
+    return respostaOk({ resposta: textoResposta }, req)
   } catch (erro) {
     console.error('Erro inesperado na nexus-ai:', erro)
-    return respostaErro('Erro interno.', 500)
+    return respostaErro('Erro interno.', 500, req)
   }
 })
 
-function respostaOk(dados: unknown) {
+function respostaOk(dados: unknown, req: Request) {
   return new Response(JSON.stringify({ ok: true, dados }), {
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     status: 200,
   })
 }
 
-function respostaErro(mensagem: string, status: number) {
+function respostaErro(mensagem: string, status: number, req: Request) {
   return new Response(JSON.stringify({ ok: false, erro: mensagem }), {
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders(req), 'Content-Type': 'application/json' },
     status,
   })
 }
