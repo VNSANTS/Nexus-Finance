@@ -161,7 +161,11 @@ export default function App() {
   // esse fundo aparecer. Ver PROXIMA_SESSAO.md, "Sessão A"/"Sessão D", pro
   // histórico desse ajuste. Cards continuam opacos via `--cor-bg-card`
   // (`card-surface`), então nenhuma tela fica com texto sobre fundo errado.
-  if (!progress.onboardingDone) {
+  const rotaDeAutenticacao = location.pathname === '/login' || location.pathname === '/redefinir-senha'
+
+  // Rotas de autenticação precisam funcionar mesmo antes de concluir o onboarding;
+  // especialmente o link de recuperação recebido por e-mail.
+  if (!progress.onboardingDone && !rotaDeAutenticacao) {
     return (
       <>
         <FundoPersonalizado />
