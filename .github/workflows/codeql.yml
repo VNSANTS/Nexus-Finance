@@ -50,7 +50,7 @@ jobs:
 
       - name: Type-check Edge Functions
         run: |
-          deno check supabase/functions/admin-users/index.ts
-          deno check supabase/functions/nexus-ai/index.ts
-          deno check supabase/functions/mercado-ia/index.ts
-          deno check supabase/functions/mercado-cotacoes/index.ts
+          deno check --node-modules-dir=auto supabase/functions/admin-users/index.ts
+          deno check --node-modules-dir=auto supabase/functions/nexus-ai/index.ts
+          deno check --node-modules-dir=auto supabase/functions/mercado-ia/index.ts
+          deno check --node-modules-dir=auto supabase/functions/mercado-cotacoes/index.ts
