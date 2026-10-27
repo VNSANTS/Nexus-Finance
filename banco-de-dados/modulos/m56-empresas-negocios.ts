@@ -6,7 +6,7 @@ export const empresasNegocios: Modulo = {
   trilhaId: 'carreira-negocios',
   numero: 1,
   titulo: 'Empresas e Negócios',
-  subtitulo: 'Como ler o balanço de uma empresa e entender se ela realmente ganha dinheiro',
+  subtitulo: 'Entenda receitas, custos, resultados e caixa de uma empresa.',
   iconName: 'Building',
   duracaoMin: 12,
 

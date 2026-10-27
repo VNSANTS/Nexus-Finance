@@ -5,7 +5,7 @@ export const formacaoInvestidor: Modulo = {
   trilhaId: 'fundamentos',
   numero: 8,
   titulo: 'Formação do Investidor',
-  subtitulo: 'O caminho real, em etapas, de quem nunca investiu até quem investe com autonomia',
+  subtitulo: 'Conheça as etapas para investir com mais autonomia e consciência.',
   iconName: 'GraduationCap',
   duracaoMin: 10,
 

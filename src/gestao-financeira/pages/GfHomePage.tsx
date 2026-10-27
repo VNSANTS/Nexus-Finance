@@ -31,6 +31,7 @@ import {
   mesAnteriorStr,
   resumoDoMes,
   resumoOrcamentos,
+  saldoDaConta,
   saldoTotalContas,
   serieDiariaDoMes,
   transacoesDoDia,
@@ -39,7 +40,6 @@ import {
 import { formatPercent } from '@/utils/format'
 import { formatMoeda } from '../formatMoeda'
 import { iconePorNome } from '../iconMap'
-import MiniGrafico from '../components/MiniGrafico'
 import GfGraficoFluxo from '../components/GfGraficoFluxo'
 import GfDonutCategorias from '../components/GfDonutCategorias'
 import GfCalendarioFinanceiro from '../components/GfCalendarioFinanceiro'
@@ -83,7 +83,11 @@ export default function GfHomePage() {
 
   const [insightIA, setInsightIA] = useState<string | null>(null)
   useEffect(() => {
-    gerarInsightDiarioGF().then(setInsightIA) // falha em silêncio (offline/Gemini fora do ar) — o card simplesmente não aparece
+    let ativo = true
+    gerarInsightDiarioGF()
+      .then((insight) => { if (ativo) setInsightIA(insight) })
+      .catch(() => { /* Insight opcional: a tela continua funcionando sem conexão. */ })
+    return () => { ativo = false }
   }, [])
 
   const varReceitas = variacaoPercentual(resumoAtual.receitas, resumoAnterior.receitas)
@@ -104,12 +108,12 @@ export default function GfHomePage() {
       {/* Header: voltar + logo | sino de notificações */}
       <div className="flex items-center justify-between px-4 pt-4">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/')} className="text-slate-300" aria-label="Voltar para o Nexus Finance">
+          <button onClick={() => navigate('/')} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-slate-300" aria-label="Voltar para o Nexus Finance">
             <ArrowLeft size={21} />
           </button>
           <NexusLogo size={30} />
         </div>
-        <button className="relative text-slate-300" aria-label="Notificações" onClick={() => navigate('/gestao-financeira/notificacoes')}>
+        <button className="relative flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl text-slate-300" aria-label="Notificações" onClick={() => navigate('/gestao-financeira/notificacoes')}>
           <Bell size={19} />
           {notificacoesNaoLidas > 0 && (
             <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 px-[3px] rounded-full bg-accent-red text-[8px] font-bold text-white flex items-center justify-center">
@@ -121,7 +125,7 @@ export default function GfHomePage() {
 
       {/* Saudação */}
       <div className="px-4 mt-4">
-        <h1 className="text-[19px] font-display font-extrabold text-white">Olá, {progress.perfilPessoal.nome}! 👋</h1>
+        <h1 className="text-[19px] font-display font-extrabold text-white">Olá, {progress.perfilPessoal.nome}!</h1>
         <p className="text-[13px] text-slate-500 capitalize mt-0.5">Hoje é {dataFormatada}.</p>
       </div>
 
@@ -152,7 +156,7 @@ export default function GfHomePage() {
               <div className="flex items-center justify-between">
                 <p className="text-[13px] text-slate-300 font-medium">Saldo atual</p>
                 {permissoes.verSaldos && (
-                  <button onClick={() => setSaldoVisivel((val) => !val)} aria-label={saldoVisivel ? 'Ocultar valores' : 'Mostrar valores'}>
+                  <button className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg" onClick={() => setSaldoVisivel((val) => !val)} aria-label={saldoVisivel ? 'Ocultar valores' : 'Mostrar valores'}>
                     {saldoVisivel ? <Eye size={16} className="text-slate-500" /> : <EyeOff size={16} className="text-slate-500" />}
                   </button>
                 )}
@@ -161,12 +165,9 @@ export default function GfHomePage() {
               <p className="text-[11.5px] text-slate-500 mt-0.5">em todas as contas</p>
             </div>
           </div>
-          <div className="flex items-center justify-between mt-3">
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-accent-green bg-accent-green/15 rounded-full px-2 py-1">
-              ▲ 0% esta semana
-            </span>
-            <MiniGrafico cor="#00D4FF" />
-          </div>
+          <p className="mt-3 border-t border-border pt-3 text-[12px] text-slate-400">
+            Saldo consolidado das contas e lançamentos
+          </p>
         </div>
       </div>
 
@@ -283,7 +284,7 @@ export default function GfHomePage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-[12.5px] text-white font-semibold truncate">{conta.nome}</p>
                   </div>
-                  <span className="text-[12.5px] font-semibold text-accent-green shrink-0">{v(conta.saldoInicial)}</span>
+                  <span className="text-[12.5px] font-semibold text-accent-green shrink-0">{v(saldoDaConta(conta, estado.transacoes))}</span>
                 </div>
               ))}
           </div>
@@ -487,7 +488,7 @@ function SecaoCard({
             </div>
           </div>
           {acao && (
-            <button onClick={acao} className="flex items-center gap-0.5 text-[11px] text-accent-cyan font-semibold shrink-0">
+            <button onClick={acao} className="flex min-h-[44px] items-center gap-0.5 text-[12px] text-accent-cyan font-semibold shrink-0">
               Ver todos <ChevronRight size={12} />
             </button>
           )}

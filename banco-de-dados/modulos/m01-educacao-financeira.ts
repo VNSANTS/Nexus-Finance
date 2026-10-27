@@ -5,7 +5,7 @@ export const moduloEducacaoFinanceira: Modulo = {
   trilhaId: 'fundamentos',
   numero: 1,
   titulo: 'Educação Financeira',
-  subtitulo: 'A base de tudo que vem depois',
+  subtitulo: 'Entenda o dinheiro e construa hábitos que apoiam suas escolhas.',
   iconName: 'GraduationCap',
   duracaoMin: 10,
 
@@ -13,7 +13,7 @@ export const moduloEducacaoFinanceira: Modulo = {
     oQueE:
       'Educação financeira é muito mais do que saber fazer contas ou entender termos complicados sobre dinheiro. É desenvolver conhecimentos e hábitos que ajudam você a tomar decisões mais conscientes sobre o que ganha, o que gasta e o que pretende construir no futuro. Isso envolve aprender a organizar o orçamento, controlar os gastos, poupar, investir com consciência e usar o crédito de forma responsável, evitando decisões que possam comprometer sua vida financeira. No fim, o objetivo não é simplesmente ter mais dinheiro. É aprender a fazer melhores escolhas com o dinheiro que você tem, seja qual for a sua renda, para alcançar seus objetivos e construir uma vida financeira mais equilibrada e segura.',
     porQueImporta:
-      'Milhões de brasileiros convivem com dívidas todos os meses. E o problema não está apenas em quanto uma pessoa ganha, mas também em como ela lida com o dinheiro, o crédito e as decisões financeiras do dia a dia. Cartão de crédito, empréstimos e outras formas de crédito podem ser úteis quando usados com planejamento, mas também podem se tornar um problema quando os juros e as parcelas começam a comprometer a renda. É justamente aí que a educação financeira faz diferença. Aprender o básico, como, organizar o orçamento, entender os juros, controlar os gastos, criar uma reserva e avaliar uma dívida antes de assumi-la, pode mudar a forma como você toma decisões financeiras. Você não precisa ser especialista em economia para cuidar melhor do seu dinheiro. Precisa apenas conhecer os princípios certos e saber aplicá-los no dia a dia. Porque pequenas decisões financeiras, repetidas ao longo dos anos, podem mudar completamente o seu futuro..',
+      'Milhões de pessoas lidam com dívidas e decisões financeiras todos os meses. O problema não depende apenas da renda: também importa como ela é organizada e como o crédito é usado. Cartão e empréstimo podem ajudar quando cabem no orçamento, mas juros e parcelas podem reduzir o dinheiro disponível para outras prioridades. Aprender a acompanhar gastos, comparar o custo das dívidas e formar uma reserva ajuda a decidir com mais clareza. Você não precisa dominar economia para começar; escolha práticas que façam sentido para sua realidade e ajuste o plano quando ela mudar.',
     naPratica:
       'Os juros podem fazer uma diferença enorme na sua vida financeira. Enquanto investimentos podem fazer seu dinheiro crescer com o tempo, uma dívida cara faz o caminho contrário: quanto mais tempo ela permanece, maior pode ser o custo. O cartão de crédito é um bom exemplo. O Banco Central mostra que o crédito rotativo está entre as modalidades de crédito com juros mais elevados para pessoas físicas. Desde 2024, porém, os juros e encargos do rotativo e do parcelamento da fatura estão limitados a 100% do valor original da dívida. Agora pense no outro lado. Se você investir R$ 200 por mês durante 20 anos, obtendo uma rentabilidade média de 0,8% ao mês, poderá acumular cerca de R$ 144 mil, considerando juros compostos e aportes mensais constantes. Você teria colocado R$ 48 mil do próprio bolso. O restante viria do crescimento acumulado ao longo do tempo. É essa a força dos juros compostos: o tempo pode trabalhar a seu favor ou contra você. A diferença está nas escolhas que você faz hoje.',
     passoAPasso: [
@@ -21,7 +21,6 @@ export const moduloEducacaoFinanceira: Modulo = {
       'Organize os gastos em três grupos: essenciais, desejos e dívidas. Assim, fica mais fácil identificar o que é necessário e o que pode ser reduzido.',
       'Liste suas dívidas e comece pelas mais caras. Compare as taxas de juros e priorize aquelas que consomem mais dinheiro ao longo do tempo.',
       'Defina uma meta de poupança mensal. Se sua realidade permitir, comece tentando guardar 10% da renda e ajuste esse percentual conforme seu orçamento.',
-      'Escolha uma instituição financeira adequada aos seus objetivos. Compare tarifas, serviços, segurança e opções de investimento antes de abrir uma conta.',
       'Escolha uma instituição financeira adequada aos seus objetivos. Compare tarifas, serviços, segurança e opções de investimento antes de abrir uma conta.',
     ],
     errosComuns: [
@@ -32,18 +31,18 @@ export const moduloEducacaoFinanceira: Modulo = {
       "Esperar 'sobrar' no fim do mês para guardar",
     ],
     comparativo: {
-      titulo: 'Custo de crédito no Brasil (referência 2025-2026)',
+      titulo: 'Compare o custo total antes de contratar',
       linhas: [
-        { label: 'Cartão rotativo', valor: '400-450% a.a.' },
-        { label: 'Cheque especial', valor: '130-150% a.a.' },
-        { label: 'Empréstimo pessoal', valor: '60-100% a.a.' },
-        { label: 'Selic (referência)', valor: '~10-11% a.a.' },
+        { label: 'Cartão rotativo', valor: 'Consulte a taxa e o CET da fatura' },
+        { label: 'Cheque especial', valor: 'Compare o custo com outras opções' },
+        { label: 'Empréstimo pessoal', valor: 'Confira o CET e o prazo total' },
+        { label: 'Crédito consignado', valor: 'Avalie parcelas e custo total' },
       ],
     },
     checklist: [
       'Anotei meus gastos dos últimos 30 dias',
       'Separei gastos essenciais, desejos e dívidas',
-      'Identifiquei dívidas com juro acima de 100% a.a.',
+      'Comparei o custo efetivo total das minhas dívidas',
       'Defini a meta de guardar 10% da renda',
       'Abri conta em corretora/banco digital sem tarifa',
     ],
@@ -73,11 +72,11 @@ export const moduloEducacaoFinanceira: Modulo = {
       'Abra Ferramentas → Juros Compostos',
       'Digite um aporte inicial (pode ser R$ 0 se está começando do zero)',
       'Digite quanto pretende investir por mês, mesmo que seja R$ 50',
-      'Use uma taxa próxima da Selic atual (~0,8% ao mês) como referência conservadora',
-      'Veja o gráfico de crescimento e a tabela ano a ano — repare como o crescimento acelera nos últimos anos',
+      'Teste diferentes taxas hipotéticas e lembre que simulações não garantem resultados',
+      'Veja o gráfico e compare cenários com taxas e prazos diferentes',
     ],
     exemploGuiado:
-      'Exemplo: aportando R$ 200/mês a 0,8% ao mês por 20 anos, sem aporte inicial, o total ultrapassa R$ 115 mil — sendo boa parte disso só juros sobre juros, não dinheiro que você colocou.',
+      'Exemplo hipotético: aportando R$ 200 por mês durante 20 anos, a uma taxa constante de 0,8% ao mês e sem aporte inicial, o saldo ficaria próximo de R$ 145 mil antes de impostos e custos. A taxa é apenas uma premissa de simulação; o resultado real pode ser diferente.',
   },
 
   flashcards: [
@@ -89,7 +88,7 @@ export const moduloEducacaoFinanceira: Modulo = {
     {
       id: 'fc2',
       frente: 'Qual é a dívida mais cara do Brasil?',
-      verso: 'O rotativo do cartão de crédito, que pode passar de 400% ao ano — muito acima de qualquer outra modalidade comum.',
+      verso: 'O rotativo costuma estar entre as modalidades mais caras. Compare o Custo Efetivo Total (CET) e as condições atuais antes de contratar crédito.',
     },
     {
       id: 'fc3',
@@ -104,7 +103,7 @@ export const moduloEducacaoFinanceira: Modulo = {
     {
       id: 'fc5',
       frente: "Por que juro composto é 'faca de dois gumes'?",
-      verso: 'Multiplica seu dinheiro com o tempo quando você investe, mas multiplica uma dívida na mesma velocidade quando você deve.',
+      verso: 'Quando há aportes e rendimento, os juros podem se acumular a favor do investidor; em uma dívida, podem aumentar o saldo devedor. Taxas, custos e prazos fazem diferença.',
     },
     {
       id: 'fc6',
@@ -118,7 +117,7 @@ export const moduloEducacaoFinanceira: Modulo = {
       pergunta: 'Qual dessas modalidades costuma ter a maior taxa de juros no Brasil?',
       alternativas: ['Tesouro Selic', 'Empréstimo consignado', 'Cartão de crédito rotativo', 'CDB de banco grande'],
       correta: 2,
-      explicacao: 'O rotativo do cartão é historicamente o mais caro do mercado brasileiro, podendo superar 400% ao ano.',
+      explicacao: 'O rotativo costuma ter custo elevado, mas as taxas variam. Compare o CET das opções disponíveis e evite generalizar uma taxa sem conferir as condições atuais.',
     },
     {
       pergunta: 'Na regra 50/30/20, o que representam os 20%?',
@@ -151,7 +150,7 @@ export const moduloEducacaoFinanceira: Modulo = {
     },
     {
       pergunta: 'É melhor quitar dívidas ou começar a investir primeiro?',
-      resposta: 'Depende da taxa de juros da dívida. Se ela cobra mais do que qualquer investimento renderia, quitar vem primeiro. Dívidas mais baratas podem conviver com um começo de investimento.',
+      resposta: 'Compare o custo efetivo da dívida com o retorno esperado dos investimentos, considerando impostos, riscos e liquidez. Em geral, priorize dívidas caras e preserve uma reserva mínima compatível com sua realidade.'
     },
   ],
 }

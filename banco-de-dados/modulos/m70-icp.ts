@@ -5,7 +5,7 @@ export const icp: Modulo = {
   trilhaId: 'geracao-de-receita',
   numero: 4,
   titulo: 'ICP: O Perfil de Cliente Ideal',
-  subtitulo: 'Vender para todo mundo é a receita mais cara de crescer devagar',
+  subtitulo: 'Defina quais clientes sua solução atende melhor e por quê.',
   iconName: 'Target',
   duracaoMin: 10,
 

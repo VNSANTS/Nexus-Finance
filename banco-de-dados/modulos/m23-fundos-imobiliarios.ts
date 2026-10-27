@@ -5,7 +5,7 @@ export const moduloFundosImobiliarios: Modulo = {
   trilhaId: 'fundos',
   numero: 2,
   titulo: 'Fundos Imobiliários (FIIs)',
-  subtitulo: 'Ser dono de imóvel sem comprar imóvel',
+  subtitulo: 'Entenda como funcionam os FIIs, seus rendimentos e seus riscos.',
   iconName: 'Building',
   duracaoMin: 14,
 

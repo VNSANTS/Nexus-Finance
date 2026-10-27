@@ -5,7 +5,7 @@ export const introducaoCulturaOrganizacional: Modulo = {
   trilhaId: 'cultura-organizacional',
   numero: 1,
   titulo: 'Introdução: Cultura Organizacional',
-  subtitulo: 'O sistema invisível que decide o que acontece quando ninguém está olhando',
+  subtitulo: 'Entenda como decisões e comportamentos formam a cultura de uma equipe.',
   iconName: 'Users',
   duracaoMin: 8,
 

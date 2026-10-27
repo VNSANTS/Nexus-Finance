@@ -5,7 +5,7 @@ export const moduloCarteiraInvestimentos: Modulo = {
   trilhaId: 'estrategia-gestao',
   numero: 2,
   titulo: 'Carteira de Investimentos',
-  subtitulo: 'Blocos com função, não uma coleção de ativos',
+  subtitulo: 'Dê a cada ativo uma função coerente com seus objetivos.',
   iconName: 'Briefcase',
   duracaoMin: 13,
 

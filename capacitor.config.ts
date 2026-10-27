@@ -1,4 +1,5 @@
 import type { CapacitorConfig } from '@capacitor/cli'
+import { env } from 'node:process'
 
 // O app usa a hospedagem pública de produção do Vercel.
 // Mantenha este domínio alinhado ao alias de produção confirmado.
@@ -8,7 +9,9 @@ const config: CapacitorConfig = {
   appName: 'Nexus Finance',
   webDir: 'dist',
   server: {
-    url: 'https://nexus-finance-lyart.vercel.app/',
+    ...(env.CAPACITOR_USE_LOCAL_BUNDLE === 'true'
+      ? {}
+      : { url: 'https://nexus-finance-ten-kappa.vercel.app/' }),
     androidScheme: 'https',
   },
 }

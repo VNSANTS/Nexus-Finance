@@ -5,7 +5,7 @@ export const moduloViesesComportamentais: Modulo = {
   trilhaId: 'fundamentos',
   numero: 6,
   titulo: 'Vieses Comportamentais',
-  subtitulo: 'Atalhos mentais que falham com dinheiro',
+  subtitulo: 'Identifique atalhos mentais que podem distorcer decisões financeiras.',
   iconName: 'Shuffle',
   duracaoMin: 13,
 

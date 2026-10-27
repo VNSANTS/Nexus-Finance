@@ -5,7 +5,7 @@ export const moduloTesouroDireto: Modulo = {
   trilhaId: 'renda-fixa-previdencia',
   numero: 2,
   titulo: 'Tesouro Direto',
-  subtitulo: 'Emprestar para o governo a partir de R$ 30',
+  subtitulo: 'Conheça os títulos públicos e os fatores que afetam seus resultados.',
   iconName: 'Landmark',
   duracaoMin: 13,
 

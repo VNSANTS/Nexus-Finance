@@ -5,7 +5,7 @@ export const estruturaEContratacao: Modulo = {
   trilhaId: 'cultura-organizacional',
   numero: 4,
   titulo: 'Estrutura e Contratação',
-  subtitulo: 'Contratar rápido demais é o jeito mais caro de crescer devagar',
+  subtitulo: 'Relacione estratégia, estrutura da equipe e critérios de contratação.',
   iconName: 'Handshake',
   duracaoMin: 11,
 

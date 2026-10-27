@@ -6,7 +6,7 @@ export const investimentosAlternativos: Modulo = {
   trilhaId: 'alternativos-derivativos',
   numero: 6,
   titulo: 'Investimentos Alternativos',
-  subtitulo: 'Arte, vinhos, whisky, terras e outras categorias fora do tradicional — o que vale a pena e o que é ilusão de retorno',
+  subtitulo: 'Avalie liquidez, custos e riscos de ativos fora das classes tradicionais.',
   iconName: 'Gem',
   duracaoMin: 11,
 

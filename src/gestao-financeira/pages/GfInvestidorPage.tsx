@@ -6,6 +6,7 @@ import {
 import GfHeader from '../components/GfHeader'
 import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
 import { formatMoeda } from '../formatMoeda'
+import { dataLocalISO } from '@/utils/datas'
 import type { Investimento, ClasseAtivo } from '../types'
 import { calcularValorAtivo, calcularResumoCarteira, type ValorAtivo } from '../investimentos/calculos'
 import { buscarIndicadores, type IndicadoresEconomicos } from '../investimentos/indicadoresBacen'
@@ -65,7 +66,7 @@ export default function GfInvestidorPage() {
   // pra não gravar um ponto zerado por causa da corrida com o fetch inicial.
   useEffect(() => {
     if (estado.investimentos.length === 0 || atualizando) return
-    const hoje = new Date().toISOString().slice(0, 10)
+    const hoje = dataLocalISO()
     registrarHistoricoPatrimonio({
       data: hoje,
       valorTotal: resumo.valorAtual,

@@ -5,7 +5,7 @@ export const introducaoGeracaoDeReceita: Modulo = {
   trilhaId: 'geracao-de-receita',
   numero: 1,
   titulo: 'Introdução: Geração de Receita',
-  subtitulo: 'Vender sem estrutura é aposta, não estratégia',
+  subtitulo: 'Conheça fundamentos para gerar receita de forma estruturada.',
   iconName: 'Rocket',
   duracaoMin: 8,
 

@@ -5,7 +5,7 @@ export const moduloCenarioMacroeconomico: Modulo = {
   trilhaId: 'economia-mercado',
   numero: 6,
   titulo: 'Cenário Macroeconômico',
-  subtitulo: 'Uma rotina de 15 minutos por semana',
+  subtitulo: 'Acompanhe indicadores para formar uma leitura do cenário econômico.',
   iconName: 'Gauge',
   duracaoMin: 13,
 

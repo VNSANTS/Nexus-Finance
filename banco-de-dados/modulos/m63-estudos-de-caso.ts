@@ -6,7 +6,7 @@ export const estudosDeCaso: Modulo = {
   trilhaId: 'cultura-investimentos',
   numero: 3,
   titulo: 'Estudos de Caso de Empresas',
-  subtitulo: 'Como decisões reais de investimento se desenrolaram — o que deu certo, o que deu errado, e por quê',
+  subtitulo: 'Analise decisões empresariais, resultados e fatores de contexto.',
   iconName: 'FileSearch',
   duracaoMin: 14,
 

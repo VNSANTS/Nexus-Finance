@@ -5,7 +5,7 @@ export const moduloAcoes: Modulo = {
   trilhaId: 'acoes-bolsa',
   numero: 3,
   titulo: 'Ações',
-  subtitulo: 'O que você comprou quando comprou uma ação',
+  subtitulo: 'Entenda o que significa ser sócio de uma empresa listada.',
   iconName: 'TrendingUp',
   duracaoMin: 13,
 

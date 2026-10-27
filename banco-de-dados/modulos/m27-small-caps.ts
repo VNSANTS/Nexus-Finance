@@ -5,7 +5,7 @@ export const moduloSmallCaps: Modulo = {
   trilhaId: 'acoes-bolsa',
   numero: 4,
   titulo: 'Small Caps',
-  subtitulo: 'Empresas menores: mais espaço para crescer, mais chance de dar errado',
+  subtitulo: 'Avalie oportunidades e riscos de empresas de menor porte.',
   iconName: 'Sprout',
   duracaoMin: 11,
 

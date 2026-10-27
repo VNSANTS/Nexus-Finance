@@ -6,7 +6,7 @@ export const reservaDeValor: Modulo = {
   trilhaId: 'alternativos-derivativos',
   numero: 2,
   titulo: 'Reserva de Valor',
-  subtitulo: 'Por que nem todo ativo que sobe de preço protege seu dinheiro da inflação',
+  subtitulo: 'Compare ativos que podem preservar poder de compra ao longo do tempo.',
   iconName: 'ShieldCheck',
   duracaoMin: 10,
 

@@ -5,7 +5,7 @@ export const moduloRendaFixaAvancada: Modulo = {
   trilhaId: 'vida-financeira',
   numero: 7,
   titulo: 'Renda Fixa Avançada para Renda Mensal',
-  subtitulo: 'Transformar patrimônio acumulado em salário todo mês, sem corroer o principal',
+  subtitulo: 'Planeje fluxos de renda considerando prazo, risco e preservação do capital.',
   iconName: 'Wallet2',
   duracaoMin: 13,
 

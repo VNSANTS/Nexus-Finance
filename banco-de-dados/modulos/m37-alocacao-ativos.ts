@@ -5,7 +5,7 @@ export const alocacaoAtivos: Modulo = {
   trilhaId: 'estrategia-gestao',
   numero: 4,
   titulo: 'Alocação de Ativos',
-  subtitulo: 'A decisão que pesa mais no seu retorno do que escolher qual ação comprar',
+  subtitulo: 'Ajuste a composição da carteira ao prazo e à tolerância a risco.',
   iconName: 'PieChart',
   duracaoMin: 12,
 

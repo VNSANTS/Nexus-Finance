@@ -6,7 +6,7 @@ export const ouro: Modulo = {
   trilhaId: 'alternativos-derivativos',
   numero: 3,
   titulo: 'Ouro',
-  subtitulo: 'As diferentes formas de investir em ouro no Brasil e o que cada uma custa de verdade',
+  subtitulo: 'Conheça formas de exposição ao ouro, com seus custos e riscos.',
   iconName: 'Coins',
   duracaoMin: 10,
 

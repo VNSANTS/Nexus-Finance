@@ -6,7 +6,7 @@ export const carreira: Modulo = {
   trilhaId: 'carreira-negocios',
   numero: 4,
   titulo: 'Carreira',
-  subtitulo: 'Por que trocar de emprego costuma render mais que esperar por um aumento interno',
+  subtitulo: 'Planeje decisões de carreira com critérios e informações de mercado.',
   iconName: 'Briefcase',
   duracaoMin: 11,
 

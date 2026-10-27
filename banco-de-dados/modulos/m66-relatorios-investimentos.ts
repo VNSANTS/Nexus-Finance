@@ -6,7 +6,7 @@ export const relatoriosInvestimentos: Modulo = {
   trilhaId: 'cultura-investimentos',
   numero: 6,
   titulo: 'Relatórios de Investimentos',
-  subtitulo: 'Como ler relatórios de análise sem confundir opinião de analista com fato garantido',
+  subtitulo: 'Separe dados, premissas e opiniões ao ler relatórios de análise.',
   iconName: 'FileBarChart',
   duracaoMin: 12,
 

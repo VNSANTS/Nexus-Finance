@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Calendar } from 'lucide-react'
 import type { PeriodoRelatorio } from '../relatorios'
 import { periodosPreDefinidos } from '../relatorios'
+import { dataLocalISO } from '@/utils/datas'
 
 interface Props {
   ativo: PeriodoRelatorio
@@ -11,7 +12,7 @@ interface Props {
 const PRESETS = periodosPreDefinidos()
 
 function hojeISO() {
-  return new Date().toISOString().slice(0, 10)
+  return dataLocalISO()
 }
 
 // Antes esses dois campos eram "defaultValue" (não-controlados) amarrados

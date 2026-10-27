@@ -5,7 +5,7 @@ export const moduloFundamentosBolsa: Modulo = {
   trilhaId: 'acoes-bolsa',
   numero: 2,
   titulo: 'Fundamentos da Bolsa',
-  subtitulo: 'O manual do botão: dar uma ordem sem pagar caro por desatenção',
+  subtitulo: 'Aprenda os tipos de ordem e os cuidados antes de negociar.',
   iconName: 'MousePointerClick',
   duracaoMin: 11,
 

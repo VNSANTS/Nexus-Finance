@@ -5,7 +5,7 @@ export const custoVsInvestimento: Modulo = {
   trilhaId: 'gestao-financeira-negocios',
   numero: 2,
   titulo: 'Custo vs. Investimento',
-  subtitulo: 'A mesma nota fiscal pode representar duas coisas completamente diferentes',
+  subtitulo: 'Avalie gastos pelo objetivo, pelo prazo e pelo valor que podem gerar.',
   iconName: 'ArrowLeftRight',
   duracaoMin: 10,
 

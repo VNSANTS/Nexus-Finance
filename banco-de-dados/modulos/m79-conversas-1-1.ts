@@ -5,7 +5,7 @@ export const conversas1a1: Modulo = {
   trilhaId: 'cultura-organizacional',
   numero: 6,
   titulo: 'Conversas 1:1',
-  subtitulo: 'O ritual de liderança mais subestimado, e o mais fácil de fazer errado',
+  subtitulo: 'Prepare conversas individuais com escuta, clareza e acompanhamento.',
   iconName: 'MessageSquare',
   duracaoMin: 10,
 

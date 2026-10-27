@@ -5,6 +5,7 @@ import { Database, Download, Upload, Clock, CloudOff, AlertTriangle, FileJson, X
 import GfHeader from '../components/GfHeader'
 import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
 import type { GestaoFinanceiraState } from '../types'
+import { dataLocalISO } from '@/utils/datas'
 
 // Tela "Dados e backup" (menu Mais → Dados e backup). Escopo: backup
 // manual local (baixar/restaurar um arquivo .json com TUDO da Gestão
@@ -60,7 +61,7 @@ export default function GfDadosBackupPage() {
 
   function aoExportar() {
     const agora = new Date()
-    const nomeArquivo = `nexus-financeira-backup-${agora.toISOString().slice(0, 10)}.json`
+    const nomeArquivo = `nexus-financeira-backup-${dataLocalISO(agora)}.json`
     baixarArquivo(nomeArquivo, JSON.stringify(estado, null, 2), 'application/json')
     try {
       window.localStorage.setItem(CHAVE_ULTIMO_BACKUP, agora.toISOString())

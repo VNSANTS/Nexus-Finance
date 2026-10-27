@@ -6,7 +6,7 @@ export const empreendedorismo: Modulo = {
   trilhaId: 'carreira-negocios',
   numero: 2,
   titulo: 'Empreendedorismo',
-  subtitulo: 'Por que a maioria dos negócios quebra por falta de caixa, não por falta de ideia',
+  subtitulo: 'Estruture finanças e operação para testar uma ideia de negócio.',
   iconName: 'Rocket',
   duracaoMin: 13,
 

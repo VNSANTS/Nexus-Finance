@@ -5,7 +5,7 @@ export const educacaoFinanceiraInfantil: Modulo = {
   trilhaId: 'fundamentos',
   numero: 7,
   titulo: 'Educação Financeira Infantil',
-  subtitulo: 'Como ensinar seus filhos sobre dinheiro sem repetir o tabu que você viveu',
+  subtitulo: 'Converse sobre dinheiro com crianças de forma prática e adequada à idade.',
   iconName: 'Baby',
   duracaoMin: 9,
 

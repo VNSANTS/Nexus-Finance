@@ -6,7 +6,7 @@ export const construcaoPatrimonio: Modulo = {
   trilhaId: 'vida-financeira',
   numero: 3,
   titulo: 'Construção de Patrimônio',
-  subtitulo: 'O processo mensal que transforma renda em capital ao longo de décadas',
+  subtitulo: 'Crie hábitos para acumular patrimônio de forma consistente.',
   iconName: 'Building2',
   duracaoMin: 12,
 

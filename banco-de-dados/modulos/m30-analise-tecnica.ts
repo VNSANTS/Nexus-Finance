@@ -5,7 +5,7 @@ export const moduloAnaliseTecnica: Modulo = {
   trilhaId: 'acoes-bolsa',
   numero: 7,
   titulo: 'Análise Técnica',
-  subtitulo: 'Estudar o gráfico e o comportamento do preço, com consciência dos limites',
+  subtitulo: 'Leia gráficos e reconheça os limites dos padrões de preço.',
   iconName: 'CandlestickChart',
   duracaoMin: 16,
 

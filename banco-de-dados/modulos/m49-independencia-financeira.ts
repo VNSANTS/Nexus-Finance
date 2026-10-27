@@ -5,7 +5,7 @@ export const moduloIndependenciaFinanceira: Modulo = {
   trilhaId: 'vida-financeira',
   numero: 1,
   titulo: 'Independência Financeira',
-  subtitulo: 'Calcular o seu número e o prazo até ele',
+  subtitulo: 'Estime um patrimônio-alvo e os fatores que influenciam esse plano.',
   iconName: 'Target',
   duracaoMin: 13,
 

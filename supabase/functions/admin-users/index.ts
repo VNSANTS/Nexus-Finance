@@ -24,6 +24,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 const ORIGENS_PERMITIDAS = new Set([
   'https://vnsants.github.io',
   'https://nexus-finance-ml5phhapi-nexus-finance0vnsants.vercel.app',
+  'https://nexus-finance-ten-kappa.vercel.app',
   'https://nexus-finance-lyart.vercel.app',
   'http://localhost:5173',
   'http://127.0.0.1:5173',

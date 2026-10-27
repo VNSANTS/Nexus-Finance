@@ -5,7 +5,7 @@ export const estrategiasGrandesGestores: Modulo = {
   trilhaId: 'estrategia-gestao',
   numero: 6,
   titulo: 'Estratégias dos Grandes Gestores',
-  subtitulo: 'O que investidores lendários fazem diferente — e o que disso cabe na sua carteira',
+  subtitulo: 'Conheça estratégias conhecidas e avalie o que pode ser adaptado.',
   iconName: 'Trophy',
   duracaoMin: 13,
 

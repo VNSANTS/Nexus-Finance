@@ -6,7 +6,7 @@ export const documentarios: Modulo = {
   trilhaId: 'cultura-investimentos',
   numero: 4,
   titulo: 'Documentários sobre Economia',
-  subtitulo: 'Como assistir com espírito crítico, sem confundir narrativa envolvente com análise completa',
+  subtitulo: 'Assista a documentários de finanças com olhar crítico e contextual.',
   iconName: 'Film',
   duracaoMin: 9,
 

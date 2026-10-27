@@ -5,7 +5,7 @@ export const moduloAnaliseFundamentalista: Modulo = {
   trilhaId: 'acoes-bolsa',
   numero: 5,
   titulo: 'Análise Fundamentalista',
-  subtitulo: 'Avaliar o negócio antes do gráfico: o que a empresa faz e por quanto tempo faz bem',
+  subtitulo: 'Estude o negócio, os resultados e a posição da empresa no setor.',
   iconName: 'Microscope',
   duracaoMin: 16,
 

@@ -5,7 +5,7 @@ export const pessoasProcessosTecnologia: Modulo = {
   trilhaId: 'eficiencia-operacional',
   numero: 6,
   titulo: 'A Ordem Certa: Pessoas, Processos, Tecnologia',
-  subtitulo: 'Automatizar um processo ruim só faz o erro acontecer mais rápido',
+  subtitulo: 'Avalie pessoas e processos antes de escolher uma tecnologia.',
   iconName: 'ListOrdered',
   duracaoMin: 11,
 

@@ -5,7 +5,7 @@ export const priorizacaoDeCanais: Modulo = {
   trilhaId: 'geracao-de-receita',
   numero: 7,
   titulo: 'Priorização de Canais e o Coeficiente Viral',
-  subtitulo: 'Nem todo canal de aquisição merece o mesmo investimento — e alguns crescem sozinhos',
+  subtitulo: 'Compare canais de aquisição por custo, alcance e potencial de retorno.',
   iconName: 'Radar',
   duracaoMin: 12,
 

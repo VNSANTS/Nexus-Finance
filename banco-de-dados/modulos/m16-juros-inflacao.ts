@@ -5,7 +5,7 @@ export const moduloJurosInflacao: Modulo = {
   trilhaId: 'economia-mercado',
   numero: 8,
   titulo: 'Juros e Inflação',
-  subtitulo: 'O par de números que define tudo no Brasil',
+  subtitulo: 'Entenda como juros e inflação afetam preços, crédito e investimentos.',
   iconName: 'Percent',
   duracaoMin: 13,
 

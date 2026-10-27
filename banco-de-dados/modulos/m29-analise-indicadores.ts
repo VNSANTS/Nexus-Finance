@@ -5,7 +5,7 @@ export const moduloAnaliseIndicadores: Modulo = {
   trilhaId: 'acoes-bolsa',
   numero: 6,
   titulo: 'Análise de Indicadores',
-  subtitulo: 'A caixa de ferramentas numérica, e nenhuma delas serve sozinha',
+  subtitulo: 'Interprete indicadores financeiros com contexto e comparação.',
   iconName: 'Ruler',
   duracaoMin: 17,
 

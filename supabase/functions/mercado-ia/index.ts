@@ -21,6 +21,7 @@
 const ORIGENS_PERMITIDAS = new Set([
   'https://vnsants.github.io',
   'https://nexus-finance-ml5phhapi-nexus-finance0vnsants.vercel.app',
+  'https://nexus-finance-ten-kappa.vercel.app',
   'https://nexus-finance-lyart.vercel.app',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
@@ -122,7 +123,7 @@ Deno.serve(async (req) => {
       return respostaOk({ eventos }, req)
     }
 
-    const tickers = corpo.tickers ?? []
+    const tickers = (corpo.tickers ?? []) as string[]
     const tickersLimpos = [...new Set(tickers.map((t) => t.trim().toUpperCase()).filter(Boolean))].slice(0, MAX_TICKERS_POR_CHAMADA)
     if (tickersLimpos.length === 0) return respostaErro('Envie ao menos um ticker.', 400, req)
 

@@ -5,7 +5,7 @@ export const orcamentoBaseZero: Modulo = {
   trilhaId: 'gestao-financeira-negocios',
   numero: 4,
   titulo: 'Orçamento Base Zero',
-  subtitulo: 'Cada linha começa em zero — nenhum gasto é aprovado só porque existia ano passado',
+  subtitulo: 'Revise despesas a partir das necessidades atuais do negócio.',
   iconName: 'CalendarClock',
   duracaoMin: 11,
 

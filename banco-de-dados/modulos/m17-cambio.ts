@@ -5,7 +5,7 @@ export const moduloCambio: Modulo = {
   trilhaId: 'economia-mercado',
   numero: 9,
   titulo: 'Câmbio',
-  subtitulo: 'Sua vida já é parcialmente dolarizada',
+  subtitulo: 'Veja como a variação cambial chega aos preços e à carteira.',
   iconName: 'DollarSign',
   duracaoMin: 11,
 

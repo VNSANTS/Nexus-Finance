@@ -5,7 +5,7 @@ export const funilDeConversao: Modulo = {
   trilhaId: 'geracao-de-receita',
   numero: 5,
   titulo: 'Funil de Conversão: Onde o Dinheiro Vaza',
-  subtitulo: 'A maioria dos negócios não tem um problema de tráfego, tem um problema de vazamento',
+  subtitulo: 'Meça as etapas de conversão e localize pontos de perda de clientes.',
   iconName: 'Filter',
   duracaoMin: 11,
 

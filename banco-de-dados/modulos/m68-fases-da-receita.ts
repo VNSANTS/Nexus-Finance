@@ -5,7 +5,7 @@ export const fasesDaReceita: Modulo = {
   trilhaId: 'geracao-de-receita',
   numero: 2,
   titulo: 'As Quatro Fases da Receita',
-  subtitulo: 'Venda única, esteira, recorrência e embaixador — elas não se substituem, se acumulam',
+  subtitulo: 'Entenda diferentes formas de gerar receita e quando cada uma se aplica.',
   iconName: 'Layers',
   duracaoMin: 10,
 

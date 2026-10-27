@@ -5,7 +5,7 @@ export const moduloDividendos: Modulo = {
   trilhaId: 'acoes-bolsa',
   numero: 9,
   titulo: 'Dividendos',
-  subtitulo: 'Parte do lucro voltando para o bolso do sócio',
+  subtitulo: 'Saiba de onde vêm os dividendos e o que observar ao avaliá-los.',
   iconName: 'Coins',
   duracaoMin: 12,
 

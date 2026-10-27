@@ -16,6 +16,7 @@ import { iconePorNome } from '../iconMap'
 import { formatPercent } from '@/utils/format'
 import { formatMoeda } from '../formatMoeda'
 import type { Transacao, GestaoFinanceiraState } from '../types'
+import { dataLocalISO, deslocarDataISO } from '@/utils/datas'
 
 type Ordenacao = 'recentes' | 'antigos' | 'maior-valor' | 'menor-valor'
 
@@ -33,8 +34,8 @@ const PROXIMA_ORDENACAO: Record<Ordenacao, Ordenacao> = {
 }
 
 function rotuloDia(dataStr: string): string {
-  const hoje = new Date().toISOString().slice(0, 10)
-  const ontem = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  const hoje = dataLocalISO()
+  const ontem = deslocarDataISO(hoje, -1)
   if (dataStr === hoje) return 'Hoje'
   if (dataStr === ontem) return 'Ontem'
   const d = new Date(`${dataStr}T12:00:00`)

@@ -5,7 +5,7 @@ export const introducaoEficienciaOperacional: Modulo = {
   trilhaId: 'eficiencia-operacional',
   numero: 1,
   titulo: 'Introdução: Eficiência Operacional',
-  subtitulo: 'O método da Toyota, adaptado para qualquer tipo de operação',
+  subtitulo: 'Entenda como identificar atividades que não geram valor.',
   iconName: 'Settings2',
   duracaoMin: 8,
 

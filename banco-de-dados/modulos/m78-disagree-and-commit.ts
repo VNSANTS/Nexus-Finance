@@ -5,7 +5,7 @@ export const disagreeAndCommit: Modulo = {
   trilhaId: 'cultura-organizacional',
   numero: 5,
   titulo: 'Disagree and Commit',
-  subtitulo: 'Discordar na sala, executar junto depois de decidido',
+  subtitulo: 'Debata decisões com franqueza e alinhe a execução após a escolha.',
   iconName: 'Handshake',
   duracaoMin: 10,
 

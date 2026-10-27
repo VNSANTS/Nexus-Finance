@@ -5,7 +5,7 @@ export const ccc: Modulo = {
   trilhaId: 'gestao-financeira-negocios',
   numero: 5,
   titulo: 'CCC: O Tempo que o Dinheiro Fica Preso',
-  subtitulo: 'Entre pagar o fornecedor e receber do cliente, o caixa fica sequestrado',
+  subtitulo: 'Entenda o ciclo de conversão de caixa e seu efeito no capital de giro.',
   iconName: 'Hourglass',
   duracaoMin: 12,
 

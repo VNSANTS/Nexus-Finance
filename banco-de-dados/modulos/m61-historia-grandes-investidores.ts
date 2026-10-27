@@ -6,7 +6,7 @@ export const historiaGrandesInvestidores: Modulo = {
   trilhaId: 'cultura-investimentos',
   numero: 1,
   titulo: 'História de Grandes Investidores',
-  subtitulo: 'O que décadas de mercado ensinam sobre paciência, ciclos e disciplina',
+  subtitulo: 'Explore lições e contextos da história dos investimentos.',
   iconName: 'ScrollText',
   duracaoMin: 13,
 

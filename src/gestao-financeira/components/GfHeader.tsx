@@ -23,7 +23,7 @@ export default function GfHeader({ titulo, subtitulo, icone: Icone, corIcone = '
       {voltarPara && (
         <button
           onClick={() => navigate(voltarPara)}
-          className="flex items-center gap-1 text-slate-400 text-[13px] font-semibold mb-3.5"
+          className="flex min-h-[44px] items-center gap-1 text-slate-400 text-[13px] font-semibold mb-2.5"
         >
           <ChevronLeft size={16} /> Voltar
         </button>

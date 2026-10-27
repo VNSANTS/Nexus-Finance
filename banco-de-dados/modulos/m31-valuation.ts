@@ -5,7 +5,7 @@ export const moduloValuation: Modulo = {
   trilhaId: 'acoes-bolsa',
   numero: 8,
   titulo: 'Valuation',
-  subtitulo: 'Estimar quanto uma empresa vale, sabendo que o resultado é faixa e nunca número exato',
+  subtitulo: 'Estime faixas de valor e entenda as incertezas de cada premissa.',
   iconName: 'Scale',
   duracaoMin: 18,
 

@@ -5,7 +5,7 @@ export const moduloPlanejamentoFinanceiro: Modulo = {
   trilhaId: 'vida-financeira',
   numero: 5,
   titulo: 'Planejamento Financeiro',
-  subtitulo: 'Dinheiro sem plano vira desculpa depois que acaba',
+  subtitulo: 'Transforme objetivos em decisões, prazos e ações acompanháveis.',
   iconName: 'CalendarCheck',
   duracaoMin: 13,
 

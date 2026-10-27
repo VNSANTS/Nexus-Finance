@@ -10,13 +10,14 @@ import { transacoesDoDia } from '../selectors'
 import { iconePorNome } from '../iconMap'
 import { formatMoeda } from '../formatMoeda'
 import type { FormaPagamento, TipoTransacao } from '../types'
+import { dataLocalISO } from '@/utils/datas'
 
 interface Props {
   novoAberto?: boolean
 }
 
 function hojeISO() {
-  return new Date().toISOString().slice(0, 10)
+  return dataLocalISO()
 }
 
 const TIPOS_VALIDOS: TipoTransacao[] = ['receita', 'despesa', 'transferencia']

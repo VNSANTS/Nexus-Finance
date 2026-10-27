@@ -6,7 +6,7 @@ export const lideranca: Modulo = {
   trilhaId: 'carreira-negocios',
   numero: 3,
   titulo: 'Liderança',
-  subtitulo: 'A diferença entre gerenciar tarefas e liderar pessoas — e por que isso afeta seu bolso',
+  subtitulo: 'Desenvolva práticas de liderança e entenda seu impacto no trabalho.',
   iconName: 'Users',
   duracaoMin: 11,
 
