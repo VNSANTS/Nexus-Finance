@@ -4,6 +4,7 @@ import { Check, Landmark, CreditCard as CreditCardIcon } from 'lucide-react'
 import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
 import { iconePorNome } from '../iconMap'
 import type { FormaPagamento, Transacao, TipoTransacao } from '../types'
+import { dataLocalISO } from '@/utils/datas'
 
 interface Props {
   tipoInicial: TipoTransacao
@@ -27,7 +28,7 @@ const FORMAS: { id: FormaPagamento; label: string }[] = [
 function agoraISO() {
   const d = new Date()
   return {
-    data: d.toISOString().slice(0, 10),
+    data: dataLocalISO(d),
     hora: d.toTimeString().slice(0, 5),
   }
 }

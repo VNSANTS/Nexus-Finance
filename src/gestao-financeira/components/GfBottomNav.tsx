@@ -23,7 +23,7 @@ export default function GfBottomNav() {
   return (
     <div className="fixed left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[456px] z-50 bottom-[calc(12px+env(safe-area-inset-bottom))]">
       <nav
-        className="rounded-[28px] bg-[#0B1120]/95 backdrop-blur-lg border border-white/5 shadow-2xl"
+        className="rounded-[28px] bg-[#0B1120]/95 backdrop-blur-lg border border-white/10 shadow-2xl"
         aria-label="Navegação da Gestão Financeira"
       >
         <ul className="flex items-stretch justify-between px-2">
@@ -59,14 +59,14 @@ function ItemNav({
 }) {
   return (
     <li className="flex-1">
-      <NavLink to={to} end={fim} className="relative flex flex-col items-center justify-center gap-1 py-2.5 min-h-[52px]">
+      <NavLink to={to} end={fim} className="relative flex min-h-[60px] flex-col items-center justify-center gap-1 py-2">
         {({ isActive }) => (
           <>
             <span className="relative flex items-center justify-center">
               <Icon size={18} strokeWidth={isActive ? 2.1 : 1.7} className={isActive ? 'text-accent-cyan' : 'text-slate-300'} />
               {comBadge && !isActive && <span className="absolute -top-0.5 -right-1 w-1.5 h-1.5 rounded-full bg-accent-red" />}
             </span>
-            <span className={`text-[9.5px] font-medium tracking-wide whitespace-nowrap ${isActive ? 'text-accent-cyan' : 'text-slate-300'}`}>
+            <span className={`text-[11px] font-medium tracking-wide whitespace-nowrap ${isActive ? 'text-accent-cyan' : 'text-slate-200'}`}>
               {label}
             </span>
             {isActive && (

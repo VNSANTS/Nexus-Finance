@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ChevronLeft, Landmark, LineChart, Coins, Loader2, Search } from 'lucide-react'
 import type { Investimento, ClasseAtivo, IndexadorRendaFixa, TipoAtivoRendaVariavel } from '../types'
+import { dataLocalISO } from '@/utils/datas'
 import { buscarPrecosAcoes } from '../investimentos/apiInvestimentos'
 import { CRIPTOS_COMUNS, buscarTesouroDireto, type TituloTesouro } from '../investimentos/apiInvestimentos'
 
@@ -14,7 +15,7 @@ function novoId() {
   return `inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 function hojeISO() {
-  return new Date().toISOString().slice(0, 10)
+  return dataLocalISO()
 }
 
 export default function FormularioInvestimento({

@@ -1,7 +1,8 @@
 import type { Cartao, Categoria, Conta, GestaoFinanceiraState, Transacao } from './types'
+import { dataLocalISO, diferencaDiasISO } from '@/utils/datas'
 
 function hojeISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  return dataLocalISO()
 }
 
 export function mesAtualStr(data = new Date()): string {
@@ -116,12 +117,11 @@ export function gastosPorCategoria(
 }
 
 export function contasProximasDoVencimento(estado: GestaoFinanceiraState, dias = 7) {
-  const hoje = new Date(hojeISO())
+  const hoje = hojeISO()
   return estado.dividas
     .filter((d) => !d.quitada && d.vencimento)
     .map((d) => {
-      const venc = new Date(d.vencimento as string)
-      const diffDias = Math.ceil((venc.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))
+      const diffDias = diferencaDiasISO(hoje, d.vencimento as string)
       return { divida: d, diffDias }
     })
     .filter((x) => x.diffDias >= -30 && x.diffDias <= dias)

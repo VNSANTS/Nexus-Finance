@@ -58,7 +58,7 @@ export function formatMoeda(valor: number, config: ConfigMoeda): string {
 }
 
 export function formatDataConfig(dataIso: string, formato: GestaoFinanceiraState['formatoData']): string {
-  const d = new Date(dataIso)
+  const d = new Date(`${dataIso}T12:00:00`)
   if (Number.isNaN(d.getTime())) return dataIso
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
