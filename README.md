@@ -4,7 +4,8 @@
 
 O **Nexus Finance** é um aplicativo de educação financeira que combina trilhas de aprendizagem, ferramentas interativas e recursos de acompanhamento de progresso. O projeto busca tornar conceitos financeiros mais acessíveis por meio de uma experiência visual, prática e gamificada.
 
-- **Aplicação web:** https://vnsants.github.io/Nexus-Finance/
+- **Aplicação web (Vercel):** https://nexus-finance-lyart.vercel.app/
+- **GitHub Actions (builds, verificações e deploy):** https://github.com/VNSANTS/Nexus-Finance/actions
 - **Repositório:** https://github.com/VNSANTS/Nexus-Finance
 - **Status:** projeto em evolução; a publicação na Google Play ainda depende da preparação e aprovação da ficha e do pacote de lançamento.
 
@@ -48,7 +49,8 @@ O **Nexus Finance** é um aplicativo de educação financeira que combina trilha
 - **Tailwind CSS**
 - **Capacitor** para integração Android
 - **Supabase** para autenticação, banco de dados e funções de backend
-- **GitHub Pages** e **GitHub Actions** para publicação web e automação de builds
+- **Vercel** para a aplicação web em produção; **GitHub Pages** também está configurado para publicação
+- **GitHub Actions** para builds, verificações, análise CodeQL e deploy: [ver execuções](https://github.com/VNSANTS/Nexus-Finance/actions)
 
 ## Executar localmente
 
@@ -112,7 +114,7 @@ No GitHub Actions, configure os segredos/variáveis de build exigidos pelos work
 
 ## Publicação e versão Android
 
-A versão web é publicada pelo fluxo de deploy configurado no GitHub Actions. O repositório também contém um workflow para gerar um APK Android de depuração.
+A versão web usada pelo aplicativo Android está hospedada na [Vercel](https://nexus-finance-lyart.vercel.app/). Os builds, verificações e execuções de deploy podem ser acompanhados em [GitHub Actions](https://github.com/VNSANTS/Nexus-Finance/actions). O repositório também mantém um fluxo de publicação no GitHub Pages e contém um workflow para gerar um APK Android de depuração.
 
 **Importante:** o workflow existente gera um **APK de debug**, que serve para testes e não é o pacote de lançamento recomendado para a Google Play. Antes da publicação oficial, gere e valide um **Android App Bundle (AAB) assinado para release**, configure a assinatura de forma segura e teste o pacote em dispositivos reais.
 
