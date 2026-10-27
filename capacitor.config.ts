@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   appName: 'Nexus Finance',
   webDir: 'dist',
   server: {
-    url: 'https://nexus-finance-lyart.vercel.app/',
+    url: 'https://nexus-finance-ten-kappa.vercel.app/',
     androidScheme: 'https',
   },
 }
