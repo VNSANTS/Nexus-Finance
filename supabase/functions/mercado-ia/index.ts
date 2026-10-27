@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       return respostaOk({ eventos }, req)
     }
 
-    const tickers = corpo.tickers ?? []
+    const tickers = (corpo.tickers ?? []) as string[]
     const tickersLimpos = [...new Set(tickers.map((t) => t.trim().toUpperCase()).filter(Boolean))].slice(0, MAX_TICKERS_POR_CHAMADA)
     if (tickersLimpos.length === 0) return respostaErro('Envie ao menos um ticker.', 400, req)
 
