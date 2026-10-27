@@ -5,7 +5,7 @@ export const moduloPrevidencia: Modulo = {
   trilhaId: 'renda-fixa-previdencia',
   numero: 3,
   titulo: 'Previdência',
-  subtitulo: 'O que decide o resultado é o fundo que está dentro do plano',
+  subtitulo: 'Compare planos, fundos, custos e regras de previdência privada.',
   iconName: 'Hourglass',
   duracaoMin: 12,
 

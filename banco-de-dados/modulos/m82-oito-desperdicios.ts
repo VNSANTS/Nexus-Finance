@@ -5,7 +5,7 @@ export const oitoDesperdicios: Modulo = {
   trilhaId: 'eficiencia-operacional',
   numero: 2,
   titulo: 'Os Oito Desperdícios (Muda)',
-  subtitulo: 'Toda operação tem, em algum grau, todos os oito — a questão é qual pesa mais',
+  subtitulo: 'Reconheça desperdícios e avalie seu impacto nos processos.',
   iconName: 'Trash2',
   duracaoMin: 12,
 

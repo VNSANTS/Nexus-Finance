@@ -5,7 +5,7 @@ export const ltvCac: Modulo = {
   trilhaId: 'geracao-de-receita',
   numero: 3,
   titulo: 'LTV/CAC: A Régua que Decide se Vale a Pena Crescer',
-  subtitulo: 'O indicador mais usado no mundo para saber se um negócio está queimando dinheiro',
+  subtitulo: 'Compare custo de aquisição e valor do cliente com as premissas corretas.',
   iconName: 'Scale',
   duracaoMin: 12,
 

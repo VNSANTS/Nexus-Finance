@@ -6,7 +6,7 @@ export const biografiasInvestidores: Modulo = {
   trilhaId: 'cultura-investimentos',
   numero: 2,
   titulo: 'Biografias de Investidores',
-  subtitulo: 'Trajetórias reais, com seus acertos e erros — o que cada uma ensina de forma diferente',
+  subtitulo: 'Conheça trajetórias de investidores sem ignorar seus contextos.',
   iconName: 'UserCheck',
   duracaoMin: 12,
 

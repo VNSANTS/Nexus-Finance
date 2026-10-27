@@ -5,7 +5,7 @@ export const moduloEconomia: Modulo = {
   trilhaId: 'economia-mercado',
   numero: 2,
   titulo: 'Economia',
-  subtitulo: 'Ler uma manchete e saber o efeito no seu bolso',
+  subtitulo: 'Relacione conceitos econômicos às decisões do dia a dia.',
   iconName: 'Globe',
   duracaoMin: 14,
 

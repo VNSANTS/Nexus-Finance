@@ -6,7 +6,7 @@ export const macroAplicadaCarteira: Modulo = {
   trilhaId: 'estrategia-gestao',
   numero: 8,
   titulo: 'Macroeconomia Aplicada à Carteira',
-  subtitulo: 'Como transformar Selic, IPCA e curva de juros em decisão de compra',
+  subtitulo: 'Use indicadores econômicos como contexto para analisar a carteira.',
   iconName: 'Landmark',
   duracaoMin: 13,
 

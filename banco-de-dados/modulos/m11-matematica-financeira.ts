@@ -5,7 +5,7 @@ export const moduloMatematicaFinanceira: Modulo = {
   trilhaId: 'economia-mercado',
   numero: 3,
   titulo: 'Matemática Financeira',
-  subtitulo: 'As quatro contas que destravam todo o resto',
+  subtitulo: 'Use juros, inflação e prazo para comparar valores com clareza.',
   iconName: 'Calculator',
   duracaoMin: 15,
 

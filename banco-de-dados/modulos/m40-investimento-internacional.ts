@@ -5,7 +5,7 @@ export const investimentoInternacional: Modulo = {
   trilhaId: 'estrategia-gestao',
   numero: 7,
   titulo: 'Investimento Internacional',
-  subtitulo: 'Como tirar parte do seu patrimônio de dentro do Brasil, na prática',
+  subtitulo: 'Compare caminhos para investir no exterior e seus custos.',
   iconName: 'Globe',
   duracaoMin: 14,
 

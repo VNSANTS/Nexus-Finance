@@ -5,7 +5,7 @@ export const okrs: Modulo = {
   trilhaId: 'cultura-organizacional',
   numero: 7,
   titulo: 'OKRs',
-  subtitulo: 'Metas que alinham o time sem exigir que o líder acompanhe cada tarefa',
+  subtitulo: 'Defina objetivos e resultados-chave que orientem o trabalho da equipe.',
   iconName: 'Target',
   duracaoMin: 12,
 

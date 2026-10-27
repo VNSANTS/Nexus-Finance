@@ -6,7 +6,7 @@ export const criptomoedas: Modulo = {
   trilhaId: 'alternativos-derivativos',
   numero: 1,
   titulo: 'Criptomoedas',
-  subtitulo: 'O que você está comprando de verdade quando compra Bitcoin',
+  subtitulo: 'Entenda criptoativos, custódia, volatilidade e cuidados básicos.',
   iconName: 'Bitcoin',
   duracaoMin: 14,
 

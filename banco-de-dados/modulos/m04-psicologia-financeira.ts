@@ -5,7 +5,7 @@ export const psicologiaFinanceira: Modulo = {
   trilhaId: 'fundamentos',
   numero: 4,
   titulo: 'Psicologia Financeira',
-  subtitulo: 'Por que seu cérebro é o maior obstáculo entre você e o dinheiro',
+  subtitulo: 'Reconheça como emoções influenciam suas decisões com dinheiro.',
   iconName: 'Brain',
   duracaoMin: 11,
 

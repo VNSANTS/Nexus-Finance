@@ -5,7 +5,7 @@ export const keeperTest: Modulo = {
   trilhaId: 'cultura-organizacional',
   numero: 3,
   titulo: 'Keeper Test',
-  subtitulo: 'A pergunta que substitui a avaliação de desempenho engessada',
+  subtitulo: 'Conheça o Keeper Test e seus limites como ferramenta de gestão.',
   iconName: 'UserCheck',
   duracaoMin: 10,
 

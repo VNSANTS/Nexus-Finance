@@ -6,7 +6,7 @@ export const esg: Modulo = {
   trilhaId: 'alternativos-derivativos',
   numero: 7,
   titulo: 'ESG',
-  subtitulo: 'Como separar investimento sustentável real de marketing verde',
+  subtitulo: 'Analise critérios ESG e reconheça limites e alegações sem comprovação.',
   iconName: 'Leaf',
   duracaoMin: 10,
 

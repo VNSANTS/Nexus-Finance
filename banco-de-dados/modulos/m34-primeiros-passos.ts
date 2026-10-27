@@ -5,7 +5,7 @@ export const moduloPrimeirosPassos: Modulo = {
   trilhaId: 'estrategia-gestao',
   numero: 1,
   titulo: 'Primeiros Passos para Investir',
-  subtitulo: 'Do zero ao primeiro aporte, sem pular etapa',
+  subtitulo: 'Organize as etapas iniciais antes de fazer seu primeiro aporte.',
   iconName: 'Footprints',
   duracaoMin: 11,
 

@@ -5,7 +5,7 @@ export const moduloMercadoFinanceiro: Modulo = {
   trilhaId: 'economia-mercado',
   numero: 1,
   titulo: 'Mercado Financeiro',
-  subtitulo: 'Quem é quem e onde o seu dinheiro entra',
+  subtitulo: 'Entenda quem participa do mercado e como os investimentos circulam.',
   iconName: 'Building2',
   duracaoMin: 12,
 

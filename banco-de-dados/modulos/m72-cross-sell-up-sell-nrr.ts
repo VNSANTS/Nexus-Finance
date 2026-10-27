@@ -5,7 +5,7 @@ export const crossSellUpSellNrr: Modulo = {
   trilhaId: 'geracao-de-receita',
   numero: 6,
   titulo: 'Cross-sell, Up-sell e NRR',
-  subtitulo: 'Vender mais para quem já confia custa uma fração de conquistar alguém novo',
+  subtitulo: 'Entenda expansão de vendas e retenção de receita em clientes atuais.',
   iconName: 'PackagePlus',
   duracaoMin: 11,
 

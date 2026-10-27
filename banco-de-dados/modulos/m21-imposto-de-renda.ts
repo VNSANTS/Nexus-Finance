@@ -5,7 +5,7 @@ export const moduloImpostoDeRenda: Modulo = {
   trilhaId: 'renda-fixa-previdencia',
   numero: 4,
   titulo: 'Imposto de Renda',
-  subtitulo: 'Quem recolhe, quanto é e o que declarar',
+  subtitulo: 'Conheça regras de declaração e tributação ligadas aos investimentos.',
   iconName: 'Receipt',
   duracaoMin: 15,
 

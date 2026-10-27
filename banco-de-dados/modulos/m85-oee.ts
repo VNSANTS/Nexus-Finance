@@ -5,7 +5,7 @@ export const oee: Modulo = {
   trilhaId: 'eficiencia-operacional',
   numero: 5,
   titulo: 'OEE: A Métrica que Mede Eficiência Real',
-  subtitulo: 'Três números multiplicados, não somados — um deles ruim já derruba tudo',
+  subtitulo: 'Use disponibilidade, desempenho e qualidade para analisar eficiência.',
   iconName: 'Gauge',
   duracaoMin: 12,
 

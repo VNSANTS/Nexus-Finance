@@ -5,7 +5,7 @@ export const moduloBolsaDeValores: Modulo = {
   trilhaId: 'acoes-bolsa',
   numero: 1,
   titulo: 'Bolsa de Valores',
-  subtitulo: 'O que acontece entre o clique e a ação na sua conta',
+  subtitulo: 'Acompanhe as etapas de uma negociação na bolsa.',
   iconName: 'BarChart3',
   duracaoMin: 12,
 

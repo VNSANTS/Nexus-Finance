@@ -5,7 +5,7 @@ export const moduloBuyAndHold: Modulo = {
   trilhaId: 'acoes-bolsa',
   numero: 10,
   titulo: 'Buy and Hold',
-  subtitulo: 'Comprar bons negócios e carregar por anos',
+  subtitulo: 'Conheça a estratégia de longo prazo e os critérios para mantê-la.',
   iconName: 'Anchor',
   duracaoMin: 10,
 

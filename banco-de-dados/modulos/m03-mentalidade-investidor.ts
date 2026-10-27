@@ -5,7 +5,7 @@ export const moduloMentalidadeInvestidor: Modulo = {
   trilhaId: 'fundamentos',
   numero: 3,
   titulo: 'Mentalidade de Investidor',
-  subtitulo: 'Trocar "quanto rende?" pela pergunta certa',
+  subtitulo: 'Avalie objetivos, prazo e risco antes de olhar para a rentabilidade.',
   iconName: 'Brain',
   duracaoMin: 10,
 

@@ -5,7 +5,7 @@ export const dre: Modulo = {
   trilhaId: 'gestao-financeira-negocios',
   numero: 3,
   titulo: 'DRE: O Demonstrativo que Conta a Verdade',
-  subtitulo: 'Da receita bruta ao lucro líquido, cada linha tira uma fatia',
+  subtitulo: 'Leia as principais linhas da DRE e acompanhe a formação do resultado.',
   iconName: 'FileBarChart',
   duracaoMin: 12,
 

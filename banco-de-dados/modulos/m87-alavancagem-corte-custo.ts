@@ -5,7 +5,7 @@ export const alavancagemCorteCusto: Modulo = {
   trilhaId: 'eficiencia-operacional',
   numero: 7,
   titulo: 'Alavancagem de Corte de Custo',
-  subtitulo: 'Nem todo real cortado tem o mesmo efeito no lucro',
+  subtitulo: 'Compare efeitos de custos e priorize mudanças sustentáveis.',
   iconName: 'Scissors',
   duracaoMin: 11,
 

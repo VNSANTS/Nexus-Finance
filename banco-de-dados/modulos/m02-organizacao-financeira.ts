@@ -5,7 +5,7 @@ export const moduloOrganizacaoFinanceira: Modulo = {
   trilhaId: 'fundamentos',
   numero: 2,
   titulo: 'Organização Financeira',
-  subtitulo: 'Enxergar o mês antes que ele aconteça',
+  subtitulo: 'Planeje o mês com uma visão clara da renda, dos gastos e das metas.',
   iconName: 'ClipboardList',
   duracaoMin: 12,
 

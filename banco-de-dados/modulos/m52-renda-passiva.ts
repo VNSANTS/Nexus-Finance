@@ -5,7 +5,7 @@ export const moduloRendaPassiva: Modulo = {
   trilhaId: 'vida-financeira',
   numero: 4,
   titulo: 'Renda Passiva',
-  subtitulo: 'Transformar patrimônio em dinheiro todo mês',
+  subtitulo: 'Conheça fontes de renda recorrente e os riscos envolvidos.',
   iconName: 'Banknote',
   duracaoMin: 12,
 

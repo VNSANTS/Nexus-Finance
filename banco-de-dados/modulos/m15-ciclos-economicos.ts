@@ -5,7 +5,7 @@ export const moduloCiclosEconomicos: Modulo = {
   trilhaId: 'economia-mercado',
   numero: 7,
   titulo: 'Ciclos Econômicos',
-  subtitulo: 'A economia anda em ondas, e o mercado se antecipa',
+  subtitulo: 'Reconheça fases do ciclo econômico e seus possíveis efeitos no mercado.',
   iconName: 'RefreshCw',
   duracaoMin: 11,
 

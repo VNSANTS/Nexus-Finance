@@ -5,7 +5,7 @@ export const informedCaptain: Modulo = {
   trilhaId: 'cultura-organizacional',
   numero: 2,
   titulo: 'Informed Captain',
-  subtitulo: 'Nem ditador, nem refém do consenso — quem decide, decide informado',
+  subtitulo: 'Considere diferentes perspectivas e deixe clara a responsabilidade pela decisão.',
   iconName: 'Anchor',
   duracaoMin: 10,
 

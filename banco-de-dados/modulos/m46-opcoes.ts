@@ -6,7 +6,7 @@ export const opcoes: Modulo = {
   trilhaId: 'alternativos-derivativos',
   numero: 5,
   titulo: 'Opções',
-  subtitulo: 'O derivativo que pode proteger sua carteira ou zerar seu capital em poucos dias',
+  subtitulo: 'Aprenda conceitos de opções e os riscos de cada estratégia.',
   iconName: 'GitBranch',
   duracaoMin: 17,
 

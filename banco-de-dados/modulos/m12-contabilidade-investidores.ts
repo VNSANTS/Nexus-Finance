@@ -5,7 +5,7 @@ export const moduloContabilidadeInvestidores: Modulo = {
   trilhaId: 'economia-mercado',
   numero: 4,
   titulo: 'Contabilidade para Investidores',
-  subtitulo: 'Achar os números que importam em 5 minutos',
+  subtitulo: 'Leia demonstrações financeiras e encontre os números relevantes.',
   iconName: 'FileSpreadsheet',
   duracaoMin: 16,
 

@@ -6,7 +6,7 @@ export const equity: Modulo = {
   trilhaId: 'alternativos-derivativos',
   numero: 4,
   titulo: 'Equity',
-  subtitulo: 'Participação acionária além da bolsa: private equity, venture capital e equity de startup',
+  subtitulo: 'Entenda participações em empresas fora do mercado público.',
   iconName: 'Building2',
   duracaoMin: 12,
 

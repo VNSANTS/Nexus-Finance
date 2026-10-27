@@ -5,7 +5,7 @@ export const introducaoGestaoFinanceiraNegocios: Modulo = {
   trilhaId: 'gestao-financeira-negocios',
   numero: 1,
   titulo: 'Introdução: Gestão Financeira de Negócios',
-  subtitulo: 'Lucro no papel não paga conta — o arsenal de quem decide com números',
+  subtitulo: 'Relacione lucro, caixa e decisões na gestão de um negócio.',
   iconName: 'LineChart',
   duracaoMin: 8,
 

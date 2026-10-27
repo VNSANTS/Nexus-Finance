@@ -5,7 +5,7 @@ export const forecastCenarios: Modulo = {
   trilhaId: 'gestao-financeira-negocios',
   numero: 7,
   titulo: 'Forecast em Cenários',
-  subtitulo: 'Uma única previsão é uma aposta; três cenários são um plano',
+  subtitulo: 'Projete cenários para planejar decisões sob diferentes condições.',
   iconName: 'GitBranch',
   duracaoMin: 12,
 

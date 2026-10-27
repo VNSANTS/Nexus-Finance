@@ -6,7 +6,7 @@ export const resumosLivros: Modulo = {
   trilhaId: 'cultura-investimentos',
   numero: 5,
   titulo: 'Resumos de Livros Financeiros',
-  subtitulo: 'O que se perde (e o que se ganha) ao trocar um livro de 300 páginas por um resumo de 10 minutos',
+  subtitulo: 'Use resumos para conhecer ideias e decidir quando ler a obra completa.',
   iconName: 'BookOpen',
   duracaoMin: 11,
 

@@ -5,7 +5,7 @@ export const roicVsWacc: Modulo = {
   trilhaId: 'gestao-financeira-negocios',
   numero: 6,
   titulo: 'ROIC vs. WACC: A Régua dos Investidores',
-  subtitulo: 'Se o retorno não supera o custo de capital, a empresa está destruindo valor, mesmo dando lucro',
+  subtitulo: 'Compare retorno sobre o capital com o custo de financiá-lo.',
   iconName: 'Scale',
   duracaoMin: 13,
 

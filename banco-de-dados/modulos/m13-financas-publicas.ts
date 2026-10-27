@@ -5,7 +5,7 @@ export const moduloFinancasPublicas: Modulo = {
   trilhaId: 'economia-mercado',
   numero: 5,
   titulo: 'Finanças Públicas',
-  subtitulo: 'Por que Brasília mexe no seu título',
+  subtitulo: 'Veja como decisões fiscais podem influenciar a economia e os títulos públicos.',
   iconName: 'Library',
   duracaoMin: 12,
 

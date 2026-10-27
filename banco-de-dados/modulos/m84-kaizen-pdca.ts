@@ -5,7 +5,7 @@ export const kaizenPdca: Modulo = {
   trilhaId: 'eficiencia-operacional',
   numero: 4,
   titulo: 'Kaizen e PDCA',
-  subtitulo: 'Melhoria contínua vence reforma pontual, quase sempre',
+  subtitulo: 'Teste melhorias contínuas com ciclos simples de planejamento e revisão.',
   iconName: 'RefreshCw',
   duracaoMin: 11,
 

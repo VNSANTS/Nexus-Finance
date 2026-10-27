@@ -5,7 +5,7 @@ export const moduloRendaFixa: Modulo = {
   trilhaId: 'renda-fixa-previdencia',
   numero: 1,
   titulo: 'Renda Fixa',
-  subtitulo: 'Emprestar dinheiro sabendo a regra desde o começo',
+  subtitulo: 'Compare regras de remuneração, riscos, prazos e liquidez.',
   iconName: 'ShieldCheck',
   duracaoMin: 14,
 

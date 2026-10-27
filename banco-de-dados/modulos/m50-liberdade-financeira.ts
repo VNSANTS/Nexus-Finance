@@ -6,7 +6,7 @@ export const liberdadeFinanceira: Modulo = {
   trilhaId: 'vida-financeira',
   numero: 2,
   titulo: 'Liberdade Financeira',
-  subtitulo: 'O número exato que separa trabalhar por opção de trabalhar por necessidade',
+  subtitulo: 'Planeje como patrimônio e renda podem apoiar suas escolhas futuras.',
   iconName: 'Compass',
   duracaoMin: 11,
 

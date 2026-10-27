@@ -5,7 +5,7 @@ export const psicologiaDoDinheiro: Modulo = {
   trilhaId: 'fundamentos',
   numero: 5,
   titulo: 'Psicologia do Dinheiro',
-  subtitulo: 'A história emocional que você carrega e que dita suas decisões financeiras hoje',
+  subtitulo: 'Perceba como experiências pessoais moldam sua relação com o dinheiro.',
   iconName: 'HeartHandshake',
   duracaoMin: 12,
 

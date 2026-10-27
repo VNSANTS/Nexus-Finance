@@ -6,7 +6,7 @@ export const negociacao: Modulo = {
   trilhaId: 'carreira-negocios',
   numero: 5,
   titulo: 'Negociação',
-  subtitulo: 'Por que quem faz a primeira proposta costuma sair na frente — e outras táticas que funcionam de verdade',
+  subtitulo: 'Prepare negociações com objetivos, alternativas e escuta ativa.',
   iconName: 'Handshake',
   duracaoMin: 12,
 

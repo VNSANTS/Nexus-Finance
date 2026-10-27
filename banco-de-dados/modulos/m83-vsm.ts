@@ -5,7 +5,7 @@ export const vsm: Modulo = {
   trilhaId: 'eficiencia-operacional',
   numero: 3,
   titulo: 'VSM: Mapeamento do Fluxo de Valor',
-  subtitulo: 'Desenhar o processo inteiro no papel revela o que ninguém enxerga vivendo dentro dele',
+  subtitulo: 'Mapeie o fluxo de valor e procure gargalos e etapas desnecessárias.',
   iconName: 'Workflow',
   duracaoMin: 12,
 

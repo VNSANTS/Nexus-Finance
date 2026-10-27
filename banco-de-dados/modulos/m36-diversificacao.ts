@@ -5,7 +5,7 @@ export const moduloDiversificacao: Modulo = {
   trilhaId: 'estrategia-gestao',
   numero: 3,
   titulo: 'Diversificação',
-  subtitulo: 'Vinte ações do mesmo setor não é diversificar',
+  subtitulo: 'Distribua riscos entre ativos, setores e classes de investimento.',
   iconName: 'PieChart',
   duracaoMin: 10,
 

@@ -5,7 +5,7 @@ export const moduloGestaoDeRisco: Modulo = {
   trilhaId: 'estrategia-gestao',
   numero: 5,
   titulo: 'Gestão de Risco',
-  subtitulo: 'Saber quais riscos você corre e em que tamanho',
+  subtitulo: 'Identifique riscos e planeje como limitar perdas possíveis.',
   iconName: 'ShieldAlert',
   duracaoMin: 14,
 

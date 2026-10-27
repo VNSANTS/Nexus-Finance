@@ -5,7 +5,7 @@ export const moduloPlanejamentoPatrimonial: Modulo = {
   trilhaId: 'vida-financeira',
   numero: 6,
   titulo: 'Planejamento Patrimonial',
-  subtitulo: 'Quem organiza o patrimônio em vida poupa a família de um inventário de anos',
+  subtitulo: 'Organize patrimônio, documentos e responsabilidades familiares.',
   iconName: 'FileLock',
   duracaoMin: 14,
 

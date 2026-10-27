@@ -5,7 +5,7 @@ export const moduloFundosInvestimento: Modulo = {
   trilhaId: 'fundos',
   numero: 1,
   titulo: 'Fundos de Investimento',
-  subtitulo: 'Ler a lâmina e decidir se a taxa cobrada se justifica',
+  subtitulo: 'Avalie estratégia, custos e riscos antes de escolher um fundo.',
   iconName: 'Layers',
   duracaoMin: 13,
 
