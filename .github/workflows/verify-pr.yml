@@ -21,6 +21,8 @@ jobs:
         run: npm install
       - name: Validar TypeScript
         run: npx tsc --noEmit
+      - name: Validar simulador sem rede
+        run: node scripts/testar-simulador.mjs
       - name: Build de GitHub Pages
         env:
           GITHUB_PAGES: 'true'
@@ -28,18 +30,5 @@ jobs:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ci-build-only
         run: npm run build
-      - name: Verificar caminhos, manifest e fallback
-        run: |
-          node --input-type=module <<'NODE'
-          import { readFileSync, existsSync } from 'node:fs'
-          const html = readFileSync('dist/index.html', 'utf8')
-          const manifest = JSON.parse(readFileSync('dist/manifest.webmanifest', 'utf8'))
-          const base = '/Nexus-Finance/'
-          if (!html.includes('src="' + base + 'assets/')) throw new Error('Build não usa base correta nos scripts')
-          if (!html.includes('href="' + base + 'favicon.svg')) throw new Error('Favicon não usa base correta')
-          if (!existsSync('dist/404.html')) throw new Error('Fallback SPA ausente')
-          for (const campo of ['id', 'scope', 'start_url']) {
-            if (manifest[campo] !== base) throw new Error('Manifest ' + campo + ' incorreto: ' + manifest[campo])
-          }
-          console.log('GitHub Pages: assets, PWA e fallback OK')
-          NODE
+      - name: Verificar caminhos, PWA e arquivos de publicacao
+        run: node scripts/verificar-build-pages.mjs
