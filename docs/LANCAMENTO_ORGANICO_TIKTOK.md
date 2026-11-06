@@ -23,7 +23,7 @@ Gerar tráfego orgânico qualificado e observar se pessoas conseguem entrar, apr
 - CTA pré-lançamento: conhecer o projeto no link público **somente depois de validar o site**.
 
 ## Funil sem anúncios pagos
-TikTok orgânico -> perfil -> página pública a validar `https://vnsants.github.io/Nexus-Finance/apresentacao.html` -> exploração de uma ferramenta ou lição -> retorno/cadastro quando disponível. Não pressupor que a conta nova dispõe de link clicável na bio.
+TikTok orgânico -> perfil -> página pública a validar `https://vnsants.github.io/Nexus-Finance/apresentacao.html` -> simulador sem login em `/simulador-reserva.html` -> explorar o aplicativo e, opcionalmente, cadastrar-se. O simulador não envia valores digitados a servidores. Não pressupor que a conta nova dispõe de link clicável na bio.
 
 URL para campanha (publicar somente após teste): `https://vnsants.github.io/Nexus-Finance/apresentacao.html?utm_source=tiktok&utm_medium=organic&utm_campaign=estreia_nexus_finance`. UTMs identificam origem; não significam que já exista coleta de analytics.
 
