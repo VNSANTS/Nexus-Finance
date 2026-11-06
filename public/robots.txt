@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /Nexus-Finance/
+
+Sitemap: https://vnsants.github.io/Nexus-Finance/sitemap.xml
