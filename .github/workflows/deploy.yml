@@ -45,9 +45,13 @@ jobs:
         # secret, e troque os valores abaixo por
         # ${{ secrets.VITE_SUPABASE_URL }} / ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}.
         env:
+          GITHUB_PAGES: 'true'
           VITE_SUPABASE_URL: https://ygtroklufolvixwazkne.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_uRP9xxjMeC_-L6A8AWwj8g_Seonofnf
         run: npm run build
+
+      - name: Validar artefatos do GitHub Pages
+        run: node scripts/verificar-build-pages.mjs
 
       - name: Preparar artefato do Pages
         uses: actions/upload-pages-artifact@v3
