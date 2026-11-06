@@ -24,11 +24,12 @@ function alterar(novoValor, novoPrazo) {
   handlers.get('valor:input')()
 }
 
-assert.equal(total.textContent, 'R$ 150,00'.replace(' ', ' ')) // pt-BR usa espaço não separável
+const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
+assert.equal(total.textContent, moeda.format(150))
 alterar('0.50', '4')
-assert.equal(total.textContent, 'R$ 2,00')
+assert.equal(total.textContent, moeda.format(2))
 alterar('5', '1')
-assert.equal(total.textContent, 'R$ 5,00')
+assert.equal(total.textContent, moeda.format(5))
 assert.match(elementos.get('detalhe').textContent, /1 dia\./)
 alterar('5', '3651')
 assert.equal(total.textContent, '—')
@@ -39,7 +40,7 @@ alterar('0.001', '30')
 assert.equal(total.textContent, '—')
 alterar('5', '30')
 assert.equal(erro.textContent, '')
-assert.equal(total.textContent, 'R$ 150,00')
+assert.equal(total.textContent, moeda.format(150))
 
 const landing = readFileSync('public/apresentacao.html', 'utf8')
 const page = readFileSync('public/simulador-reserva.html', 'utf8')
