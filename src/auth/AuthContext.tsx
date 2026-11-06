@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // porque usa a URL real do navegador, não uma configurada à parte).
     const { error } = await supabase.auth.signInWithOAuth({
       provider: provedor,
-      options: { redirectTo: window.location.origin + '/' },
+      options: { redirectTo: new URL(import.meta.env.BASE_URL, window.location.origin).toString() },
     })
     // Em fluxo OAuth, sucesso não retorna aqui — o navegador é redirecionado
     // pro provedor (Google etc.) e depois volta pro app já logado, o
@@ -225,7 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // mostra a mesma mensagem de sucesso.
   const resetarSenha = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + '/redefinir-senha',
+      redirectTo: new URL('redefinir-senha', new URL(import.meta.env.BASE_URL, window.location.origin)).toString(),
     })
     if (error) return { erro: traduzirErro(error.message) }
     return { erro: null }
