@@ -23,9 +23,9 @@ Gerar tráfego orgânico qualificado e observar se pessoas conseguem entrar, apr
 - CTA pré-lançamento: conhecer o projeto no link público **somente depois de validar o site**.
 
 ## Funil sem anúncios pagos
-TikTok orgânico -> perfil -> endereço verificado `https://vnsants.github.io/Nexus-Finance/` -> exploração de uma ferramenta ou lição -> retorno/cadastro quando disponível. Não pressupor que a conta nova dispõe de link clicável na bio.
+TikTok orgânico -> perfil -> página pública a validar `https://vnsants.github.io/Nexus-Finance/apresentacao.html` -> exploração de uma ferramenta ou lição -> retorno/cadastro quando disponível. Não pressupor que a conta nova dispõe de link clicável na bio.
 
-UTM sugerida para medição, apenas quando houver coleta adequada: `?utm_source=tiktok&utm_medium=organic&utm_campaign=estreia_nexus_finance`.
+URL para campanha (publicar somente após teste): `https://vnsants.github.io/Nexus-Finance/apresentacao.html?utm_source=tiktok&utm_medium=organic&utm_campaign=estreia_nexus_finance`. UTMs identificam origem; não significam que já exista coleta de analytics.
 
 ## Experimento inicial (4 semanas)
 - Semanas 1–2: 3 vídeos originais por semana, alternando conceitos simples, erros comuns e demonstrações reais.
@@ -51,7 +51,7 @@ Estudar, **somente após validação de procura**, uma oferta claramente definid
 - https://www.gov.br/investidor/pt-br/investir/como-investir/profissionais-do-mercado/a-diferenca-entre-educacao-financeira-e-o-exercicio-profissional-de-atividade-regulamentada
 
 ## Checkpoint
-- Produto: corrigir e publicar app é pré-requisito.
+- Produto: página de apresentação criada em `public/apresentacao.html`; corrigir e publicar o app continua sendo pré-requisito.
 - Marketing: 12 roteiros experimentais planejados; os 3 primeiros estão em `marketing/tiktok/roteiros-iniciais.md`.
 - Contas: não criadas/conectadas; publicação pendente de acesso e revisão final.
 - Cobrança: desativada; não existem compras ou promessas de faturamento.
