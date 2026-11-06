@@ -45,9 +45,13 @@ jobs:
         # secret, e troque os valores abaixo por
         # ${{ secrets.VITE_SUPABASE_URL }} / ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}.
         env:
+          GITHUB_PAGES: 'true'
           VITE_SUPABASE_URL: https://ygtroklufolvixwazkne.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_uRP9xxjMeC_-L6A8AWwj8g_Seonofnf
         run: npm run build
+
+      - name: Validar artefatos do GitHub Pages
+        run: node scripts/verificar-build-pages.mjs
 
       - name: Preparar artefato do Pages
         uses: actions/upload-pages-artifact@v3
@@ -64,3 +68,15 @@ jobs:
       - name: Deploy no GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Smoke test HTTP da publicacao
+        # Valida a pagina publica de verdade, alem de verificar o build local.
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          BASE="${PAGES_URL%/}/"
+          curl --fail --location --silent --show-error --retry 8 --retry-all-errors --retry-delay 8 --max-time 20 "${BASE}" -o /tmp/nexus-pages-index.html
+          grep -q '/Nexus-Finance/assets/' /tmp/nexus-pages-index.html
+          curl --fail --location --silent --show-error --retry 8 --retry-all-errors --retry-delay 8 --max-time 20 "${BASE}apresentacao.html" -o /tmp/nexus-pages-apresentacao.html
+          grep -q 'NEXUS' /tmp/nexus-pages-apresentacao.html
+          echo "Publicacao validada por HTTP no dominio do GitHub Pages."
