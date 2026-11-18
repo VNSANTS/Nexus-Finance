@@ -12,14 +12,19 @@ O APK de debug serve somente à equipe, não deve ser enviado ao grupo: usa chav
 
 - `server.url` removido do Capacitor, evitando carregar HTML/JS atualizado remotamente por um site antigo.
 - Android `allowBackup=false` e `usesCleartextTraffic=false`.
-- Origem `https://localhost` acrescentada às quatro Edge Functions (requer implantar essas versões no Supabase correto). Origem/CORS **não é autenticação**. JWT, permissões, RLS e rate limits ainda devem ser testados no serviço hospedado.
-- SQL `supabase/013_proteger_campos_perfil.sql` impede usuário comum de editar diretamente `profiles.role/status/email/id` e corrige a policy de UPDATE. **A correção só entra em produção após executar a SQL no projeto do Nexus Finance.**
-- O projeto Supabase do Nexus Finance identificado no código é `ygtroklufolvixwazkne`; ele **não aparece entre os projetos da conexão atual**. Não executar esta SQL no Supabase do Nexus ERP/CRM ou do Bíblia App.
+- Origem `https://localhost` acrescentada e **implantada em 18/11/2026** nas quatro Edge Functions do projeto correto. Elas continuam com `verify_jwt=true`; CORS **não é autenticação**. Ainda é necessário o smoke test funcional via dispositivo Android.
+- SQL `supabase/013_proteger_campos_perfil.sql` aplicada em **18/11/2026** ao projeto Nexus Finance. Simulações transacionais sem persistência confirmaram bloqueio de troca de `role/status/email`, edição de nome permitida e acesso administrativo intacto.
+- SQL `supabase/014_suspender_acesso_contas_bloqueadas.sql` aplicada em **18/11/2026**: políticas RLS restritivas impedem tokens de contas bloqueadas de acessar Gestão Financeira, histórico de IA e progresso. Testado com sessão simulada bloqueada e administradora ativa.
+- Rotas protegidas aguardam a consulta do perfil e exibem bloqueio antes de liberar a interface, incluindo navegação/chat. **Ainda não testado em um APK instalado.**
+- O projeto Supabase correto foi conectado: **Nexus Finance App**, ref `ygtroklufolvixwazkne`. Nenhum SQL foi aplicado nos projetos Nexus ERP/CRM ou Bíblia App.
 - Nenhum backup completo foi solicitado ou realizado. Como rollback leve, preservar o commit anterior, registrar as DDLs alteradas e confirmar a política após aplicação. Isso não substitui backup de dados.
 
 ## Bloqueios para entregar ao grupo
 
-1. Conectar/autorizar o Supabase **do Nexus Finance**, aplicar a SQL 013, implantar Edge Functions e testar com duas contas reais distintas: usuário A não altera dados de B, usuário comum não muda role/status/email, admin autorizado mantém funções próprias.
+O Supabase Security Advisor ainda alerta para **proteção contra senhas vazadas desativada**. Revisar https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection e validar disponibilidade no plano sem custos extras.
+
+
+1. **Concluído no backend (18/11):** conexão ao Supabase correto, SQL 013 e 014, e quatro Edge Functions implantadas. Simulações de papéis no PostgreSQL passaram sem persistir alterações. **Pendente:** repetir fluxo A/B e funções pelo APK real com duas contas diferentes e redes reais.
 2. **Autenticação no Android local:** o login por e-mail e senha deve ser testado. OAuth e recuperação de senha dependem de redirecionamentos web/deep links; a configuração atual aponta para a origem do navegador e **não está validada para o APK local**. Corrigir e homologar antes da distribuição. Manter página legal/recuperação minimalista na Cloudflare, se necessário, sem hospedar a aplicação completa.
 3. Configurar os secrets de assinatura Android (ou verificar os já existentes) e gerar APK de release assinado, depois testar instalação e atualização em dispositivo Android real.
 4. Apenas após o APK ser testado e possuir URL pública: criar um repositório **separado** de distribuição pública contendo somente APK, checksum e changelog, ou publicar o binário na Cloudflare. Um GitHub Release de repositório privado **não é baixável pelo grupo sem autenticação**.
