@@ -14,6 +14,7 @@ import {
   GraduationCap,
   Lock,
   LogOut,
+  MessageSquare,
   Palette,
   Pencil,
   Plus,
@@ -329,6 +330,13 @@ export default function PerfilPage() {
             label="Personalização"
             cor="#00D4FF"
             onClick={() => navigate('/personalizacao')}
+            chevron
+          />
+          <ConfigRow
+            icon={MessageSquare}
+            label="Enviar feedback (beta)"
+            cor="#22C55E"
+            onClick={() => navigate('/feedback-beta')}
             chevron
           />
           <ConfigRow

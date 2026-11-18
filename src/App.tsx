@@ -31,6 +31,7 @@ const BuscaPage = lazy(() => import('@/pages/BuscaPage'))
 const DesafioDiarioPage = lazy(() => import('@/pages/DesafioDiarioPage'))
 const NotificacoesConfigPage = lazy(() => import('@/pages/NotificacoesConfigPage'))
 const PersonalizacaoPage = lazy(() => import('@/pages/PersonalizacaoPage'))
+const FeedbackBetaPage = lazy(() => import('@/pages/FeedbackBetaPage'))
 const GestaoFinanceiraShell = lazy(() => import('@/gestao-financeira/GestaoFinanceiraShell'))
 const AdminUsuariosPage = lazy(() => import('@/admin/AdminUsuariosPage'))
 const NexusAIPage = lazy(() => import('@/pages/NexusAIPage'))
@@ -117,6 +118,7 @@ function AppRotas() {
                     <Route path="/desafio-diario" element={<DesafioDiarioPage />} />
                     <Route path="/notificacoes" element={<NotificacoesConfigPage />} />
                     <Route path="/personalizacao" element={<PersonalizacaoPage />} />
+                    <Route path="/feedback-beta" element={<FeedbackBetaPage />} />
                     <Route path="/nexus-ai" element={<NexusAIPage />} />
                     <Route path="/gestao-financeira/*" element={<GestaoFinanceiraShell />} />
                     <Route

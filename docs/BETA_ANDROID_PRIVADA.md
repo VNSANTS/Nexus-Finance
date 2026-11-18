@@ -35,3 +35,7 @@ O APK de debug serve somente à equipe, não deve ser enviado ao grupo: usa chav
 - Instalação limpa, atualização por APK assinado com a **mesma chave**, arquivo SHA-256 publicado e teste de versão anterior.
 
 O arquivo `scripts/verificar-beta-android.mjs` e o workflow de PR validam apenas algumas configurações estáticas e compilação. PASS em CI não substitui os testes acima.
+
+## Coleta de feedback para teste em grupo
+
+Incluída a tela `/feedback-beta`, acessível em Perfil → Enviar feedback (beta). O testador pode descrever erro, sugestões e passos de reprodução e escolher Compartilhar/Copiar para mandar ao grupo. Nenhum dado ou relato é enviado automaticamente a um servidor. Recomenda-se que ninguém compartilhe CPF, tokens, saldos, senhas ou capturas com dados pessoais. A tela precisa de validação visual e do fluxo de compartilhamento num APK real.
