@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { Loader2, Mail, Lock, User, LogIn, UserPlus, TrendingUp } from 'lucide-react'
 import { useAuth, type ProvedorOAuth } from './AuthContext'
 
@@ -29,6 +29,7 @@ const PROVEDORES: { id: ProvedorOAuth; nome: string; icone: () => React.JSX.Elem
 ]
 
 export default function LoginPage() {
+  const [searchParams] = useSearchParams()
   const { sessao, carregando, entrar, cadastrar, entrarComOAuth, resetarSenha, appConfig } = useAuth()
   const [modo, setModo] = useState<'entrar' | 'cadastrar' | 'esqueci'>('entrar')
   const [nome, setNome] = useState('')
@@ -39,6 +40,12 @@ export default function LoginPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [avisoCadastro, setAvisoCadastro] = useState<string | null>(null)
   const [avisoReset, setAvisoReset] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (searchParams.get('auth_error') === '1') {
+      setErro('Não foi possível concluir a autenticação. Peça um novo link ou tente entrar novamente.')
+    }
+  }, [searchParams])
 
   // Já logado — não faz sentido mostrar a tela de login de novo.
   if (!carregando && sessao) return <Navigate to="/" replace />

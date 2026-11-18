@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { Capacitor } from '@capacitor/core'
+import { Browser } from '@capacitor/browser'
 import { supabase } from '@/lib/supabase'
 import { forcarAtualizacaoCompleta } from '@/lib/forcarAtualizacao'
 import type { Perfil } from './types'
@@ -38,6 +40,15 @@ interface AuthContextValor {
 // funcionar de verdade — sem isso, o Supabase retorna erro "provider is
 // not enabled" ao clicar.
 export type ProvedorOAuth = 'google' | 'github'
+
+const REDIRECT_NATIVE = 'com.nexusfinance.app://auth/callback'
+
+function redirectAuth(next: '/login' | '/redefinir-senha' | '/'): string {
+  if (Capacitor.isNativePlatform()) {
+    return `${REDIRECT_NATIVE}?next=${encodeURIComponent(next)}`
+  }
+  return new URL(next === '/' ? '' : next.slice(1), new URL(import.meta.env.BASE_URL, window.location.origin)).toString()
+}
 
 const AuthContext = createContext<AuthContextValor | null>(null)
 
@@ -187,7 +198,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password: senha,
-      options: { data: { nome } }, // vira raw_user_meta_data, o trigger de signup usa isso pro nome inicial
+      options: {
+        data: { nome }, // vira raw_user_meta_data, o trigger de signup usa isso pro nome inicial
+        emailRedirectTo: redirectAuth('/'),
+      },
     })
     if (error) return { erro: traduzirErro(error.message) }
     return { erro: null }
@@ -209,10 +223,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // a pessoa volta pro app (e não pra localhost, mesmo problema que
     // tivemos com o e-mail de confirmação — aqui resolvido de saída
     // porque usa a URL real do navegador, não uma configurada à parte).
-    const { error } = await supabase.auth.signInWithOAuth({
+    const native = Capacitor.isNativePlatform()
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: provedor,
-      options: { redirectTo: new URL(import.meta.env.BASE_URL, window.location.origin).toString() },
+      options: {
+        redirectTo: redirectAuth('/'),
+        ...(native ? { skipBrowserRedirect: true } : {}),
+      },
     })
+    if (!error && native && data.url) {
+      await Browser.open({ url: data.url })
+    }
     // Em fluxo OAuth, sucesso não retorna aqui — o navegador é redirecionado
     // pro provedor (Google etc.) e depois volta pro app já logado, o
     // onAuthStateChange (acima) capta a sessão nova sozinho. Só chega
@@ -248,7 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // mostra a mesma mensagem de sucesso.
   const resetarSenha = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: new URL('redefinir-senha', new URL(import.meta.env.BASE_URL, window.location.origin)).toString(),
+      redirectTo: redirectAuth('/redefinir-senha'),
     })
     if (error) return { erro: traduzirErro(error.message) }
     return { erro: null }

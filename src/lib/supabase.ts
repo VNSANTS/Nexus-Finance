@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { Capacitor } from '@capacitor/core'
 
 // Cliente único do Supabase — todo o app importa daqui, nunca cria outro
 // createClient() em outro arquivo.
@@ -19,4 +20,11 @@ if (!url || !publishableKey) {
   )
 }
 
-export const supabase = createClient(url, publishableKey)
+export const supabase = createClient(url, publishableKey, {
+  auth: {
+    // PKCE lets the native callback exchange a short-lived code instead of
+    // putting bearer tokens directly in the custom-scheme URL.
+    flowType: 'pkce',
+    detectSessionInUrl: !Capacitor.isNativePlatform(),
+  },
+})

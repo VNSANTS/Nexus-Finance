@@ -53,6 +53,15 @@ jobs:
           test -s "$RUNNER_TEMP/nexus-release.keystore"
           chmod 600 "$RUNNER_TEMP/nexus-release.keystore"
 
+      - name: Validate keystore and alias
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          keytool -list -v -keystore "$RUNNER_TEMP/nexus-release.keystore" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" \
+            > "$RUNNER_TEMP/signing-certificate.txt"
+
       - name: Build signed release APK
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nexus-release.keystore
@@ -67,7 +76,7 @@ jobs:
           test -s "$APK"
           APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -n 1)
           test -n "$APKSIGNER"
-          "$APKSIGNER" verify --verbose "$APK"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
           sha256sum "$APK" > "$APK.sha256"
 
       - name: Upload for owner review (not a public download link)
@@ -77,6 +86,7 @@ jobs:
           path: |
             android/app/build/outputs/apk/release/app-release.apk
             android/app/build/outputs/apk/release/app-release.apk.sha256
+            ${{ runner.temp }}/signing-certificate.txt
           if-no-files-found: error
           retention-days: 14
 

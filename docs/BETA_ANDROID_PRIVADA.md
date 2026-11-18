@@ -25,8 +25,8 @@ O Supabase Security Advisor ainda alerta para **proteção contra senhas vazadas
 
 
 1. **Concluído no backend (18/11):** conexão ao Supabase correto, SQL 013 e 014, e quatro Edge Functions implantadas. Simulações de papéis no PostgreSQL passaram sem persistir alterações. **Pendente:** repetir fluxo A/B e funções pelo APK real com duas contas diferentes e redes reais.
-2. **Autenticação no Android local:** o login por e-mail e senha deve ser testado. OAuth e recuperação de senha dependem de redirecionamentos web/deep links; a configuração atual aponta para a origem do navegador e **não está validada para o APK local**. Corrigir e homologar antes da distribuição. Manter página legal/recuperação minimalista na Cloudflare, se necessário, sem hospedar a aplicação completa.
-3. Configurar os secrets de assinatura Android (ou verificar os já existentes) e gerar APK de release assinado, depois testar instalação e atualização em dispositivo Android real.
+2. **Autenticação Android:** implementado nesta continuação o esquema `com.nexusfinance.app://auth/callback`, listener nativo e troca PKCE; confirmação, OAuth e recuperação retornam ao app. Antes do teste, adicionar exatamente essa URL em Supabase → Authentication → URL Configuration → Redirect URLs. OAuth ainda depende dos provedores Google/GitHub estarem habilitados. Nenhum fluxo foi homologado em aparelho ainda.
+3. Verificar se os quatro secrets de assinatura já existem. Se existirem, reutilizar a mesma keystore e não gerar outra. Se não existirem, criar uma única keystore com `scripts/preparar-assinatura-android.ps1`, cadastrar `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` e `ANDROID_KEY_PASSWORD` como secrets do GitHub Actions. O script cria a chave fora do repositório, copia o Base64 para a área de transferência e nunca imprime a senha. Guardar a keystore e senha em local seguro. Disparar **Android Beta - Signed Release APK** escolhendo o branch desta PR; depois testar instalação e atualização num Android real.
 4. Apenas após o APK ser testado e possuir URL pública: criar um repositório **separado** de distribuição pública contendo somente APK, checksum e changelog, ou publicar o binário na Cloudflare. Um GitHub Release de repositório privado **não é baixável pelo grupo sem autenticação**.
 5. Tornar o repositório-fonte privado em Settings → General → Danger Zone → Change repository visibility. Isso **não revoga cópias já feitas** enquanto era público; também desabilitar GitHub Pages, descontinuar implantação web antiga e verificar Vercel, sem fazer isso antes de preservar os fluxos de autenticação.
 6. Revisar direito autoral dos textos/resumos de livros distribuídos no aplicativo e a política de privacidade de usuários, além de demonstrar consentimento e canais de feedback.
@@ -40,6 +40,18 @@ O Supabase Security Advisor ainda alerta para **proteção contra senhas vazadas
 - Instalação limpa, atualização por APK assinado com a **mesma chave**, arquivo SHA-256 publicado e teste de versão anterior.
 
 O arquivo `scripts/verificar-beta-android.mjs` e o workflow de PR validam apenas algumas configurações estáticas e compilação. PASS em CI não substitui os testes acima.
+
+### Autenticação nativa — detalhes de configuração
+
+- Supabase Auth precisa permitir `com.nexusfinance.app://auth/callback` na lista de Redirect URLs. Não mude Site URL nem os redirects dos sites em produção.
+- O app usa Authorization Code + PKCE; o callback Android está restrito ao scheme e host registrados no manifesto. O código é trocado por sessão dentro do app. A abertura OAuth usa navegador do sistema via Capacitor Browser.
+- Login por e-mail/senha não depende de deep link. Cadastro/confirmacão, OAuth e reset de senha dependem do retorno nativo e devem ser exercitados com contas de teste.
+- O workflow valida que a keystore, alias e assinatura são válidos, gera SHA-256 e entrega APK/checksum/certificado como artifact privado temporário por 14 dias. O artifact não é um link de distribuição aos testadores.
+- Cada execução do workflow de release usa um `versionCode` crescente para permitir atualização do APK beta com a mesma assinatura.
+
+### Distribuição gratuita após homologação
+
+Não publicar o APK até passar instalação limpa, login, confirmação por e-mail, reset de senha, OAuth habilitado, Edge Functions, feedback e atualização sobre a versão anterior. Depois do aceite, hospedar somente APK, SHA-256, número da versão e instruções para testadores em um download público separado e gratuito (por exemplo, Cloudflare Pages). Não incluir código-fonte, keystore, secrets ou dados de usuários no pacote público. O artifact de Actions é para revisão e expira em 14 dias.
 
 ## Coleta de feedback para teste em grupo
 
