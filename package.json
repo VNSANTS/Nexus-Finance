@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@capacitor/android": "^8.5.1",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
     "@capacitor/core": "^8.5.1",
     "@supabase/supabase-js": "^2.115.0",
     "framer-motion": "^11.5.4",

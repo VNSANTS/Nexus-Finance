@@ -19,6 +19,10 @@ jobs:
           cache: npm
       - name: Instalar dependências
         run: npm install
+      - name: Validar configuração de segurança do APK
+        run: node scripts/verificar-beta-android.mjs
+      - name: Validar autenticação sem await no listener
+        run: node scripts/verificar-auth-listener.mjs
       - name: Validar TypeScript
         run: npx tsc --noEmit
       - name: Validar simulador sem rede

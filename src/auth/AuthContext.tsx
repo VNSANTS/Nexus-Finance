@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { Capacitor } from '@capacitor/core'
+import { Browser } from '@capacitor/browser'
 import { supabase } from '@/lib/supabase'
 import { forcarAtualizacaoCompleta } from '@/lib/forcarAtualizacao'
 import type { Perfil } from './types'
@@ -20,6 +22,7 @@ interface AuthContextValor {
   sessao: Session | null
   perfil: Perfil | null
   carregando: boolean // true só durante o carregamento inicial da sessão
+  carregandoPerfil: boolean // bloqueia rotas até validar status e papel do usuário
   appConfig: AppConfig | null
   entrar: (email: string, senha: string) => Promise<{ erro: string | null }>
   cadastrar: (nome: string, email: string, senha: string) => Promise<{ erro: string | null }>
@@ -37,6 +40,15 @@ interface AuthContextValor {
 // funcionar de verdade — sem isso, o Supabase retorna erro "provider is
 // not enabled" ao clicar.
 export type ProvedorOAuth = 'google' | 'github'
+
+const REDIRECT_NATIVE = 'com.nexusfinance.app://auth/callback'
+
+function redirectAuth(next: '/login' | '/redefinir-senha' | '/'): string {
+  if (Capacitor.isNativePlatform()) {
+    return `${REDIRECT_NATIVE}?next=${encodeURIComponent(next)}`
+  }
+  return new URL(next === '/' ? '' : next.slice(1), new URL(import.meta.env.BASE_URL, window.location.origin)).toString()
+}
 
 const AuthContext = createContext<AuthContextValor | null>(null)
 
@@ -70,36 +82,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessao, setSessao] = useState<Session | null>(null)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [carregando, setCarregando] = useState(true)
+  const [carregandoPerfil, setCarregandoPerfil] = useState(false)
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
+  const [versaoConsultaPerfil, setVersaoConsultaPerfil] = useState(0)
 
   useEffect(() => {
-    buscarAppConfig().then(setAppConfig)
+    let ativo = true
+    buscarAppConfig().then((config) => {
+      if (ativo) setAppConfig(config)
+    })
 
-    // Carrega a sessão existente (usuário já logado antes, cookie/local
-    // storage do supabase-js) uma vez ao montar o app.
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSessao(session)
-      if (session?.user) {
-        const p = await buscarPerfil(session.user.id)
-        setPerfil(p)
-      }
+    // O Supabase emite INITIAL_SESSION quando lê a sessão salva.
+    // Importante: o callback de auth é SÍNCRONO. Fazer await de outra
+    // consulta Supabase aqui pode provocar deadlock com o auth lock.
+    const { data: listener } = supabase.auth.onAuthStateChange((_evento, novaSessao) => {
+      if (!ativo) return
+      setSessao(novaSessao)
+      setVersaoConsultaPerfil((v) => v + 1)
+      setCarregandoPerfil(Boolean(novaSessao?.user))
       setCarregando(false)
     })
 
-    // Escuta mudanças de sessão (login, logout, token refresh) em qualquer
-    // lugar do app — não precisa cada componente escutar isso.
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_evento, novaSessao) => {
-      setSessao(novaSessao)
-      if (novaSessao?.user) {
-        const p = await buscarPerfil(novaSessao.user.id)
-        setPerfil(p)
-      } else {
-        setPerfil(null)
-      }
-    })
-
-    return () => listener.subscription.unsubscribe()
+    return () => {
+      ativo = false
+      listener.subscription.unsubscribe()
+    }
   }, [])
+
+  // Busca o perfil FORA do callback de autenticação. Revalida nos eventos
+  // de auth (inclusive SIGNED_IN e TOKEN_REFRESHED) e descarta resultados
+  // antigos se a pessoa trocar de conta ou sair antes da resposta.
+  useEffect(() => {
+    let ativo = true
+    const usuarioId = sessao?.user?.id
+    if (!usuarioId) {
+      setPerfil(null)
+      setCarregandoPerfil(false)
+      return
+    }
+    setPerfil(null)
+    setCarregandoPerfil(true)
+    buscarPerfil(usuarioId)
+      .then((resultado) => {
+        if (ativo) setPerfil(resultado)
+      })
+      .catch(() => {
+        if (ativo) setPerfil(null)
+      })
+      .finally(() => {
+        if (ativo) setCarregandoPerfil(false)
+      })
+    return () => { ativo = false }
+  }, [sessao?.user?.id, versaoConsultaPerfil])
 
   // Modo manutenção — reforço: o check de entrar() só pega quem está
   // LOGANDO agora. Isso aqui cobre quem JÁ estava com o app aberto quando
@@ -164,7 +198,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password: senha,
-      options: { data: { nome } }, // vira raw_user_meta_data, o trigger de signup usa isso pro nome inicial
+      options: {
+        data: { nome }, // vira raw_user_meta_data, o trigger de signup usa isso pro nome inicial
+        emailRedirectTo: redirectAuth('/'),
+      },
     })
     if (error) return { erro: traduzirErro(error.message) }
     return { erro: null }
@@ -186,10 +223,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // a pessoa volta pro app (e não pra localhost, mesmo problema que
     // tivemos com o e-mail de confirmação — aqui resolvido de saída
     // porque usa a URL real do navegador, não uma configurada à parte).
-    const { error } = await supabase.auth.signInWithOAuth({
+    const native = Capacitor.isNativePlatform()
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: provedor,
-      options: { redirectTo: new URL(import.meta.env.BASE_URL, window.location.origin).toString() },
+      options: {
+        redirectTo: redirectAuth('/'),
+        ...(native ? { skipBrowserRedirect: true } : {}),
+      },
     })
+    if (!error && native && data.url) {
+      await Browser.open({ url: data.url })
+    }
     // Em fluxo OAuth, sucesso não retorna aqui — o navegador é redirecionado
     // pro provedor (Google etc.) e depois volta pro app já logado, o
     // onAuthStateChange (acima) capta a sessão nova sozinho. Só chega
@@ -225,7 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // mostra a mesma mensagem de sucesso.
   const resetarSenha = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: new URL('redefinir-senha', new URL(import.meta.env.BASE_URL, window.location.origin)).toString(),
+      redirectTo: redirectAuth('/redefinir-senha'),
     })
     if (error) return { erro: traduzirErro(error.message) }
     return { erro: null }
@@ -258,6 +302,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessao,
         perfil,
         carregando,
+        carregandoPerfil,
         appConfig,
         entrar,
         cadastrar,

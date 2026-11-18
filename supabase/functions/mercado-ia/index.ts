@@ -18,7 +18,10 @@
 // telas simplesmente voltam a mostrar "sem dado" até o mês seguinte (erro
 // tratado, nunca trava o app).
 
+// O Capacitor empacotado serve o frontend a partir de https://localhost.
+// Origin não autentica o cliente: JWT e autorização devem continuar obrigatórios.
 const ORIGENS_PERMITIDAS = new Set([
+  'https://localhost',
   'https://vnsants.github.io',
   'https://nexus-finance-ml5phhapi-nexus-finance0vnsants.vercel.app',
   'https://nexus-finance-lyart.vercel.app',

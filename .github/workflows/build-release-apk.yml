@@ -1,0 +1,95 @@
+name: Android Beta - Signed Release APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  signed-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check signing secrets
+        env:
+          STORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          test -n "$STORE_BASE64" || { echo "::error::Configure ANDROID_KEYSTORE_BASE64"; exit 1; }
+          test -n "$STORE_PASSWORD" || { echo "::error::Configure ANDROID_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "::error::Configure ANDROID_KEY_ALIAS"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "::error::Configure ANDROID_KEY_PASSWORD"; exit 1; }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Build bundled app
+        env:
+          VITE_SUPABASE_URL: https://ygtroklufolvixwazkne.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_uRP9xxjMeC_-L6A8AWwj8g_Seonofnf
+        run: |
+          npm ci
+          node scripts/verificar-beta-android.mjs
+          npm run build
+          npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Restore signing keystore
+        env:
+          STORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          printf '%s' "$STORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nexus-release.keystore"
+          test -s "$RUNNER_TEMP/nexus-release.keystore"
+          chmod 600 "$RUNNER_TEMP/nexus-release.keystore"
+
+      - name: Validate keystore and alias
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          keytool -list -v -keystore "$RUNNER_TEMP/nexus-release.keystore" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS" \
+            > "$RUNNER_TEMP/signing-certificate.txt"
+
+      - name: Build signed release APK
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nexus-release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleRelease
+          APK=app/build/outputs/apk/release/app-release.apk
+          test -s "$APK"
+          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -n 1)
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          sha256sum "$APK" > "$APK.sha256"
+
+      - name: Upload for owner review (not a public download link)
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-finance-beta-signed-apk
+          path: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/apk/release/app-release.apk.sha256
+            ${{ runner.temp }}/signing-certificate.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Erase temporary keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/nexus-release.keystore"
