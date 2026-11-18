@@ -11,8 +11,9 @@ AS $$
 BEGIN
   -- Com o token de um usuário comum, somente os campos editáveis pelo
   -- usuário podem mudar. Admins reais são verificados pelo banco.
+  -- A função de admin foi movida para o schema private pela migração 20261023161332.
   -- Calls administrativos/service_role sem auth.uid continuam permitidos.
-  IF auth.uid() IS NOT NULL AND NOT public.is_admin() THEN
+  IF auth.uid() IS NOT NULL AND NOT private.is_admin() THEN
     IF NEW.role IS DISTINCT FROM OLD.role
        OR NEW.status IS DISTINCT FROM OLD.status
        OR NEW.email IS DISTINCT FROM OLD.email
