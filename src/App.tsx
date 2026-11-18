@@ -143,11 +143,12 @@ function AppRotas() {
 
 export default function App() {
   const { progress, setOnboardingDone } = useUserProgress()
-  const { sessao } = useAuth()
+  const { sessao, perfil, carregando, carregandoPerfil } = useAuth()
   const location = useLocation()
   const dentroDeGf = location.pathname.startsWith('/gestao-financeira')
+  const mostrarChrome = Boolean(sessao && perfil?.status === 'ativo' && !carregando && !carregandoPerfil)
 
-  usePresenca(sessao?.user?.id)
+  usePresenca(mostrarChrome ? sessao?.user?.id : undefined)
 
   // Roda em segundo plano (checagem a cada 60s + ao voltar o foco) enquanto
   // o app estiver aberto — ver src/lib/notificacoesAprender.ts para o motor
@@ -203,11 +204,11 @@ export default function App() {
         style={{ transform: 'translateZ(0)' }}
       >
         <div className="h-full overflow-y-auto">
-          {!rotaSemChrome && <AvisoEmailNaoConfirmado />}
+          {mostrarChrome && !rotaSemChrome && <AvisoEmailNaoConfirmado />}
           <AppRotas />
         </div>
-        {!dentroDeGf && !rotaSemChrome && <BottomNav />}
-        {!dentroDeGf && !rotaSemChrome && <NexusAIChat />}
+        {mostrarChrome && !dentroDeGf && !rotaSemChrome && <BottomNav />}
+        {mostrarChrome && !dentroDeGf && !rotaSemChrome && <NexusAIChat />}
       </div>
     </>
   )

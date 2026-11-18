@@ -20,6 +20,7 @@ interface AuthContextValor {
   sessao: Session | null
   perfil: Perfil | null
   carregando: boolean // true só durante o carregamento inicial da sessão
+  carregandoPerfil: boolean // bloqueia rotas até validar status e papel do usuário
   appConfig: AppConfig | null
   entrar: (email: string, senha: string) => Promise<{ erro: string | null }>
   cadastrar: (nome: string, email: string, senha: string) => Promise<{ erro: string | null }>
@@ -70,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessao, setSessao] = useState<Session | null>(null)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [carregando, setCarregando] = useState(true)
+  const [carregandoPerfil, setCarregandoPerfil] = useState(false)
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const [versaoConsultaPerfil, setVersaoConsultaPerfil] = useState(0)
 
@@ -86,6 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!ativo) return
       setSessao(novaSessao)
       setVersaoConsultaPerfil((v) => v + 1)
+      setCarregandoPerfil(Boolean(novaSessao?.user))
       setCarregando(false)
     })
 
@@ -103,12 +106,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const usuarioId = sessao?.user?.id
     if (!usuarioId) {
       setPerfil(null)
+      setCarregandoPerfil(false)
       return
     }
     setPerfil(null)
-    buscarPerfil(usuarioId).then((resultado) => {
-      if (ativo) setPerfil(resultado)
-    })
+    setCarregandoPerfil(true)
+    buscarPerfil(usuarioId)
+      .then((resultado) => {
+        if (ativo) setPerfil(resultado)
+      })
+      .catch(() => {
+        if (ativo) setPerfil(null)
+      })
+      .finally(() => {
+        if (ativo) setCarregandoPerfil(false)
+      })
     return () => { ativo = false }
   }, [sessao?.user?.id, versaoConsultaPerfil])
 
@@ -269,6 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessao,
         perfil,
         carregando,
+        carregandoPerfil,
         appConfig,
         entrar,
         cadastrar,
