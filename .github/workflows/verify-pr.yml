@@ -23,6 +23,8 @@ jobs:
         run: node scripts/verificar-beta-android.mjs
       - name: Validar autenticação sem await no listener
         run: node scripts/verificar-auth-listener.mjs
+      - name: Simular fluxos reais de autenticação Android
+        run: node --test scripts/testar-fluxo-auth-native.mjs
       - name: Auditar links e rotas
         run: node scripts/auditar-links.mjs
       - name: Verificar disponibilidade de links públicos
