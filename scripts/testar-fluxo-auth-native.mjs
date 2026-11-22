@@ -204,3 +204,25 @@ test('Rejects token injection using implicit access_token and refresh_token URL 
   assert.equal(d.db.calls.filter(x=>x.name==='session').length,0)
   assert.equal(d.navigations.at(-1),'/login?auth_error=1')
 })
+
+test('Protected pages cannot be entered before session or profile validation',()=>{
+  function guarded(context,admin=false){
+    const exported=compile('src/auth/RotaProtegida.tsx',{
+      react:{},'lucide-react':{Loader2:'Loader2',ShieldAlert:'ShieldAlert'},
+      'react-router-dom':{Navigate:'Navigate'},
+      './AuthContext':{useAuth:()=>context},
+    },storage())
+    return admin?exported.RotaAdmin({children:'SECRET'}):exported.RotaProtegida({children:'SECRET'})
+  }
+  assert.equal(guarded({sessao:null,perfil:null,carregando:false,carregandoPerfil:false}).props.to,'/login')
+  const loading=guarded({sessao:{user:{}},perfil:null,carregando:false,carregandoPerfil:true})
+  assert.notEqual(loading.props?.children,'SECRET')
+  const blocked=guarded({sessao:{user:{}},perfil:{status:'bloqueado'},carregando:false,carregandoPerfil:false})
+  assert.notEqual(blocked.props?.children,'SECRET')
+  const allowed=guarded({sessao:{user:{}},perfil:{status:'ativo'},carregando:false,carregandoPerfil:false})
+  assert.equal(allowed.props.children,'SECRET')
+  const deniedAdmin=guarded({sessao:{user:{}},perfil:{status:'ativo'},carregando:false,carregandoPerfil:false,ehAdmin:false},true)
+  assert.notEqual(deniedAdmin.props?.children,'SECRET')
+  const allowedAdmin=guarded({sessao:{user:{}},perfil:{status:'ativo'},carregando:false,carregandoPerfil:false,ehAdmin:true},true)
+  assert.equal(allowedAdmin.props.children,'SECRET')
+})
