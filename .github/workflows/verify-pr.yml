@@ -25,12 +25,14 @@ jobs:
         run: node scripts/verificar-auth-listener.mjs
       - name: Auditar links e rotas
         run: node scripts/auditar-links.mjs
+      - name: Verificar disponibilidade de links públicos
+        run: node scripts/verificar-links-publicos.mjs
       - name: Publicar inventário de links
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: nexus-finance-auditoria-links
-          path: reports/auditoria-links.*
+          path: reports/auditoria-links*
           if-no-files-found: warn
           retention-days: 14
       - name: Validar TypeScript
