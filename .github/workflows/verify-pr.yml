@@ -23,6 +23,16 @@ jobs:
         run: node scripts/verificar-beta-android.mjs
       - name: Validar autenticação sem await no listener
         run: node scripts/verificar-auth-listener.mjs
+      - name: Auditar links e rotas
+        run: node scripts/auditar-links.mjs
+      - name: Publicar inventário de links
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-finance-auditoria-links
+          path: reports/auditoria-links.*
+          if-no-files-found: warn
+          retention-days: 14
       - name: Validar TypeScript
         run: npx tsc --noEmit
       - name: Validar simulador sem rede
