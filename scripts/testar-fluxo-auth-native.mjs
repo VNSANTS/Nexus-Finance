@@ -172,3 +172,28 @@ test('Web OAuth uses site origin, not native Android deep link',async()=>{
   assert.equal(a.db.calls[0].data.options.redirectTo,'https://web.nexusfinance.invalid/')
   assert.equal(a.opened.length,0)
 })
+
+test('Real supabase-js generates PKCE authorize URL with exact native redirect, no Vercel',async()=>{
+  const {createClient}=await import('@supabase/supabase-js')
+  const cache=new Map()
+  const storageAdapter={
+    getItem:async key=>cache.get(key)??null,
+    setItem:async(key,v)=>{cache.set(key,v)},
+    removeItem:async key=>{cache.delete(key)},
+  }
+  const client=createClient('https://test-only.supabase.co','sb_publishable_test',{
+    auth:{flowType:'pkce',detectSessionInUrl:false,persistSession:true,autoRefreshToken:false,storage:storageAdapter}
+  })
+  const {data,error}=await client.auth.signInWithOAuth({
+    provider:'google',options:{redirectTo:REDIRECT,skipBrowserRedirect:true}
+  })
+  assert.equal(error,null)
+  assert.ok(data.url)
+  const u=new URL(data.url)
+  assert.equal(u.searchParams.get('provider'),'google')
+  assert.equal(u.searchParams.get('redirect_to'),REDIRECT)
+  assert.equal(u.searchParams.get('code_challenge_method'),'s256')
+  assert.ok(u.searchParams.get('code_challenge'))
+  assert.ok(!data.url.includes('vercel.app'))
+  assert.ok([...cache.keys()].some(k=>k.includes('code-verifier')))
+})
