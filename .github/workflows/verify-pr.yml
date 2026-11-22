@@ -25,6 +25,8 @@ jobs:
         run: node scripts/verificar-auth-listener.mjs
       - name: Simular fluxos reais de autenticação Android
         run: node --test scripts/testar-fluxo-auth-native.mjs
+      - name: Testar carregamento seguro dos modulos
+        run: node --test scripts/testar-carregamento-modulos.mjs
       - name: Auditar links e rotas
         run: node scripts/auditar-links.mjs
       - name: Verificar disponibilidade de links públicos
