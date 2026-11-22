@@ -41,8 +41,17 @@ for(const file of files){
   const s=readFileSync(file,'utf8')
   collect(file,s,/\b(?:to|href|voltarPara|src)\s*[:=]\s*["']([^"'\n]+)["']/g,'property')
   collect(file,s,/\]\(([^)\s]+)\)/g,'markdown')
-  collect(file,s,/\b(?:navigate|location\.assign|location\.replace)\s*\(\s*["']([^"']+)["']/g,'navigate')
+  collect(file,s,/\b(?:navigate|window\.open|location\.assign|location\.replace)\s*\(\s*["']([^"']+)["']/g,'navigate')
   collect(file,s,/\b(?:navigate|location\.assign|location\.replace)\s*\(\s*\x60([^\x60]+)\x60/g,'template')
+  for(const m of s.matchAll(/\b(?:navigate|window\.open|Browser\.open|location\.assign|location\.replace)\s*\(\s*([^\r\n)]*)/g)){
+    const arg=m[1].trim()
+    if(!/^["'\x60]/.test(arg))dynamic.push({...loc(file,s,m.index),expression:'call: '+arg.slice(0,85)})
+  }
+  if(file.endsWith('.html')){
+    for(const m of s.matchAll(/href\s*=\s*["']#([^"']+)["']/g)){
+      refs.push({...loc(file,s,m.index),kind:'fragment',url:'#'+m[1]})
+    }
+  }
   for(const m of s.matchAll(/\b(?:href|to|src)\s*=\s*\{([^}]+)\}/g)){
     if(!/^["'\x60]/.test(m[1].trim()))dynamic.push({...loc(file,s,m.index),expression:m[1].trim().slice(0,85)})
   }
@@ -55,6 +64,12 @@ function isAsset(u){
   return existsSync('public'+p)||existsSync('.'+p)
 }
 function checkUrl(raw,file){
+  if(raw.startsWith('#')){
+    if(!file.endsWith('.html'))return 'fragment-review'
+    const id=raw.slice(1)
+    const src=readFileSync(file,'utf8')
+    return src.includes('id="'+id+'"')||src.includes("id='"+id+"'")?'fragment':'missing-fragment'
+  }
   if(/^(mailto:|tel:)/.test(raw))return 'scheme'
   if(raw.startsWith('%BASE_URL%')){
     const name=raw.slice('%BASE_URL%'.length).split(/[?#]/)[0]
@@ -80,7 +95,7 @@ function checkUrl(raw,file){
   return 'missing-route'
 }
 const checked=refs.map(x=>({...x,result:checkUrl(x.url,x.file)}))
-const broken=checked.filter(x=>['missing-route','missing-asset','invalid'].includes(x.result))
+const broken=checked.filter(x=>['missing-route','missing-asset','missing-fragment','invalid'].includes(x.result))
 const urls=[...new Map(external.map(x=>[x.url,x])).values()]
 const summary={scannedFiles:files.length,declaredRoutes:routes.length,linkReferences:checked.length,internalRoutes:checked.filter(x=>x.result==='route').length,publicAssets:checked.filter(x=>x.result==='asset').length,broken:broken.length,dynamicExpressions:dynamic.length,externalLiterals:urls.length}
 const tick=String.fromCharCode(96)
