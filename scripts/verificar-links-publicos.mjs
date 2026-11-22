@@ -4,6 +4,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 const audit=JSON.parse(readFileSync('reports/auditoria-links.json','utf8'))
 const excludedHosts=/^(api\.|economia\.|brapi\.dev$|fonts\.gstatic\.com$|localhost$|app\.invalid$|schemas\.android\.com$|www\.sitemaps\.org$)/
 const excludedDomains=new Set(['dadosabertos.bcb.gov.br','fonts.googleapis.com','www.googleapis.com'])
+const allowedPublicHosts=new Set(['github.com','vnsants.github.io','supabase.com','support.google.com','help.metricool.com','ads.tiktok.com','seller-br.tiktok.com','www.gov.br'])
 const refs=audit.external
 function eligibility(item){
   try {
@@ -12,6 +13,7 @@ function eligibility(item){
     if(/[{}\x24]/.test(item.url))return 'templated'
     if(u.hostname.endsWith('.invalid')||excludedHosts.test(u.hostname)||excludedDomains.has(u.hostname))return 'api-or-infrastructure'
     if(u.pathname.endsWith('.git'))return 'repository-clone-endpoint'
+    if(!allowedPublicHosts.has(u.hostname))return 'unverified-public-host'
     if(u.hostname==='ygtroklufolvixwazkne.supabase.co')return 'auth-api'
     return 'public'
   }catch{return 'not-a-concrete-url'}
