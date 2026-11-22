@@ -25,6 +25,7 @@ assert.match(deepLink, /resgatarDestinoPendente\(\)/, 'Callback deve restaurar a
 assert.match(auth, /redirectTo:\s*redirectAuth\('\/redefinir-senha'\)/, 'Reset de senha deve abrir a rota correta')
 assert.match(auth, /skipBrowserRedirect:\s*true/, 'OAuth nativo precisa ser aberto fora do WebView')
 assert.match(deepLink, /exchangeCodeForSession\(code\)/, 'Callback PKCE precisa trocar o código por sessão')
+assert.doesNotMatch(deepLink, /setSession\s*\(/, 'Não aceitar sessão injetada por fragmento em deep link nativo')
 assert.match(deepLink, /callback\.protocol !== SCHEME/, 'Callback deve validar o esquema')
 assert.match(main, /<NativeAuthDeepLink\s*\/>/, 'Listener nativo deve montar dentro do Router e AuthProvider')
 assert.match(main, /!Capacitor\.isNativePlatform\(\) && <RegistrarPwa\s*\/>/, 'O Android não deve registrar PWA Service Worker')

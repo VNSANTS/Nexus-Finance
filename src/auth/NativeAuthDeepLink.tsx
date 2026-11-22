@@ -57,22 +57,11 @@ export default function NativeAuthDeepLink() {
 
       try {
         if (erroUrl) throw new Error('OAuth callback returned an error')
-        if (code) {
-          const { error } = await supabase.auth.exchangeCodeForSession(code)
-          if (error) throw error
-        } else {
-          // Compatibilidade com templates antigos; PKCE por código é o fluxo
-          // normal do aplicativo. Nunca usar hash/token sem ambos os valores.
-          const hashParams = new URLSearchParams(callback.hash.slice(1))
-          const accessToken = hashParams.get('access_token')
-          const refreshToken = hashParams.get('refresh_token')
-          if (!accessToken || !refreshToken) throw new Error('Missing authentication code')
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          })
-          if (error) throw error
-        }
+        // O app exige PKCE. Não aceitar JWTs diretamente em um deep link
+        // personalizado: outro aplicativo poderia injetar uma sessão própria.
+        if (!code) throw new Error('Missing PKCE authorization code')
+        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        if (error) throw error
         sucesso = true
       } catch {
         // Erros de rede, código expirado, consentimento negado e JWT inválido

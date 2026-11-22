@@ -197,3 +197,10 @@ test('Real supabase-js generates PKCE authorize URL with exact native redirect, 
   assert.ok(!data.url.includes('vercel.app'))
   assert.ok([...cache.keys()].some(k=>k.includes('code-verifier')))
 })
+
+test('Rejects token injection using implicit access_token and refresh_token URL fragment',async()=>{
+  const d=nativeEnv()
+  await d.event(REDIRECT+'#access_token=forged&refresh_token=forged')
+  assert.equal(d.db.calls.filter(x=>x.name==='session').length,0)
+  assert.equal(d.navigations.at(-1),'/login?auth_error=1')
+})
