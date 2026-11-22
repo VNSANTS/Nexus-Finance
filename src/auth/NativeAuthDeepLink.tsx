@@ -39,7 +39,6 @@ export default function NativeAuthDeepLink() {
 
     const processar = async (rawUrl: string) => {
       if (!ativo || processadas.has(rawUrl)) return
-      processadas.add(rawUrl)
 
       let callback: URL
       try {
@@ -49,42 +48,50 @@ export default function NativeAuthDeepLink() {
       }
       if (callback.protocol !== SCHEME || callback.hostname !== HOST || callback.pathname !== '/callback') return
 
+      // Não consumir a rota de recuperação até verificar um código válido.
+      // Links malformados/de outra origem não devem apagar uma tentativa.
+      processadas.add(rawUrl)
       const erroUrl = callback.searchParams.get('error') || callback.searchParams.get('error_description')
       const code = callback.searchParams.get('code')
-      const destinoPendente = resgatarDestinoPendente()
-      const destino = rotaSegura(callback.searchParams.get('next') || destinoPendente)
-      if (erroUrl) {
+      let sucesso = false
+
+      try {
+        if (erroUrl) throw new Error('OAuth callback returned an error')
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code)
+          if (error) throw error
+        } else {
+          // Compatibilidade com templates antigos; PKCE por código é o fluxo
+          // normal do aplicativo. Nunca usar hash/token sem ambos os valores.
+          const hashParams = new URLSearchParams(callback.hash.slice(1))
+          const accessToken = hashParams.get('access_token')
+          const refreshToken = hashParams.get('refresh_token')
+          if (!accessToken || !refreshToken) throw new Error('Missing authentication code')
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          })
+          if (error) throw error
+        }
+        sucesso = true
+      } catch {
+        // Erros de rede, código expirado, consentimento negado e JWT inválido
+        // devem ir para uma tela de erro, jamais gerar Promise rejeitada solta.
+      }
+
+      try { await Browser.close() } catch { /* Android pode não suportar close() */ }
+      if (!ativo) return
+
+      if (!sucesso) {
+        // O erro pertence ao fluxo atual; descartar o destino pendente.
+        resgatarDestinoPendente()
         navigate('/login?auth_error=1', { replace: true })
         return
       }
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
-        if (error) {
-          navigate('/login?auth_error=1', { replace: true })
-          return
-        }
-      } else {
-        // Support Supabase templates that return an implicit session, while
-        // keeping PKCE as the configured default for all new auth flows.
-        const hashParams = new URLSearchParams(callback.hash.slice(1))
-        const accessToken = hashParams.get('access_token')
-        const refreshToken = hashParams.get('refresh_token')
-        if (!accessToken || !refreshToken) {
-          navigate('/login?auth_error=1', { replace: true })
-          return
-        }
-        const { error } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        })
-        if (error) {
-          navigate('/login?auth_error=1', { replace: true })
-          return
-        }
-      }
 
-      try { await Browser.close() } catch { /* No browser tab may be open for email links. */ }
-      if (ativo) navigate(destino, { replace: true })
+      const destinoPendente = resgatarDestinoPendente()
+      const destino = rotaSegura(callback.searchParams.get('next') || destinoPendente)
+      navigate(destino, { replace: true })
     }
 
     const listener = App.addListener('appUrlOpen', ({ url }) => { void processar(url) })

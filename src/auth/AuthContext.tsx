@@ -216,16 +216,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const entrarComOAuth = useCallback(async (provedor: ProvedorOAuth) => {
-    // Checa cadastro fechado ANTES de redirecionar pro provedor — evita
-    // mandar a pessoa pro Google/GitHub pra só voltar com erro depois.
-    // Isto é só uma barreira de UX: a barreira real (impossível de
-    // contornar) é o trigger em auth.users (ver supabase/005_controle_acesso.sql),
-    // que também bloqueia contas OAuth novas quando cadastro_fechado=true.
+    // Mesmo com novos cadastros fechados, o OAuth precisa permitir o login
+    // de quem já existe. A restrição a NOVAS contas é imposta no trigger
+    // de auth.users; bloquear antes de chamar OAuth impediria o login legítimo.
     const configAtual = await buscarAppConfig()
     setAppConfig(configAtual)
-    if (configAtual.cadastroFechado) {
-      return { erro: 'Novos cadastros estão temporariamente pausados. Se você já tem conta, isso não te afeta — tente entrar normalmente.' }
-    }
 
     // redirectTo garante que, depois de autorizar no Google/GitHub/etc.,
     // a pessoa volta pro app (e não pra localhost, mesmo problema que
