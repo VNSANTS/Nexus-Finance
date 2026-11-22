@@ -10,7 +10,7 @@ function eligibility(item){
     const u=new URL(item.url)
     if(!['https:','http:'].includes(u.protocol))return 'not-http'
     if(/[{}\x24]/.test(item.url))return 'templated'
-    if(excludedHosts.test(u.hostname)||excludedDomains.has(u.hostname))return 'api-or-infrastructure'
+    if(u.hostname.endsWith('.invalid')||excludedHosts.test(u.hostname)||excludedDomains.has(u.hostname))return 'api-or-infrastructure'
     if(u.pathname.endsWith('.git'))return 'repository-clone-endpoint'
     if(u.hostname==='ygtroklufolvixwazkne.supabase.co')return 'auth-api'
     return 'public'
