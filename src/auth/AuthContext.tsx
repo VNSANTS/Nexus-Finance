@@ -32,6 +32,7 @@ interface AuthContextValor {
   resetarSenha: (email: string) => Promise<{ erro: string | null }>
   atualizarSenha: (novaSenha: string) => Promise<{ erro: string | null }>
   reenviarConfirmacaoPropria: () => Promise<{ erro: string | null }>
+  reenviarConfirmacaoCadastro: (email: string) => Promise<{ erro: string | null }>
   ehAdmin: boolean
 }
 // Os 3 provedores configurados. Cada um precisa ser habilitado e
@@ -296,9 +297,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Reenvia a confirmação pro PRÓPRIO e-mail (diferente da versão no
   // painel admin, que reenvia pra qualquer usuário) — `auth.resend()` não
   // exige privilégio nenhum além de já estar logado.
-  const reenviarConfirmacaoPropria = useCallback(async () => {
-    const email = sessao?.user?.email
-    if (!email) return { erro: 'Sessão inválida.' }
+  // O cadastro pode não retornar sessão enquanto o e-mail está pendente.
+  // Permitir reenvio também na tela de login; GoTrue aplica limites de envio.
+  const reenviarConfirmacaoCadastro = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
@@ -306,7 +307,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
     if (error) return { erro: traduzirErro(error.message) }
     return { erro: null }
-  }, [sessao])
+  }, [])
+
+  const reenviarConfirmacaoPropria = useCallback(async () => {
+    const email = sessao?.user?.email
+    if (!email) return { erro: 'Sessão inválida.' }
+    return reenviarConfirmacaoCadastro(email)
+  }, [sessao, reenviarConfirmacaoCadastro])
 
   return (
     <AuthContext.Provider
@@ -324,6 +331,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resetarSenha,
         atualizarSenha,
         reenviarConfirmacaoPropria,
+        reenviarConfirmacaoCadastro,
         ehAdmin: perfil?.role === 'admin',
       }}
     >

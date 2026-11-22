@@ -95,6 +95,9 @@ test('Signup and resend email confirmation always use native redirect',async()=>
   await a.api.reenviarConfirmacaoPropria()
   assert.equal(a.db.calls[0].data.options.emailRedirectTo,REDIRECT)
   assert.equal(a.db.calls[1].data.options.emailRedirectTo,REDIRECT)
+  const newUser=authEnv()
+  assert.equal((await newUser.api.reenviarConfirmacaoCadastro('no-session@example.invalid')).erro,null)
+  assert.equal(newUser.db.calls[0].data.options.emailRedirectTo,REDIRECT)
 })
 test('Reset email stores route and PKCE callback opens reset form',async()=>{
   const s=storage(),db=backend(),a=authEnv({store:s,db})
