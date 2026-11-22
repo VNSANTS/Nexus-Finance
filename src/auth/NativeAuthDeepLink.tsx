@@ -7,6 +7,21 @@ import { supabase } from '@/lib/supabase'
 
 const SCHEME = 'com.nexusfinance.app:'
 const HOST = 'auth'
+const CHAVE_DESTINO_AUTH_NATIVO = 'nexus-finance-auth-native-next'
+
+function resgatarDestinoPendente(): string | null {
+  try {
+    const raw = localStorage.getItem(CHAVE_DESTINO_AUTH_NATIVO)
+    localStorage.removeItem(CHAVE_DESTINO_AUTH_NATIVO)
+    if (!raw) return null
+    const parsed: { next?: string; at?: number } = JSON.parse(raw)
+    // Email de recuperação pode demorar a ser aberto. Após 48h, rota padrão.
+    if (!parsed.at || !Number.isFinite(parsed.at) || Date.now() - parsed.at > 48 * 60 * 60 * 1000) return null
+    return parsed.next ?? null
+  } catch {
+    return null
+  }
+}
 
 function rotaSegura(value: string | null): '/login' | '/redefinir-senha' | '/' {
   if (value === '/redefinir-senha' || value === '/login') return value
@@ -36,6 +51,8 @@ export default function NativeAuthDeepLink() {
 
       const erroUrl = callback.searchParams.get('error') || callback.searchParams.get('error_description')
       const code = callback.searchParams.get('code')
+      const destinoPendente = resgatarDestinoPendente()
+      const destino = rotaSegura(callback.searchParams.get('next') || destinoPendente)
       if (erroUrl) {
         navigate('/login?auth_error=1', { replace: true })
         return
@@ -52,20 +69,22 @@ export default function NativeAuthDeepLink() {
         const hashParams = new URLSearchParams(callback.hash.slice(1))
         const accessToken = hashParams.get('access_token')
         const refreshToken = hashParams.get('refresh_token')
-        if (accessToken && refreshToken) {
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          })
-          if (error) {
-            navigate('/login?auth_error=1', { replace: true })
-            return
-          }
+        if (!accessToken || !refreshToken) {
+          navigate('/login?auth_error=1', { replace: true })
+          return
+        }
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
+        if (error) {
+          navigate('/login?auth_error=1', { replace: true })
+          return
         }
       }
 
       try { await Browser.close() } catch { /* No browser tab may be open for email links. */ }
-      if (ativo) navigate(rotaSegura(callback.searchParams.get('next')), { replace: true })
+      if (ativo) navigate(destino, { replace: true })
     }
 
     const listener = App.addListener('appUrlOpen', ({ url }) => { void processar(url) })

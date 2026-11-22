@@ -42,10 +42,18 @@ interface AuthContextValor {
 export type ProvedorOAuth = 'google' | 'github'
 
 const REDIRECT_NATIVE = 'com.nexusfinance.app://auth/callback'
+// Este endereço deve corresponder exatamente à allowlist do Supabase.
+// Anexar ?next= à URL pode fazê-la cair na Site URL (Vercel).
+const CHAVE_DESTINO_AUTH_NATIVO = 'nexus-finance-auth-native-next'
 
 function redirectAuth(next: '/login' | '/redefinir-senha' | '/'): string {
   if (Capacitor.isNativePlatform()) {
-    return `${REDIRECT_NATIVE}?next=${encodeURIComponent(next)}`
+    // Preserva a rota no WebView sem alterar a URL cadastrada. Os destinos
+    // são restritos pelo tipo, impedindo redirects externos injetados.
+    try {
+      localStorage.setItem(CHAVE_DESTINO_AUTH_NATIVO, JSON.stringify({ next, at: Date.now() }))
+    } catch { /* armazenamento pode estar indisponível */ }
+    return REDIRECT_NATIVE
   }
   return new URL(next === '/' ? '' : next.slice(1), new URL(import.meta.env.BASE_URL, window.location.origin)).toString()
 }
@@ -231,8 +239,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...(native ? { skipBrowserRedirect: true } : {}),
       },
     })
-    if (!error && native && data.url) {
-      await Browser.open({ url: data.url })
+    if (!error && native) {
+      if (!data.url) return { erro: 'O provedor não forneceu o link de autenticação.' }
+      try {
+        await Browser.open({ url: data.url })
+      } catch {
+        return { erro: 'Não foi possível abrir o navegador para autenticação.' }
+      }
     }
     // Em fluxo OAuth, sucesso não retorna aqui — o navegador é redirecionado
     // pro provedor (Google etc.) e depois volta pro app já logado, o
@@ -291,7 +304,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const reenviarConfirmacaoPropria = useCallback(async () => {
     const email = sessao?.user?.email
     if (!email) return { erro: 'Sessão inválida.' }
-    const { error } = await supabase.auth.resend({ type: 'signup', email })
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: redirectAuth('/') },
+    })
     if (error) return { erro: traduzirErro(error.message) }
     return { erro: null }
   }, [sessao])
