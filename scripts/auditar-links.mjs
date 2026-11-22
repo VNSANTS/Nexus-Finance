@@ -34,12 +34,13 @@ const routePatterns=routes.map(p=>new RegExp('^'+p.replace(/[.*+?^$()|[\]{}]/g,'
 const refs=[],external=[],dynamic=[]
 function collect(file,source,regex,kind){
   for(const m of source.matchAll(regex)){
-    if(/^(\/|https?:\/\/|mailto:|tel:)/.test(m[1]))refs.push({...loc(file,source,m.index),kind,url:m[1]})
+    if(/^(\/|\.\/|\.\.\/|%BASE_URL%|https?:\/\/|mailto:|tel:)/.test(m[1]))refs.push({...loc(file,source,m.index),kind,url:m[1]})
   }
 }
 for(const file of files){
   const s=readFileSync(file,'utf8')
-  collect(file,s,/\b(?:to|href|voltarPara)\s*[:=]\s*["']([^"'\n]+)["']/g,'property')
+  collect(file,s,/\b(?:to|href|voltarPara|src)\s*[:=]\s*["']([^"'\n]+)["']/g,'property')
+  collect(file,s,/\]\(([^)\s]+)\)/g,'markdown')
   collect(file,s,/\b(?:navigate|location\.assign|location\.replace)\s*\(\s*["']([^"']+)["']/g,'navigate')
   collect(file,s,/\b(?:navigate|location\.assign|location\.replace)\s*\(\s*\x60([^\x60]+)\x60/g,'template')
   for(const m of s.matchAll(/\b(?:href|to|src)\s*=\s*\{([^}]+)\}/g)){
@@ -53,8 +54,21 @@ function isAsset(u){
   const p=u.split(/[?#]/)[0].replace(/^\/Nexus-Finance\//,'/')
   return existsSync('public'+p)||existsSync('.'+p)
 }
-function checkUrl(raw){
+function checkUrl(raw,file){
   if(/^(mailto:|tel:)/.test(raw))return 'scheme'
+  if(raw.startsWith('%BASE_URL%')){
+    const name=raw.slice('%BASE_URL%'.length).split(/[?#]/)[0]
+    return existsSync('public/'+name)?'asset':'missing-asset'
+  }
+  if(raw.startsWith('./')||raw.startsWith('../')){
+    if(file.startsWith('public/')||file==='index.html'){
+      const origin=file==='index.html'?'/index.html':'/'+file.slice('public/'.length)
+      const rel=new URL(raw,'https://pages.invalid'+origin)
+      if(rel.pathname==='/'||rel.pathname==='/index.html')return 'web-app-entry'
+      return existsSync('public'+rel.pathname)?'asset':'missing-asset'
+    }
+    return 'relative-review'
+  }
   if(/^https?:\/\//.test(raw))return 'external'
   if(!raw.startsWith('/'))return 'other'
   if(raw.startsWith('//'))return 'invalid'
@@ -65,8 +79,8 @@ function checkUrl(raw){
   if(/\x24\{|\*|:id\b/.test(raw))return 'dynamic-review'
   return 'missing-route'
 }
-const checked=refs.map(x=>({...x,result:checkUrl(x.url)}))
-const broken=checked.filter(x=>['missing-route','invalid'].includes(x.result))
+const checked=refs.map(x=>({...x,result:checkUrl(x.url,x.file)}))
+const broken=checked.filter(x=>['missing-route','missing-asset','invalid'].includes(x.result))
 const urls=[...new Map(external.map(x=>[x.url,x])).values()]
 const summary={scannedFiles:files.length,declaredRoutes:routes.length,linkReferences:checked.length,internalRoutes:checked.filter(x=>x.result==='route').length,publicAssets:checked.filter(x=>x.result==='asset').length,broken:broken.length,dynamicExpressions:dynamic.length,externalLiterals:urls.length}
 const tick=String.fromCharCode(96)
@@ -81,7 +95,7 @@ const report=[
   '',
   '## Rotas e referências inválidas',...(broken.length?broken.map(item):['_Nenhuma rota estática inválida detectada_']),
   '',
-  '## Todas as referências internas',...checked.filter(x=>x.url.startsWith('/')).map(x=>item(x)+' ('+x.result+')'),
+  '## Todas as referências internas e relativas',...checked.filter(x=>!/^(https?:|mailto:|tel:)/.test(x.url)).map(x=>item(x)+' ('+x.result+')'),
   '',
   '## Todos os links externos literais',...urls.map(item),
   '',
