@@ -7,6 +7,8 @@ import { ProgressProvider } from './hooks/useUserProgress'
 import { ThemeProvider } from './hooks/useTheme'
 import { AuthProvider } from './auth/AuthContext'
 import NativeAuthDeepLink from './auth/NativeAuthDeepLink'
+import { Capacitor } from '@capacitor/core'
+import { RegistrarPwa } from './hooks/useAtualizacaoApp'
 import './styles/globals.css'
 
 // O 404 do GitHub Pages redireciona rotas profundas à raiz e guarda a rota
@@ -35,6 +37,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           app principal quanto a Gestão Financeira (tema é preferência de
           app inteiro, não específica de nenhum dos dois). */}
       <ThemeProvider>
+        {!Capacitor.isNativePlatform() && <RegistrarPwa />}
         <BrowserRouter basename={import.meta.env.BASE_URL}>
           {/* AuthProvider por fora do Router: qualquer tela (inclusive o
               próprio /login) precisa poder ler sessão/perfil. */}

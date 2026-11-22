@@ -27,6 +27,10 @@ assert.match(auth, /skipBrowserRedirect:\s*true/, 'OAuth nativo precisa ser aber
 assert.match(deepLink, /exchangeCodeForSession\(code\)/, 'Callback PKCE precisa trocar o código por sessão')
 assert.match(deepLink, /callback\.protocol !== SCHEME/, 'Callback deve validar o esquema')
 assert.match(main, /<NativeAuthDeepLink\s*\/>/, 'Listener nativo deve montar dentro do Router e AuthProvider')
+assert.match(main, /!Capacitor\.isNativePlatform\(\) && <RegistrarPwa\s*\/>/, 'O Android não deve registrar PWA Service Worker')
+const updateHook = read('src/hooks/useAtualizacaoApp.ts')
+assert.match(updateHook, /export function RegistrarPwa\(\)/, 'PWA web deve continuar registrável')
+assert.match(updateHook, /Capacitor\.isNativePlatform\(\)/, 'Atualização no Android exige APK assinado')
 for (const name of ['admin-users', 'nexus-ai', 'mercado-ia', 'mercado-cotacoes']) {
   const functionSource = read(`supabase/functions/${name}/index.ts`)
   assert.match(functionSource, /'https:\/\/localhost'/, `Origem Capacitor ausente em ${name}`)

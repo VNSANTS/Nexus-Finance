@@ -1,22 +1,22 @@
 import { useCallback } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
+import { Capacitor } from '@capacitor/core'
 import { forcarAtualizacaoCompleta } from '@/lib/forcarAtualizacao'
 
-/**
- * Registra o Service Worker (necessário porque vite.config.ts usa
- * `injectRegister: false` — sem isso, nada registraria o SW) e expõe um
- * botão de "forçar atualização" direto, sem etapa de verificação prévia:
- * desregistra o SW atual, limpa os caches e recarrega. É mais garantido
- * que confiar no ciclo normal de troca do Service Worker, que é
- * exatamente o que ficava "preso" antes (relato: "muitas vezes eu atualizo
- * mas o pwa instalado não atualiza").
- */
+// O PWA é exclusivo do site. Instalar Service Worker no WebView do APK pode
+// manter chunks antigos após uma atualização Android, inclusive o fluxo Auth.
+export function RegistrarPwa() {
+  useRegisterSW()
+  return null
+}
+
 export function useAtualizacaoApp() {
-  useRegisterSW() // só o registro em si — sem isso o SW nunca é instalado
-
   const aplicarAtualizacao = useCallback(() => {
-    forcarAtualizacaoCompleta()
+    if (Capacitor.isNativePlatform()) {
+      window.alert('No Android, as atualizações são instaladas por um novo APK assinado. Não é possível atualizar os arquivos internos só recarregando a tela.')
+      return
+    }
+    void forcarAtualizacaoCompleta()
   }, [])
-
   return { aplicarAtualizacao }
 }

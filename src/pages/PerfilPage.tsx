@@ -36,6 +36,7 @@ import { ModalAvancado as SeletorCorAvancado } from '@/components/SeletorCor'
 import { corComAlfa, corOpaca } from '@/utils/cor'
 import { useUserProgress } from '@/hooks/useUserProgress'
 import { useAtualizacaoApp } from '@/hooks/useAtualizacaoApp'
+import { Capacitor } from '@capacitor/core'
 import { useAuth } from '@/auth/AuthContext'
 import { BADGES } from '@/data/badges'
 import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
@@ -297,7 +298,7 @@ export default function PerfilPage() {
           />
           <ConfigRow
             icon={Download}
-            label="Forçar atualização do app"
+            label={Capacitor.isNativePlatform() ? 'Como atualizar o APK' : 'Forçar atualização do app'}
             cor="#00D4FF"
             onClick={aplicarAtualizacao}
           />
