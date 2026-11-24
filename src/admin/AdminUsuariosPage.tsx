@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { useAdminUsuarios } from './useAdminUsuarios'
 import { buscarAppConfig, atualizarAppConfig, forcarAtualizacaoTodos } from './backend'
+import PainelApoioPix from './PainelApoioPix'
 import type { EdicaoMetricasAdmin, EdicaoUsuarioAdmin, OrdenacaoAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from './types'
 
 function formatarData(iso: string | null) {
@@ -616,6 +617,7 @@ export default function AdminUsuariosPage() {
       </div>
 
       <PainelControleAcesso />
+      <PainelApoioPix />
 
       {/* Busca */}
       <div className="relative">

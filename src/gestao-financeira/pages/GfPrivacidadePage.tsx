@@ -7,9 +7,8 @@ import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
 
 // Tela "Privacidade" (menu Mais → Privacidade). Escopo: o que dá pra
 // controlar de fato dentro do app hoje — ocultar valores, gerenciar as
-// permissões usadas pelo app e apagar dados. O que fica de fora por
+// permissões usadas pelo app e apagar dados locais. O que fica de fora por
 // decisão consciente, não por esquecimento:
-// - PIN/biometria/sessões: isso é a tela "Segurança" (ainda não construída).
 // - Exportar/importar/sincronizar: isso é "Dados e backup" (outra tela) —
 //   o botão de apagar tudo aqui é sobre direito de exclusão, não backup.
 // - Câmera nas Metas e notificação/vibração viraram controle de verdade
@@ -28,9 +27,6 @@ export default function GfPrivacidadePage() {
   const notifPrefs = estado.preferenciasNotificacoes
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
   const [avisoPermissao, setAvisoPermissao] = useState<string | null>(null)
-
-  const totalRegistros =
-    estado.transacoes.length + estado.contas.length + estado.cartoes.length + estado.dividas.length + estado.metas.length
 
   const statusNotificacaoNavegador: 'granted' | 'denied' | 'default' | 'indisponivel' =
     typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'indisponivel'
@@ -93,7 +89,7 @@ export default function GfPrivacidadePage() {
             onToggle={() => definirPreferenciasPrivacidade({ ocultarAoTrocarDeApp: !prefs.ocultarAoTrocarDeApp })}
           />
           <p className="text-[10.5px] text-slate-500 leading-relaxed">
-            Isso é um véu visual, não uma trava — não pede senha nem PIN pra voltar. Bloqueio de verdade com PIN ou biometria vai ficar na tela Segurança.
+            Ocultar valores é um recurso visual. Para bloquear esta área, configure um PIN em Segurança.
           </p>
         </div>
 
@@ -106,11 +102,9 @@ export default function GfPrivacidadePage() {
             <p className="text-[13.5px] font-semibold text-white">Onde seus dados ficam</p>
           </div>
           <p className="text-[11.5px] text-slate-400 leading-relaxed">
-            Tudo da Gestão Financeira — contas, cartões, lançamentos, dívidas e metas — fica salvo só neste dispositivo, no
-            armazenamento local do navegador. Nada é enviado pra nenhum servidor, nenhuma nuvem e não existe coleta de dados
-            de uso (analytics) rodando hoje.
+            Seus registros ficam disponíveis neste aparelho e também são sincronizados com sua conta pelo Supabase quando
+            você está conectado. Veja a Política de Privacidade para entender o uso desses dados e dos serviços externos.
           </p>
-          <p className="text-[10.5px] text-slate-500">{totalRegistros} registros salvos localmente agora</p>
         </div>
 
         {/* Permissões */}

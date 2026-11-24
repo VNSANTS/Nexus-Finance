@@ -276,6 +276,15 @@ export default function LoginPage() {
           </div>
         </>
       )}
+
+      {modo !== 'esqueci' && (
+        <p className="mt-5 text-center text-[11px] leading-relaxed text-texto-secundario">
+          Documentos: {' '}
+          <a className="text-accent-cyan underline" href={`${import.meta.env.BASE_URL}privacy-policy.html`}>Política de Privacidade</a>
+          {' '}e os{' '}
+          <a className="text-accent-cyan underline" href={`${import.meta.env.BASE_URL}termos-de-uso.html`}>Termos de Uso</a>.
+        </p>
+      )}
     </div>
   )
 }

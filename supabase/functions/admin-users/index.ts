@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       p_function_name: 'admin-users',
     })
     if (erroLimite) {
-      console.error('Falha ao verificar limite admin-users:', erroLimite.message)
+      console.error('[admin-users] Rate-limit check failed')
       return respostaErro('Serviço temporariamente indisponível.', 503, req)
     }
     if (permitido !== true) return respostaErro('Limite de 10 ações por minuto atingido. Aguarde um minuto e tente novamente.', 429, req)
@@ -189,13 +189,19 @@ Deno.serve(async (req) => {
         const { error: erroAuth } = await supabaseAdmin.auth.admin.updateUserById(acao.alvoId, {
           ban_duration: acao.bloquear ? '876000h' : 'none',
         })
-        if (erroAuth) return respostaErro('Não foi possível atualizar a conta.', 400, req)
+        if (erroAuth) {
+          console.error('[admin-users] Auth ban update failed')
+          return respostaErro('Não foi possível atualizar a conta.', 400, req)
+        }
 
         const { error: erroPerfilUpdate } = await supabaseAdmin
           .from('profiles')
           .update({ status: acao.bloquear ? 'bloqueado' : 'ativo' })
           .eq('id', acao.alvoId)
-        if (erroPerfilUpdate) return respostaErro('Não foi possível atualizar o perfil.', 400, req)
+        if (erroPerfilUpdate) {
+          console.error('[admin-users] Profile status update failed')
+          return respostaErro('Não foi possível atualizar o perfil.', 400, req)
+        }
 
         return respostaOk({ status: acao.bloquear ? 'bloqueado' : 'ativo' }, req)
       }
@@ -239,7 +245,7 @@ Deno.serve(async (req) => {
         return respostaErro('Ação desconhecida.', 400, req)
     }
   } catch (erro) {
-    console.error('Erro inesperado na admin-users:', erro)
+    console.error('[admin-users] Unexpected request failure')
     return respostaErro('Erro interno.', 500, req)
   }
 })

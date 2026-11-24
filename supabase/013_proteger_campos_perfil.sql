@@ -9,10 +9,16 @@ SECURITY INVOKER
 SET search_path = ''
 AS $$
 BEGIN
+  -- A service_role é confiável e não deve depender de EXECUTE em is_admin,
+  -- que é restrita aos JWTs authenticated por desenho.
+  IF auth.role() = 'service_role' THEN
+    RETURN NEW;
+  END IF;
+
   -- Com o token de um usuário comum, somente os campos editáveis pelo
   -- usuário podem mudar. Admins reais são verificados pelo banco.
   -- A função de admin foi movida para o schema private pela migração 20261023161332.
-  -- Calls administrativos/service_role sem auth.uid continuam permitidos.
+  -- Calls administrativos sem auth.uid continuam permitidos.
   IF auth.uid() IS NOT NULL AND NOT private.is_admin() THEN
     IF NEW.role IS DISTINCT FROM OLD.role
        OR NEW.status IS DISTINCT FROM OLD.status
