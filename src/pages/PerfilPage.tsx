@@ -32,6 +32,7 @@ import { getIcon } from '@/components/Icon'
 import ProgressRing from '@/components/ProgressRing'
 import Avatar from '@/components/Avatar'
 import EditorFotoPerfil from '@/components/EditorFotoPerfil'
+import ApoieProjetoCard from '@/components/ApoieProjetoCard'
 import { ModalAvancado as SeletorCorAvancado } from '@/components/SeletorCor'
 import { corComAlfa, corOpaca } from '@/utils/cor'
 import { useUserProgress } from '@/hooks/useUserProgress'
@@ -264,6 +265,8 @@ export default function PerfilPage() {
         <ConquistasCarrossel badges={BADGES} statsUsuario={statsUsuario} onCompartilhar={setBadgeCompartilhando} />
       </div>
 
+      <ApoieProjetoCard />
+
       {/* Configurações */}
       <div>
         <p className="text-[12.5px] font-bold text-white mb-2.5">Configurações</p>
@@ -311,6 +314,13 @@ export default function PerfilPage() {
             cor="#FFC93C"
             control={<span className="text-[11px] text-slate-500 font-medium">{resumoNotificacoes}</span>}
             onClick={() => navigate('/notificacoes')}
+            chevron
+          />
+          <ConfigRow
+            icon={ShieldCheck}
+            label="Privacidade e segurança"
+            cor="#22C55E"
+            onClick={() => navigate('/privacidade-seguranca')}
             chevron
           />
           <ConfigRow

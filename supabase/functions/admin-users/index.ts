@@ -189,13 +189,27 @@ Deno.serve(async (req) => {
         const { error: erroAuth } = await supabaseAdmin.auth.admin.updateUserById(acao.alvoId, {
           ban_duration: acao.bloquear ? '876000h' : 'none',
         })
-        if (erroAuth) return respostaErro('Não foi possível atualizar a conta.', 400, req)
+        if (erroAuth) {
+          console.error('[admin-users] Auth ban update failed:', {
+            code: erroAuth.code,
+            status: erroAuth.status,
+            message: erroAuth.message,
+          })
+          return respostaErro('Não foi possível atualizar a conta.', 400, req)
+        }
 
         const { error: erroPerfilUpdate } = await supabaseAdmin
           .from('profiles')
           .update({ status: acao.bloquear ? 'bloqueado' : 'ativo' })
           .eq('id', acao.alvoId)
-        if (erroPerfilUpdate) return respostaErro('Não foi possível atualizar o perfil.', 400, req)
+        if (erroPerfilUpdate) {
+          console.error('[admin-users] Profile status update failed:', {
+            code: erroPerfilUpdate.code,
+            status: erroPerfilUpdate.status,
+            message: erroPerfilUpdate.message,
+          })
+          return respostaErro('Não foi possível atualizar o perfil.', 400, req)
+        }
 
         return respostaOk({ status: acao.bloquear ? 'bloqueado' : 'ativo' }, req)
       }

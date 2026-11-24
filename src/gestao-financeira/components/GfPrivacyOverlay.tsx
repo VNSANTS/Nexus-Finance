@@ -34,7 +34,7 @@ export default function GfPrivacyOverlay() {
       <div className="w-14 h-14 rounded-2xl bg-accent-cyan/15 flex items-center justify-center">
         <ShieldCheck size={26} className="text-accent-cyan" />
       </div>
-      <p className="text-[13.5px] font-semibold text-white text-center">Seus valores estão protegidos</p>
+      <p className="text-[13.5px] font-semibold text-white text-center">Tela ocultada</p>
       <p className="text-[11px] text-slate-500 text-center max-w-[240px]">
         Ativado em Privacidade → Ocultar valores ao trocar de app
       </p>

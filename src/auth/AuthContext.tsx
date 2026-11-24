@@ -29,8 +29,10 @@ interface AuthContextValor {
   entrarComOAuth: (provedor: ProvedorOAuth) => Promise<{ erro: string | null }>
   sair: () => Promise<void>
   excluirPropriaConta: () => Promise<{ erro: string | null }>
+  encerrarOutrasSessoes: () => Promise<{ erro: string | null }>
   resetarSenha: (email: string) => Promise<{ erro: string | null }>
   atualizarSenha: (novaSenha: string) => Promise<{ erro: string | null }>
+  alterarSenhaComSenhaAtual: (senhaAtual: string, novaSenha: string) => Promise<{ erro: string | null }>
   reenviarConfirmacaoPropria: () => Promise<{ erro: string | null }>
   reenviarConfirmacaoCadastro: (email: string) => Promise<{ erro: string | null }>
   ehAdmin: boolean
@@ -160,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (appConfig?.modoManutencao && sessao && perfil && perfil.role !== 'admin') {
-      supabase.auth.signOut()
+      supabase.auth.signOut({ scope: 'local' })
     }
   }, [appConfig, sessao, perfil])
 
@@ -195,7 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (configAtual.modoManutencao && data.user) {
       const p = await buscarPerfil(data.user.id)
       if (p?.role !== 'admin') {
-        await supabase.auth.signOut()
+        await supabase.auth.signOut({ scope: 'local' })
         return { erro: 'O app está em manutenção no momento. Tente novamente mais tarde.' }
       }
     }
@@ -253,7 +255,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const sair = useCallback(async () => {
-    await supabase.auth.signOut()
+    // Sair deste aparelho não deve derrubar as sessões de outros dispositivos.
+    await supabase.auth.signOut({ scope: 'local' })
   }, [])
 
   const excluirPropriaConta = useCallback(async () => {
@@ -268,9 +271,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // A conta já foi apagada no servidor — desloga localmente pra limpar
     // a sessão (que agora aponta pra um usuário que não existe mais).
-    await supabase.auth.signOut()
+    await supabase.auth.signOut({ scope: 'local' })
     return { erro: null }
   }, [sessao])
+
+  const encerrarOutrasSessoes = useCallback(async () => {
+    const { error } = await supabase.auth.signOut({ scope: 'others' })
+    if (error) return { erro: traduzirErro(error.message) }
+    return { erro: null }
+  }, [])
 
   // "Esqueci minha senha" — manda o e-mail com o link de recuperação. Não
   // avisa se o e-mail existe ou não (Supabase não retorna erro nesse caso
@@ -291,6 +300,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const atualizarSenha = useCallback(async (novaSenha: string) => {
     const { error } = await supabase.auth.updateUser({ password: novaSenha })
     if (error) return { erro: traduzirErro(error.message) }
+    return { erro: null }
+  }, [])
+
+  // Troca iniciada em Conta > Privacidade: exige a senha atual para
+  // confirmar a identidade antes de atualizar a credencial.
+  const alterarSenhaComSenhaAtual = useCallback(async (senhaAtual: string, novaSenha: string) => {
+    const { error } = await supabase.auth.updateUser({
+      current_password: senhaAtual,
+      password: novaSenha,
+    })
+    if (error) {
+      const mensagem = error.message.toLowerCase()
+      if (mensagem.includes('current password') || mensagem.includes('current_password')) {
+        return { erro: 'A senha atual está incorreta.' }
+      }
+      return { erro: traduzirErro(error.message) }
+    }
     return { erro: null }
   }, [])
 
@@ -328,8 +354,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         entrarComOAuth,
         sair,
         excluirPropriaConta,
+        encerrarOutrasSessoes,
         resetarSenha,
         atualizarSenha,
+        alterarSenhaComSenhaAtual,
         reenviarConfirmacaoPropria,
         reenviarConfirmacaoCadastro,
         ehAdmin: perfil?.role === 'admin',

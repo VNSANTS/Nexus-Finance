@@ -22,6 +22,7 @@ const ModuloPage = lazy(() => import('@/pages/ModuloPage'))
 const CarteiraPage = lazy(() => import('@/pages/CarteiraPage'))
 const FerramentasPage = lazy(() => import('@/pages/FerramentasPage'))
 const PerfilPage = lazy(() => import('@/pages/PerfilPage'))
+const PrivacidadeSegurancaPage = lazy(() => import('@/pages/PrivacidadeSegurancaPage'))
 const BibliotecaPage = lazy(() => import('@/pages/BibliotecaPage'))
 const GlossarioPage = lazy(() => import('@/pages/GlossarioPage'))
 const MercadoPage = lazy(() => import('@/pages/MercadoPage'))
@@ -112,6 +113,7 @@ function AppRotas() {
                     <Route path="/carteira" element={<CarteiraPage />} />
                     <Route path="/ferramentas" element={<FerramentasPage />} />
                     <Route path="/perfil" element={<PerfilPage />} />
+                    <Route path="/privacidade-seguranca" element={<PrivacidadeSegurancaPage />} />
                     <Route path="/investidor" element={<InvestidorPage />} />
                     <Route path="/revisao" element={<RevisaoPage />} />
                     <Route path="/busca" element={<BuscaPage />} />

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Check, Fingerprint, KeyRound, Laptop, ShieldCheck } from 'lucide-react'
+import { Check, KeyRound, ShieldCheck } from 'lucide-react'
 import GfHeader from '../components/GfHeader'
 import GfTecladoPin from '../components/GfTecladoPin'
 import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
@@ -93,6 +93,10 @@ export default function GfSegurancaPage() {
         } else {
           setEtapa('novo')
         }
+      }).catch(() => {
+        processandoRef.current = false
+        setDigitado('')
+        setMensagemErro('Não foi possível validar o PIN. Tente novamente.')
       })
       return
     }
@@ -125,6 +129,10 @@ export default function GfSegurancaPage() {
         })
         avisarSucesso(modo === 'ativar' ? 'PIN ativado.' : 'PIN alterado.')
         limparFluxo()
+      }).catch(() => {
+        processandoRef.current = false
+        setDigitado('')
+        setMensagemErro('Não foi possível salvar o PIN neste aparelho. Tente novamente.')
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,7 +140,7 @@ export default function GfSegurancaPage() {
 
   return (
     <div className="pb-10">
-      <GfHeader titulo="Segurança" subtitulo="PIN, biometria, sessões" icone={ShieldCheck} corIcone="#22C55E" voltarPara="/gestao-financeira/mais" />
+      <GfHeader titulo="Segurança" subtitulo="Bloqueio de acesso" icone={ShieldCheck} corIcone="#22C55E" voltarPara="/gestao-financeira/mais" />
 
       <div className="px-4 mt-4 flex flex-col gap-3">
         {mensagemSucesso && (
@@ -244,44 +252,8 @@ export default function GfSegurancaPage() {
           )}
 
           <p className="text-[10.5px] text-slate-500 leading-relaxed border-t border-border pt-3">
-            O PIN nunca fica salvo em texto puro — só um hash (PBKDF2-SHA256), gerado no seu próprio navegador. Isso
-            protege o acesso à TELA neste aparelho; não é criptografia dos dados e não impede alguém com acesso ao
-            aparelho e ferramentas de desenvolvedor de ler o que está salvo localmente. Se esquecer o PIN, dá pra
-            remover a trava na própria tela de bloqueio — isso não apaga nenhum lançamento, conta ou meta. Por enquanto
-            qualquer perfil de Família e perfis pode mexer aqui, sem checagem de permissão ainda.
-          </p>
-        </div>
-
-        {/* Biometria */}
-        <div className="card-surface rounded-2xl p-3.5 flex flex-col gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-accent-purple/15">
-              <Fingerprint size={15} className="text-accent-purple" />
-            </div>
-            <p className="text-[13.5px] font-semibold text-white">Biometria</p>
-          </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
-            Ainda não dá pra desbloquear com digital ou reconhecimento facial. O navegador até oferece uma API pra isso
-            (WebAuthn), mas ela foi pensada pra funcionar junto com um servidor validando a chave — sem servidor
-            (decisão de projeto da Gestão Financeira), usar isso direito exigiria guardar a própria chave de acesso no
-            aparelho, o que enfraquece a proteção em vez de reforçar. Por ora, o PIN é a trava real; biometria fica
-            registrada como pendência, não como algo fingido pronto.
-          </p>
-        </div>
-
-        {/* Sessões e dispositivos */}
-        <div className="card-surface rounded-2xl p-3.5 flex flex-col gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-accent-blue/15">
-              <Laptop size={15} className="text-accent-blue" />
-            </div>
-            <p className="text-[13.5px] font-semibold text-white">Sessões e dispositivos</p>
-          </div>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
-            A Gestão Financeira roda só neste aparelho — não existe login, conta na nuvem nem sincronização entre
-            celular, computador etc. (ver Privacidade → "Onde seus dados ficam"). Por isso não há uma lista de "outras
-            sessões" pra encerrar: cada aparelho tem seus próprios dados, PIN e membros, de forma independente. Pra
-            levar seus dados pra outro aparelho, use Mais → Dados e backup.
+            O PIN ajuda a evitar acesso casual a esta área neste aparelho. Ele não substitui o bloqueio do aparelho nem
+            criptografa os dados salvos. Se esquecer, você pode remover o PIN na tela de bloqueio sem apagar seus registros.
           </p>
         </div>
       </div>
