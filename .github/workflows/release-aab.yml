@@ -14,13 +14,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # This manual workflow exists on main and can therefore be dispatched from
-      # the draft PR branch. Never sign unrelated source code by accident.
-      - name: Require private-beta branch
+      # Dispatch only the reviewed beta branch or the merged production branch.
+      - name: Require reviewed source branch
         run: |
-          test "$GITHUB_REF_NAME" = "nexus/android-private-beta-2026-11-18" || {
-            echo "::error::Select nexus/android-private-beta-2026-11-18 in 'Use workflow from'."; exit 1;
-          }
+          case "$GITHUB_REF_NAME" in
+            main|nexus/android-private-beta-2026-11-18) ;;
+            *) echo "::error::Select main or nexus/android-private-beta-2026-11-18 in 'Use workflow from'."; exit 1 ;;
+          esac
 
       - name: Validate signing secrets
         env:

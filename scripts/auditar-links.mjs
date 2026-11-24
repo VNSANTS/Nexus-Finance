@@ -8,7 +8,7 @@ const files=[]
 function walk(root){
   if(!existsSync(root))return
   for(const e of readdirSync(root,{withFileTypes:true})){
-    if(ignored.has(e.name))continue
+    if(ignored.has(e.name)||(root==='android/app/src/main'&&e.name==='assets'))continue
     const p=path.join(root,e.name)
     if(e.isDirectory())walk(p)
     else if(extensions.test(e.name)&&e.name!=='nexus-ai-indice-modulos.json')files.push(p)
@@ -30,7 +30,7 @@ const routes=[...new Set([
   ...routeList(readFileSync('src/App.tsx','utf8')),
   ...routeList(readFileSync('src/gestao-financeira/GestaoFinanceiraShell.tsx','utf8'),'/gestao-financeira/')
 ])]
-const routePatterns=routes.map(p=>new RegExp('^'+p.replace(/[.*+?^$()|[\]{}]/g,'\\$&').replace(/:[a-zA-Z]\w*/g,'[^/]+')+'/?$'))
+const routePatterns=routes.map(p=>new RegExp('^'+p.replace(/[.*+?^$()|[\]{}\\]/g,'\\$&').replace(/:[a-zA-Z]\w*/g,'[^/]+')+'/?$'))
 const refs=[],external=[],dynamic=[]
 function collect(file,source,regex,kind){
   for(const m of source.matchAll(regex)){
