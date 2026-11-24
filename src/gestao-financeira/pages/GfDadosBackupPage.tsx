@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Database, Download, Upload, Clock, CloudOff, AlertTriangle, FileJson, X } from 'lucide-react'
+import { Database, Download, Upload, Clock, AlertTriangle, FileJson, X } from 'lucide-react'
 import GfHeader from '../components/GfHeader'
 import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
 import type { GestaoFinanceiraState } from '../types'
@@ -9,9 +9,6 @@ import type { GestaoFinanceiraState } from '../types'
 // Tela "Dados e backup" (menu Mais → Dados e backup). Escopo: backup
 // manual local (baixar/restaurar um arquivo .json com TUDO da Gestão
 // Financeira). O que fica fora por decisão consciente:
-// - Sincronização automática em nuvem: não existe backend hoje (ver
-//   src/backend/ — só localStorage). Fica registrado como "em breve",
-//   sem fingir um toggle que não faz nada.
 // - Exportar CSV de lançamentos / PDF-imagem de relatório: já existem
 //   em Relatórios (gerarCsvTransacoes, exportarComoPdf/Imagem) — aqui é
 //   o backup completo do app (todas as tabelas), não um recorte.
@@ -184,19 +181,6 @@ export default function GfDadosBackupPage() {
           )}
         </div>
 
-        {/* Sincronização em nuvem — honesto sobre o que não existe ainda */}
-        <div className="card-surface rounded-2xl p-3.5 flex items-start gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 bg-slate-500/15">
-            <CloudOff size={15} className="text-slate-400" />
-          </div>
-          <div>
-            <p className="text-[13px] font-semibold text-white">Sincronização automática</p>
-            <p className="text-[11px] text-slate-500 leading-relaxed mt-0.5">
-              Ainda não existe — hoje os dados vivem só neste dispositivo, e o backup acima é manual. Fica pra quando o
-              backend da Gestão Financeira existir.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Confirmação de restauração */}
