@@ -146,7 +146,12 @@ export default function App() {
   const { sessao, perfil, carregando, carregandoPerfil } = useAuth()
   const location = useLocation()
   const dentroDeGf = location.pathname.startsWith('/gestao-financeira')
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const mostrarChrome = Boolean(sessao && perfil?.status === 'ativo' && !carregando && !carregandoPerfil)
+
+  useEffect(() => {
+    if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0
+  }, [location.pathname])
 
   usePresenca(mostrarChrome ? sessao?.user?.id : undefined)
 
@@ -179,7 +184,7 @@ export default function App() {
             isso, um "fixed" dentro de um container mais alto que a tela
             gruda no fim do CONTAINER, não no fim da TELA visível. */}
         <div
-          className="max-w-[480px] mx-auto h-dvh relative bg-transparent overflow-hidden"
+          className="nexus-app-frame mx-auto h-dvh relative bg-transparent overflow-hidden"
           style={{ transform: 'translateZ(0)' }}
         >
           <Onboarding onFinalizar={setOnboardingDone} />
@@ -200,10 +205,10 @@ export default function App() {
           escorregando pro fim do conteúdo quando a página é longa. O
           conteúdo em si (AppRotas) rola numa div interna separada. */}
       <div
-        className="max-w-[480px] mx-auto h-dvh relative bg-transparent overflow-hidden"
+        className="nexus-app-frame mx-auto h-dvh relative bg-transparent overflow-hidden"
         style={{ transform: 'translateZ(0)' }}
       >
-        <div className="h-full overflow-y-auto">
+        <div ref={scrollContainerRef} className="nexus-scroll-container h-full overflow-y-auto overscroll-contain">
           {mostrarChrome && !rotaSemChrome && <AvisoEmailNaoConfirmado />}
           <AppRotas />
         </div>

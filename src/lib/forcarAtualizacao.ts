@@ -8,7 +8,6 @@ import { Capacitor } from '@capacitor/core'
 // forçada pelo admin pra todo mundo (ver AuthContext.tsx).
 export async function forcarAtualizacaoCompleta() {
   if (Capacitor.isNativePlatform()) {
-    window.alert('Há uma atualização? Instale a nova versão assinada do APK para receber o código atualizado. Recarregar não substitui o APK.')
     return
   }
   try {

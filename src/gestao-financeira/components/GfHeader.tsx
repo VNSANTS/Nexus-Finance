@@ -34,8 +34,8 @@ export default function GfHeader({ titulo, subtitulo, icone: Icone, corIcone = '
             <Icone size={22} style={{ color: corIcone }} />
           </div>
           <div>
-            <h1 className="text-xl font-display font-extrabold text-white leading-tight">{titulo}</h1>
-            {subtitulo && <p className="text-xs text-slate-500 mt-0.5">{subtitulo}</p>}
+            <h1 className="text-xl font-display font-extrabold text-texto leading-tight">{titulo}</h1>
+            {subtitulo && <p className="text-xs text-texto-secundario mt-1">{subtitulo}</p>}
           </div>
         </div>
         {acoes}

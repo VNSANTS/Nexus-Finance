@@ -35,8 +35,6 @@ import EditorFotoPerfil from '@/components/EditorFotoPerfil'
 import { ModalAvancado as SeletorCorAvancado } from '@/components/SeletorCor'
 import { corComAlfa, corOpaca } from '@/utils/cor'
 import { useUserProgress } from '@/hooks/useUserProgress'
-import { useAtualizacaoApp } from '@/hooks/useAtualizacaoApp'
-import { Capacitor } from '@capacitor/core'
 import { useAuth } from '@/auth/AuthContext'
 import { BADGES } from '@/data/badges'
 import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
@@ -69,7 +67,6 @@ const MAX_BIO = 60
 export default function PerfilPage() {
   const navigate = useNavigate()
   const { progress, levelInfo, setPerfilPessoal, resetProgress, sincronizarAgora, sincronizando } = useUserProgress()
-  const { aplicarAtualizacao } = useAtualizacaoApp()
   const { ehAdmin, sair, excluirPropriaConta } = useAuth()
 
   const modulosCompletos = Object.values(progress.abasConcluidas).filter((abas) => abas.length === 6).length
@@ -166,14 +163,10 @@ export default function PerfilPage() {
       {/* Capa com gradiente na cor do perfil — dá profundidade ao topo sem
           precisar de uma imagem de capa de verdade (mantém tudo local/leve) */}
       <div
-        className="h-[132px] w-full relative overflow-hidden"
-        style={{ background: `linear-gradient(160deg, ${corComAlfa(corPerfil, 18)} 0%, #070B16 78%)` }}
+        className="profile-hero h-[152px] w-full relative overflow-hidden"
+        style={{ background: `radial-gradient(ellipse at 82% 25%, ${corComAlfa(corPerfil, 22)} 0%, transparent 55%), linear-gradient(180deg, ${corComAlfa(corPerfil, 9)} 0%, transparent 100%)` }}
       >
-        <div
-          className="absolute -top-10 -right-14 w-[180px] h-[180px] rounded-full blur-3xl opacity-40"
-          style={{ background: corOpaca(corPerfil) }}
-        />
-        <div className="px-4 pt-5">
+        <div className="relative z-10 px-4 pt-5">
           <h1 className="text-xl font-display font-extrabold text-white">Perfil</h1>
           <p className="text-xs text-slate-400 mt-1">Seu progresso, conquistas e configurações</p>
         </div>
@@ -181,7 +174,7 @@ export default function PerfilPage() {
 
       <div className="px-4">
         {/* Avatar + nome + bio, sobrepondo a capa */}
-        <button onClick={() => setEditandoPerfil(true)} className="flex items-end gap-3.5 -mt-8 mb-6 w-full text-left">
+        <button onClick={() => setEditandoPerfil(true)} aria-label="Editar perfil" className="flex items-end gap-3.5 -mt-8 mb-6 w-full text-left">
           <div className="relative shrink-0">
             <Avatar
               nome={progress.perfilPessoal.nome}
@@ -235,7 +228,7 @@ export default function PerfilPage() {
       )}
 
       {/* Resumo XP */}
-      <div className="card-surface rounded-[20px] py-5.5 px-4.5 flex flex-col items-center gap-3 mb-6">
+      <div className="card-surface card-highlight rounded-[20px] py-5.5 px-4.5 flex flex-col items-center gap-3 mb-6">
         <ProgressRing progress={levelInfo.progressToNext} size={100} strokeWidth={9}>
           <span className="text-xl font-display font-extrabold text-white leading-none">{levelInfo.level}</span>
           <span className="text-[9.5px] text-slate-500 mt-0.5">nível</span>
@@ -295,12 +288,6 @@ export default function PerfilPage() {
                 setTimeout(() => setErroSincronizacao(null), 3500)
               }
             }}
-          />
-          <ConfigRow
-            icon={Download}
-            label={Capacitor.isNativePlatform() ? 'Como atualizar o APK' : 'Forçar atualização do app'}
-            cor="#00D4FF"
-            onClick={aplicarAtualizacao}
           />
           <ConfigRow
             icon={Sparkles}
@@ -599,7 +586,7 @@ function ConquistasCarrossel({
                   style={{
                     background: desbloqueado ? `${b.cor}14` : '#0E1526',
                     border: `1px solid ${desbloqueado ? b.cor + '44' : '#1C2740'}`,
-                    opacity: desbloqueado ? 1 : 0.55,
+                    opacity: desbloqueado ? 1 : 0.82,
                   }}
                 >
                   <motion.div
@@ -615,10 +602,10 @@ function ConquistasCarrossel({
                         <Icon size={18} style={{ color: b.cor }} />
                       )
                     ) : (
-                      <Lock size={15} className="text-slate-600" />
+                      <Lock size={15} className="text-slate-400" />
                     )}
                   </motion.div>
-                  <span className={`text-[9.5px] font-semibold text-center leading-tight ${desbloqueado ? 'text-white' : 'text-slate-500'}`}>{b.nome}</span>
+                  <span className={`text-[9.5px] font-semibold text-center leading-tight ${desbloqueado ? 'text-white' : 'text-slate-400'}`}>{b.nome}</span>
                 </motion.button>
               )
             })}

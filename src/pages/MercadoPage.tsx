@@ -57,8 +57,8 @@ export default function MercadoPage() {
     <div>
       <TickerTape cambio={cambio} />
       <div className="px-4 pt-4 pb-28">
-        <h1 className="text-xl font-display font-extrabold text-white">Mercado ao vivo</h1>
-        <p className="text-xs text-slate-500 mt-1 mb-4.5">Toque em um mercado para ver as notícias</p>
+        <h1 className="text-xl font-display font-extrabold text-texto">Mercado ao vivo</h1>
+        <p className="text-xs text-texto-secundario mt-1 mb-4.5">Toque em um mercado para ver as notícias</p>
 
         {resumoIA && <ResumoDiarioIA texto={resumoIA} />}
 
@@ -78,7 +78,7 @@ export default function MercadoPage() {
                 key={m.id}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => setSelecionado(m)}
-                className="flex items-center gap-3 card-surface rounded-2xl p-3.5 text-left"
+                className="flex items-center gap-3 card-surface rounded-2xl p-3.5 text-left transition-colors active:border-accent-cyan/50"
               >
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${m.cor}1A` }}>
                   <Icon size={19} style={{ color: m.cor }} />
@@ -88,7 +88,7 @@ export default function MercadoPage() {
                   <p className="text-[11px] text-slate-500 mt-0.5">{m.noticias.length} notícias recentes</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[13px] font-bold text-white">{m.valor}</p>
+                  <p className="text-[13px] font-bold text-texto tabular-nums">{m.valor}</p>
                   <p className="text-[11px] font-semibold mt-0.5" style={{ color: m.up === null ? '#64748B' : m.up ? '#22C55E' : '#EF4444' }}>
                     {m.delta}
                   </p>

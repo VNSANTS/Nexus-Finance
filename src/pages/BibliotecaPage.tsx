@@ -23,12 +23,12 @@ export default function BibliotecaPage() {
 
   return (
     <div className="px-4 pt-5 pb-28">
-      <h1 className="text-xl font-display font-extrabold text-white">Biblioteca</h1>
-      <p className="text-xs text-slate-500 mt-1 mb-4">Resumos de livros, biografias, casos e documentários</p>
+      <h1 className="text-xl font-display font-extrabold text-texto">Biblioteca</h1>
+      <p className="text-xs text-texto-secundario mt-1 mb-4">Resumos de livros, biografias, casos e documentários</p>
 
       <button
         onClick={() => navigate('/glossario')}
-        className="flex items-center gap-3 w-full p-3.5 mb-6 rounded-2xl"
+        className="card-highlight flex items-center gap-3 w-full p-3.5 mb-6 rounded-2xl transition-transform active:scale-[0.99]"
         style={{ background: '#00D4FF14', border: '1px solid #00D4FF44' }}
       >
         <div className="w-[38px] h-[38px] rounded-xl bg-accent-cyan/20 flex items-center justify-center shrink-0">
@@ -52,7 +52,7 @@ export default function BibliotecaPage() {
             key={livro.id}
             whileTap={{ scale: 0.98 }}
             onClick={() => abrirLivro(livro.id)}
-            className="flex items-center gap-3.5 card-surface rounded-[18px] p-3.5 text-left"
+            className="flex items-center gap-3.5 card-surface rounded-[18px] p-3.5 text-left transition-colors active:border-accent-cyan/50"
           >
             <div
               className="w-[46px] h-[60px] rounded-lg flex items-center justify-center shrink-0"
@@ -61,7 +61,7 @@ export default function BibliotecaPage() {
               <BookMarked size={20} style={{ color: livro.cor }} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-bold text-white leading-tight">{livro.titulo}</p>
+              <p className="text-[14px] font-bold text-texto leading-tight">{livro.titulo}</p>
               <p className="text-[11.5px] text-slate-500 mt-0.5">{livro.autor}</p>
               <p className="text-[10.5px] mt-1" style={{ color: livro.cor }}>
                 5 ideias-chave

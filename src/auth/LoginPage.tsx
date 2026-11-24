@@ -110,7 +110,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col justify-center px-6 py-10 max-w-[420px] mx-auto">
+    <div className="auth-screen min-h-dvh flex flex-col justify-center px-6 py-10 max-w-[420px] mx-auto">
       <div className="flex flex-col items-center gap-2 mb-8">
         <div className="w-14 h-14 rounded-2xl bg-accent-cyan/15 flex items-center justify-center">
           <TrendingUp size={26} className="text-accent-cyan" />
