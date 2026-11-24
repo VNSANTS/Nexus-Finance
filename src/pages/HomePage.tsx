@@ -131,7 +131,7 @@ export default function HomePage() {
       )}
 
       {/* XP Card */}
-      <div className="card-surface rounded-[20px] p-4.5 flex items-center gap-4">
+      <div className="card-surface card-highlight rounded-[20px] p-4.5 flex items-center gap-4">
         <ProgressRing progress={levelInfo.progressToNext} size={92} strokeWidth={9}>
           <span className="text-[19px] font-display font-extrabold text-white leading-none">{levelInfo.level}</span>
           <span className="text-[8.5px] text-slate-500 mt-0.5">nível</span>

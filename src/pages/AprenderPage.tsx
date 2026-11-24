@@ -63,8 +63,8 @@ export default function AprenderPage() {
   return (
     <div className="px-4 pt-5 pb-28 flex flex-col gap-5">
       <div>
-        <h1 className="text-xl font-display font-extrabold text-white">Aprender</h1>
-        <p className="text-xs text-slate-500 mt-0.5">{MODULOS.length} módulos em {TRILHAS.length} trilhas — do zero ao avançado</p>
+        <h1 className="text-xl font-display font-extrabold text-texto">Aprender</h1>
+        <p className="text-xs text-texto-secundario mt-1">{MODULOS.length} módulos em {TRILHAS.length} trilhas — do zero ao avançado</p>
       </div>
 
       {/* Busca */}
@@ -125,7 +125,7 @@ export default function AprenderPage() {
                       <Icon size={18} style={{ color: trilha.cor }} strokeWidth={2} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-[14px] font-display font-bold text-white leading-tight">
+                      <h2 className="text-[14px] font-display font-bold text-texto leading-tight">
                         {trilha.numero}. {trilha.nome}
                       </h2>
                       <p className="text-[11px] text-slate-500">

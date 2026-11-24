@@ -53,7 +53,7 @@ export default function NexusAIChat({ escopo = 'geral', abrirExternamente, onAbr
       {!painelDeveEstarAberto && (
         <button
           onClick={() => setAberto(true)}
-          className="fixed z-[70] bottom-[86px] right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg bg-bg-card/60 backdrop-blur-sm"
+          className="fixed z-[70] bottom-[calc(72px+env(safe-area-inset-bottom))] right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg bg-bg-card/60 backdrop-blur-sm"
           aria-label="Abrir Nexus AI"
         >
           <NexusAIIcone size={44} />

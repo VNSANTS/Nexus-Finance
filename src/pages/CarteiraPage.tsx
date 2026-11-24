@@ -37,7 +37,7 @@ export default function CarteiraPage() {
   return (
     <div className="px-4 pt-5 pb-28">
       <div className="flex items-center justify-between mb-1">
-        <h1 className="text-xl font-display font-extrabold text-white">Carteira</h1>
+        <h1 className="text-xl font-display font-extrabold text-texto">Carteira</h1>
         <button
           onClick={() => navigate('/ferramentas')}
           className="flex items-center gap-1.5 card-surface rounded-full px-3 py-1.5"
@@ -61,7 +61,8 @@ export default function CarteiraPage() {
               <button
                 key={key}
                 onClick={() => trocarPerfil(key)}
-                className="flex-1 h-10 rounded-2xl text-xs font-bold"
+                aria-pressed={perfilAtivo === key}
+                className="flex-1 min-h-11 rounded-2xl text-xs font-bold transition-colors"
                 style={{
                   background: perfilAtivo === key ? p.cor : '#0E1526',
                   color: perfilAtivo === key ? '#04070D' : '#94A3B8',
@@ -99,7 +100,7 @@ export default function CarteiraPage() {
 
             <div className="mb-5">
               <p className="text-xs font-bold text-white mb-3">Evolução simulada (5 anos) vs. CDI</p>
-              <div className="card-surface rounded-2xl p-3.5">
+              <div className="card-surface card-highlight rounded-2xl p-3.5">
                 <GraficoEvolucao retornoMensal={perfil.retornoMensalEstimado} cor={perfil.cor} />
               </div>
             </div>

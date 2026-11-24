@@ -150,14 +150,26 @@ export async function buscarNoticiasMercado(categoria: CategoriaNoticia): Promis
     const resp = await fetch(`https://api.marketaux.com/v1/news/all?${params}`)
     if (!resp.ok) return null
     const dados = await resp.json()
-    const artigos = dados?.data ?? []
-    return artigos.map((a: Record<string, unknown>) => ({
-      titulo: String(a.title ?? ''),
-      fonte: String(a.source ?? 'Fonte desconhecida'),
-      url: String(a.url ?? ''),
-      publicadaEm: String(a.published_at ?? ''),
-      imagemUrl: typeof a.image_url === 'string' ? a.image_url : null,
-    }))
+    const artigos: Record<string, unknown>[] = Array.isArray(dados?.data) ? dados.data : []
+    // Links vêm de terceiros: impedir javascript:, data:, HTTP não seguro
+    // e URL inválida antes de disponibilizar a navegação ao usuário.
+    return artigos.flatMap((a) => {
+      let href: string
+      try {
+        const url = new URL(String(a.url ?? ''))
+        if (url.protocol !== 'https:' || url.username || url.password) return []
+        href = url.toString()
+      } catch {
+        return []
+      }
+      return [{
+        titulo: String(a.title ?? ''),
+        fonte: String(a.source ?? 'Fonte desconhecida'),
+        url: href,
+        publicadaEm: String(a.published_at ?? ''),
+        imagemUrl: typeof a.image_url === 'string' ? a.image_url : null,
+      }]
+    })
   } catch {
     return null
   }

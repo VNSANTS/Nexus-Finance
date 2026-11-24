@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { Loader2, Mail, Lock, User, LogIn, UserPlus, TrendingUp } from 'lucide-react'
 import { useAuth, type ProvedorOAuth } from './AuthContext'
 
@@ -29,7 +29,8 @@ const PROVEDORES: { id: ProvedorOAuth; nome: string; icone: () => React.JSX.Elem
 ]
 
 export default function LoginPage() {
-  const { sessao, carregando, entrar, cadastrar, entrarComOAuth, resetarSenha, appConfig } = useAuth()
+  const [searchParams] = useSearchParams()
+  const { sessao, carregando, entrar, cadastrar, entrarComOAuth, resetarSenha, reenviarConfirmacaoCadastro, appConfig } = useAuth()
   const [modo, setModo] = useState<'entrar' | 'cadastrar' | 'esqueci'>('entrar')
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -39,6 +40,13 @@ export default function LoginPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [avisoCadastro, setAvisoCadastro] = useState<string | null>(null)
   const [avisoReset, setAvisoReset] = useState<string | null>(null)
+  const [reenvioSolicitado, setReenvioSolicitado] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('auth_error') === '1') {
+      setErro('Não foi possível concluir a autenticação. Peça um novo link ou tente entrar novamente.')
+    }
+  }, [searchParams])
 
   // Já logado — não faz sentido mostrar a tela de login de novo.
   if (!carregando && sessao) return <Navigate to="/" replace />
@@ -77,6 +85,19 @@ export default function LoginPage() {
     setEnviando(false)
   }
 
+  async function handleReenviarConfirmacao() {
+    if (!emailValido || enviando || reenvioSolicitado) return
+    setEnviando(true)
+    setErro(null)
+    const resultado = await reenviarConfirmacaoCadastro(email)
+    if (resultado.erro) setErro(resultado.erro)
+    else {
+      setReenvioSolicitado(true)
+      setAvisoCadastro('Se esse endereço estiver aguardando confirmação, um novo e-mail foi solicitado. Confira sua caixa de entrada e o spam.')
+    }
+    setEnviando(false)
+  }
+
   async function handleOAuth(provedor: ProvedorOAuth) {
     if (provedorEnviando) return
     setProvedorEnviando(provedor)
@@ -89,7 +110,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col justify-center px-6 py-10 max-w-[420px] mx-auto">
+    <div className="auth-screen min-h-dvh flex flex-col justify-center px-6 py-10 max-w-[420px] mx-auto">
       <div className="flex flex-col items-center gap-2 mb-8">
         <div className="w-14 h-14 rounded-2xl bg-accent-cyan/15 flex items-center justify-center">
           <TrendingUp size={26} className="text-accent-cyan" />
@@ -156,7 +177,7 @@ export default function LoginPage() {
             <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-texto-secundario" />
             <input
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setReenvioSolicitado(false) }}
               type="email"
               placeholder="email@exemplo.com"
               className="w-full rounded-xl bg-bg-card border border-border pl-10 pr-3.5 py-3 text-sm text-texto outline-none focus:border-accent-cyan"
@@ -193,6 +214,16 @@ export default function LoginPage() {
         {erro && <p className="text-xs text-accent-red text-center">{erro}</p>}
         {avisoCadastro && <p className="text-xs text-accent-green text-center">{avisoCadastro}</p>}
         {avisoReset && <p className="text-xs text-accent-green text-center">{avisoReset}</p>}
+        {modo === 'entrar' && emailValido && (
+          <button
+            type="button"
+            onClick={handleReenviarConfirmacao}
+            disabled={enviando || reenvioSolicitado}
+            className="text-xs text-accent-cyan text-center disabled:opacity-50"
+          >
+            {reenvioSolicitado ? 'Confirmação solicitada' : 'Não recebeu a confirmação? Reenviar e-mail'}
+          </button>
+        )}
 
         <button
           type="submit"

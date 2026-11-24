@@ -21,9 +21,9 @@ const ITEMS_DIREITA = [
 
 export default function GfBottomNav() {
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[456px] z-50 bottom-[calc(12px+env(safe-area-inset-bottom))]">
+    <div className="fixed left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[640px] z-50 bottom-[calc(12px+env(safe-area-inset-bottom))]">
       <nav
-        className="rounded-[28px] bg-[#0B1120]/95 backdrop-blur-lg border border-white/5 shadow-2xl"
+        className="gf-bottom-nav-glass rounded-[28px] border shadow-2xl"
         aria-label="Navegação da Gestão Financeira"
       >
         <ul className="flex items-stretch justify-between px-2">

@@ -9,9 +9,18 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Dispatch only the reviewed beta branch or the merged production branch.
+      - name: Require reviewed source branch
+        run: |
+          case "$GITHUB_REF_NAME" in
+            main|nexus/android-private-beta-2026-11-18) ;;
+            *) echo "::error::Select main or nexus/android-private-beta-2026-11-18 in 'Use workflow from'."; exit 1 ;;
+          esac
 
       - name: Validate signing secrets
         env:
@@ -32,14 +41,15 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm ci
+          node scripts/verificar-beta-android.mjs
 
       - name: Build web app
         env:
           VITE_SUPABASE_URL: https://ygtroklufolvixwazkne.supabase.co
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_uRP9xxjMeC_-L6A8AWwj8g_Seonofnf
         run: |
-          test -n "$VITE_SUPABASE_PUBLISHABLE_KEY" || (echo "::error::Configure VITE_SUPABASE_PUBLISHABLE_KEY in GitHub Actions secrets." && exit 1)
           npm run build
 
       - name: Sync Capacitor
@@ -55,10 +65,19 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nexus-release.keystore"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nexus-release.keystore"
+          chmod 600 "$RUNNER_TEMP/nexus-release.keystore"
           test -s "$RUNNER_TEMP/nexus-release.keystore"
 
-      - name: Build signed release bundle
+      - name: Validate signing certificate and alias
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          keytool -list -keystore "$RUNNER_TEMP/nexus-release.keystore" \
+            -storepass:env ANDROID_KEYSTORE_PASSWORD -alias "$ANDROID_KEY_ALIAS"
+
+      - name: Build signed release APK and bundle
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/nexus-release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -67,13 +86,23 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew bundleRelease
+          ./gradlew assembleRelease bundleRelease
+          APK=app/build/outputs/apk/release/app-release.apk
+          AAB=app/build/outputs/bundle/release/app-release.aab
+          test -s "$APK" && test -s "$AAB"
+          APKSIGNER=$(find "${ANDROID_HOME}/build-tools" -maxdepth 2 -name apksigner -type f | sort -V | tail -n 1)
+          test -n "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          (cd app/build/outputs/apk/release && sha256sum app-release.apk > app-release.apk.sha256)
 
-      - name: Upload AAB
+      - name: Upload signed beta APK, checksum and AAB for owner review
         uses: actions/upload-artifact@v4
         with:
-          name: nexus-finance-release-aab
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          name: nexus-finance-beta-signed-review
+          path: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/apk/release/app-release.apk.sha256
+            android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
 

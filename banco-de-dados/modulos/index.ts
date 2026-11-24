@@ -27,19 +27,22 @@ export type { Trilha }
  */
 const carregadores = import.meta.glob<Record<string, unknown>>('./m*.ts')
 
-const porId: Record<string, () => Promise<Record<string, unknown>>> = {}
+// Mapa criado somente com os importadores conhecidos do Vite. Diferente de
+// um objeto {}, não herda constructor, toString, __proto__ ou outros métodos
+// que um ID fornecido pela rota poderia acessar e executar indevidamente.
+const porId = new Map<string, () => Promise<Record<string, unknown>>>()
 for (const [caminho, carregar] of Object.entries(carregadores)) {
   const arquivo = caminho.replace('./', '').replace(/\.ts$/, '')
   const id = arquivo.replace(/^m\d+-/, '')
-  porId[id] = carregar
+  porId.set(id, carregar)
 }
 
-export const IDS_MODULOS_COMPLETOS = Object.keys(porId).sort()
+export const IDS_MODULOS_COMPLETOS = Array.from(porId.keys()).sort()
 export const TOTAL_MODULOS_COMPLETOS = IDS_MODULOS_COMPLETOS.length
 
 /** Checagem síncrona e barata: dá para marcar o card sem baixar o conteúdo. */
 export function temConteudoCompleto(id: string): boolean {
-  return Object.prototype.hasOwnProperty.call(porId, id)
+  return porId.has(id)
 }
 
 const cache = new Map<string, Modulo>()
@@ -64,7 +67,7 @@ export function carregarModulo(id: string): Promise<Modulo | null> {
   const jaPedido = emVoo.get(id)
   if (jaPedido) return jaPedido
 
-  const carregar = porId[id]
+  const carregar = porId.get(id)
   if (!carregar) return Promise.resolve(null)
 
   const promessa = carregar()

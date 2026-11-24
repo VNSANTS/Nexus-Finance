@@ -13,8 +13,7 @@ const ITEMS = [
 export default function BottomNav() {
   return (
     <nav
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50
-                 bg-bg-card/95 backdrop-blur-lg border-t border-border
+      className="bottom-nav-glass nexus-bottom-nav fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50
                  pb-[env(safe-area-inset-bottom)]"
       aria-label="Navegação principal"
     >
@@ -24,7 +23,7 @@ export default function BottomNav() {
             <NavLink
               to={to}
               end={to === '/'}
-              className="relative flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px]"
+              className="nav-item relative flex flex-col items-center justify-center gap-0.5 py-2 min-h-[52px]"
             >
               {({ isActive }) => (
                 <>

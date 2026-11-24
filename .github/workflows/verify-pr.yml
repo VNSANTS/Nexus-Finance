@@ -15,10 +15,30 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
           cache: npm
       - name: Instalar dependências
         run: npm install
+      - name: Validar configuração de segurança do APK
+        run: node scripts/verificar-beta-android.mjs
+      - name: Validar autenticação sem await no listener
+        run: node scripts/verificar-auth-listener.mjs
+      - name: Simular fluxos reais de autenticação Android
+        run: node --test scripts/testar-fluxo-auth-native.mjs
+      - name: Testar carregamento seguro dos modulos
+        run: node --test scripts/testar-carregamento-modulos.mjs
+      - name: Auditar links e rotas
+        run: node scripts/auditar-links.mjs
+      - name: Verificar disponibilidade de links públicos
+        run: node scripts/verificar-links-publicos.mjs
+      - name: Publicar inventário de links
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nexus-finance-auditoria-links
+          path: reports/auditoria-links*
+          if-no-files-found: warn
+          retention-days: 14
       - name: Validar TypeScript
         run: npx tsc --noEmit
       - name: Validar simulador sem rede

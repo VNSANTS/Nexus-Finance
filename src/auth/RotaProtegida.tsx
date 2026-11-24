@@ -11,41 +11,54 @@ function TelaCarregandoAuth() {
   )
 }
 
-// Exige sessão logada. Sem sessão, manda pro login.
-export function RotaProtegida({ children }: { children: ReactNode }) {
-  const { sessao, carregando } = useAuth()
+function TelaAcessoRestrito({ mensagem, tentarNovamente = false }: { mensagem: string; tentarNovamente?: boolean }) {
+  return (
+    <div className="min-h-dvh flex flex-col items-center justify-center gap-3 px-6 text-center">
+      <ShieldAlert size={32} className="text-accent-red" />
+      <p className="text-sm text-texto">{mensagem}</p>
+      {tentarNovamente && (
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="rounded-xl border border-accent-cyan px-4 py-2 text-sm text-accent-cyan"
+        >
+          Tentar novamente
+        </button>
+      )}
+    </div>
+  )
+}
 
-  if (carregando) return <TelaCarregandoAuth />
+function StatusDoPerfil({ perfil }: { perfil: ReturnType<typeof useAuth>['perfil'] }) {
+  if (!perfil) {
+    return <TelaAcessoRestrito mensagem="Não foi possível verificar seu perfil. Confira a conexão e tente novamente." tentarNovamente />
+  }
+  if (perfil.status === 'bloqueado') {
+    return <TelaAcessoRestrito mensagem="Sua conta está bloqueada. Entre em contato com o suporte." />
+  }
+  return null
+}
+
+// A rota não libera o app antes de obter o perfil do servidor: uma sessão
+// válida isoladamente não comprova que a conta permanece ativa.
+export function RotaProtegida({ children }: { children: ReactNode }) {
+  const { sessao, perfil, carregando, carregandoPerfil } = useAuth()
+
+  if (carregando || (sessao && carregandoPerfil)) return <TelaCarregandoAuth />
   if (!sessao) return <Navigate to="/login" replace />
+  if (!perfil || perfil.status === 'bloqueado') return <StatusDoPerfil perfil={perfil} />
   return <>{children}</>
 }
 
-// Exige sessão logada E role === 'admin'. Usuário comum logado vê uma tela
-// de acesso negado em vez de simplesmente sumir/redirecionar — mais claro
-// sobre o motivo de não conseguir entrar.
 export function RotaAdmin({ children }: { children: ReactNode }) {
-  const { sessao, perfil, carregando, ehAdmin } = useAuth()
+  const { sessao, perfil, carregando, carregandoPerfil, ehAdmin } = useAuth()
 
-  if (carregando) return <TelaCarregandoAuth />
+  if (carregando || (sessao && carregandoPerfil)) return <TelaCarregandoAuth />
   if (!sessao) return <Navigate to="/login" replace />
-
-  if (perfil?.status === 'bloqueado') {
-    return (
-      <div className="min-h-dvh flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <ShieldAlert size={32} className="text-accent-red" />
-        <p className="text-sm text-texto">Sua conta está bloqueada. Entre em contato com o suporte.</p>
-      </div>
-    )
-  }
+  if (!perfil || perfil.status === 'bloqueado') return <StatusDoPerfil perfil={perfil} />
 
   if (!ehAdmin) {
-    return (
-      <div className="min-h-dvh flex flex-col items-center justify-center gap-3 px-6 text-center">
-        <ShieldAlert size={32} className="text-accent-gold" />
-        <p className="text-sm text-texto">Essa área é restrita a administradores.</p>
-      </div>
-    )
+    return <TelaAcessoRestrito mensagem="Essa área é restrita a administradores." />
   }
-
   return <>{children}</>
 }

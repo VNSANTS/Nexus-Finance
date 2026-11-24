@@ -3,6 +3,8 @@ name: Build APK
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -32,6 +34,9 @@ jobs:
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_uRP9xxjMeC_-L6A8AWwj8g_Seonofnf
         run: npm run build
 
+      - name: Validate local APK security configuration
+        run: node scripts/verificar-beta-android.mjs
+
       - name: Sync Capacitor
         run: npx cap sync android
 
@@ -50,5 +55,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: nexus-finance-apk
+          name: nexus-finance-debug-apk-NOT-FOR-DISTRIBUTION
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

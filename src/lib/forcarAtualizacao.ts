@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core'
+
 // Reset "nuclear" do PWA — o jeito mais confiável de garantir que a pessoa
 // pega a versão mais nova do app, sem depender do ciclo normal de troca do
 // Service Worker (que às vezes fica "preso" esperando um momento que nunca
@@ -5,6 +7,9 @@
 // botão pessoal ("Verificar atualização" no Perfil) quanto pela atualização
 // forçada pelo admin pra todo mundo (ver AuthContext.tsx).
 export async function forcarAtualizacaoCompleta() {
+  if (Capacitor.isNativePlatform()) {
+    return
+  }
   try {
     if ('serviceWorker' in navigator) {
       const registros = await navigator.serviceWorker.getRegistrations()
