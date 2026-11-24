@@ -205,7 +205,6 @@ Deno.serve(async (req) => {
         if (erroPerfilUpdate) {
           console.error('[admin-users] Profile status update failed:', {
             code: erroPerfilUpdate.code,
-            status: erroPerfilUpdate.status,
             message: erroPerfilUpdate.message,
           })
           return respostaErro('Não foi possível atualizar o perfil.', 400, req)
