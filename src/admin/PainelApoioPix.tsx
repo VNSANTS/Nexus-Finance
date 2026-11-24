@@ -8,7 +8,6 @@ export default function PainelApoioPix() {
   const [nomeRecebedor, setNomeRecebedor] = useState('')
   const [arquivoQr, setArquivoQr] = useState<File | null>(null)
   const [removerQr, setRemoverQr] = useState(false)
-  const [previaLocal, setPreviaLocal] = useState<string | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [mensagem, setMensagem] = useState('')
@@ -34,16 +33,6 @@ export default function PainelApoioPix() {
     }
   }, [])
 
-  useEffect(() => {
-    if (!arquivoQr) {
-      setPreviaLocal(null)
-      return
-    }
-    const url = URL.createObjectURL(arquivoQr)
-    setPreviaLocal(url)
-    return () => URL.revokeObjectURL(url)
-  }, [arquivoQr])
-
   async function salvar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (salvando) return
@@ -66,7 +55,9 @@ export default function PainelApoioPix() {
   }
 
   const urlQrSalvo = !removerQr && !arquivoQr ? urlPublicaQrPix(config?.caminhoQr ?? null) : null
-  const urlQr = previaLocal ?? urlQrSalvo
+  // Preview only the already-uploaded public image. Avoid interpreting a
+  // locally selected file URL in the DOM before it has been validated/stored.
+  const urlQr = urlQrSalvo
 
   return (
     <section className="rounded-card border border-border bg-bg-card p-4">

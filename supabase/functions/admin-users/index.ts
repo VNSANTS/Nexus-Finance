@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
       p_function_name: 'admin-users',
     })
     if (erroLimite) {
-      console.error('Falha ao verificar limite admin-users:', erroLimite.message)
+      console.error('[admin-users] Rate-limit check failed')
       return respostaErro('Serviço temporariamente indisponível.', 503, req)
     }
     if (permitido !== true) return respostaErro('Limite de 10 ações por minuto atingido. Aguarde um minuto e tente novamente.', 429, req)
@@ -190,11 +190,7 @@ Deno.serve(async (req) => {
           ban_duration: acao.bloquear ? '876000h' : 'none',
         })
         if (erroAuth) {
-          console.error('[admin-users] Auth ban update failed:', {
-            code: erroAuth.code,
-            status: erroAuth.status,
-            message: erroAuth.message,
-          })
+          console.error('[admin-users] Auth ban update failed')
           return respostaErro('Não foi possível atualizar a conta.', 400, req)
         }
 
@@ -203,10 +199,7 @@ Deno.serve(async (req) => {
           .update({ status: acao.bloquear ? 'bloqueado' : 'ativo' })
           .eq('id', acao.alvoId)
         if (erroPerfilUpdate) {
-          console.error('[admin-users] Profile status update failed:', {
-            code: erroPerfilUpdate.code,
-            message: erroPerfilUpdate.message,
-          })
+          console.error('[admin-users] Profile status update failed')
           return respostaErro('Não foi possível atualizar o perfil.', 400, req)
         }
 
@@ -252,7 +245,7 @@ Deno.serve(async (req) => {
         return respostaErro('Ação desconhecida.', 400, req)
     }
   } catch (erro) {
-    console.error('Erro inesperado na admin-users:', erro)
+    console.error('[admin-users] Unexpected request failure')
     return respostaErro('Erro interno.', 500, req)
   }
 })
