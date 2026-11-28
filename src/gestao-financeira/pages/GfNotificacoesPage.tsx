@@ -5,6 +5,7 @@ import GfHeader from '../components/GfHeader'
 import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
 import { gerarNotificacoes, type Notificacao, type TipoNotificacao, type PrioridadeNotificacao } from '../notificacoes'
 import { tocarSomNotificacao } from '../somNotificacao'
+import { mostrarNotificacaoWeb, notificacoesLocaisAndroid } from '@/lib/notificacoesDispositivo'
 
 function iconePorTipo(tipo: TipoNotificacao) {
   if (tipo === 'divida') return HandCoins
@@ -63,14 +64,14 @@ export default function GfNotificacoesPage() {
   const idsNaoLidasChave = naoLidas.map((n) => n.id).join(',')
   useEffect(() => {
     const idsAtuais = new Set(naoLidas.map((n) => n.id))
-    if (idsConhecidosRef.current) {
+    if (idsConhecidosRef.current && !(notificacoesLocaisAndroid && prefs.notificacaoNavegador)) {
       const novas = naoLidas.filter((n) => !idsConhecidosRef.current!.has(n.id))
       if (novas.length > 0 && prefs.ativas) {
         const maisUrgente = novas.reduce((a, b) => (ORDEM(b.prioridade) < ORDEM(a.prioridade) ? b : a))
         if (prefs.som.ativo) tocarSomNotificacao(prefs.som.estilo, maisUrgente.prioridade, prefs.som.volume)
         if (prefs.vibrar && 'vibrate' in navigator) navigator.vibrate(maisUrgente.prioridade === 'alta' ? [40, 60, 40] : [30])
-        if (prefs.notificacaoNavegador && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
-          new Notification(maisUrgente.titulo, { body: maisUrgente.mensagem })
+        if (prefs.notificacaoNavegador && document.hidden) {
+          void mostrarNotificacaoWeb('Gestão Financeira', { body: 'Há um novo aviso na central de notificações.', tag: maisUrgente.id })
         }
       }
     }

@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom'
 import {
   ArrowLeft, Search, ShieldCheck, ShieldOff, Lock, Unlock, Pencil, Trash2,
   Users, UserCheck, UserX, Crown, X, Loader2, AlertTriangle, ChevronDown, Sparkles,
-  MailWarning, MailCheck, SendHorizonal, Wifi, RefreshCw,
+  MailWarning, MailCheck, SendHorizonal, Wifi, Save,
 } from 'lucide-react'
 import { useAdminUsuarios } from './useAdminUsuarios'
-import { buscarAppConfig, atualizarAppConfig, forcarAtualizacaoTodos } from './backend'
+import { buscarAppConfig, atualizarAppConfig } from './backend'
 import PainelApoioPix from './PainelApoioPix'
+import PainelEnviarAtualizacao from './PainelEnviarAtualizacao'
 import type { EdicaoMetricasAdmin, EdicaoUsuarioAdmin, OrdenacaoAdmin, PapelUsuario, StatusUsuario, UsuarioAdmin } from './types'
 
 function formatarData(iso: string | null) {
@@ -538,27 +539,41 @@ function PainelControleAcesso() {
         carregando={salvando === 'manutencao'}
         onToggle={() => alternar('modoManutencao', 'manutencao')}
       />
-      <BotaoForcarAtualizacao />
+      <PainelVersaoAndroid />
+      <PainelEnviarAtualizacao />
     </div>
   )
 }
 
-function BotaoForcarAtualizacao() {
+function PainelVersaoAndroid() {
+  const [minima, setMinima] = useState('1')
+  const [revogada, setRevogada] = useState(false)
   const [enviando, setEnviando] = useState(false)
   const [feito, setFeito] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
 
-  async function disparar() {
+  useEffect(() => {
+    let ativo = true
+    buscarAppConfig().then((c) => {
+      if (ativo) { setMinima(String(c.androidMinVersionCode)); setRevogada(c.androidUpdateRevoked) }
+    }).catch((e) => { if (ativo) setErro(e instanceof Error ? e.message : 'Erro ao ler configuração.') })
+    return () => { ativo = false }
+  }, [])
+
+  async function salvar() {
     if (enviando) return
-    if (!window.confirm('Forçar todo mundo com o app aberto a recarregar com a versão mais nova agora?')) return
+    const valor = Number(minima)
+    if (!Number.isSafeInteger(valor) || valor < 1) { setErro('Informe um versionCode inteiro maior que zero.'); return }
+    if (!revogada && valor > 1 && !window.confirm(`Bloqueará APKs com versionCode menor que ${valor}, incluindo convidados e administradores. Confirme apenas após homologar e publicar o APK assinado.`)) return
     setEnviando(true)
     setErro(null)
     try {
-      await forcarAtualizacaoTodos()
+      const atualizado = await atualizarAppConfig({ androidMinVersionCode: valor, androidUpdateRevoked: revogada })
+      setMinima(String(atualizado.androidMinVersionCode))
       setFeito(true)
       setTimeout(() => setFeito(false), 3000)
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Erro ao forçar atualização.')
+      setErro(e instanceof Error ? e.message : 'Erro ao salvar o versionCode mínimo.')
       setTimeout(() => setErro(null), 3500)
     } finally {
       setEnviando(false)
@@ -566,21 +581,18 @@ function BotaoForcarAtualizacao() {
   }
 
   return (
-    <button
-      onClick={disparar}
-      disabled={enviando}
-      className="flex items-center justify-between rounded-card bg-bg-card border border-border px-3.5 py-3 disabled:opacity-60"
-    >
+    <section className="rounded-card bg-bg-card border border-border p-3.5">
       <div className="text-left">
-        <p className="text-[13px] font-semibold text-texto">
-          {feito ? 'Atualização disparada!' : erro ?? 'Forçar atualização pra todo mundo'}
-        </p>
-        <p className="text-[11px] text-texto-secundario">
-          Todo aparelho com o app aberto recarrega sozinho com a versão mais nova em até ~25s.
-        </p>
+        <p className="text-[13px] font-semibold text-texto">Versão mínima do APK Android</p>
+        <p className="mt-1 text-[11px] text-texto-secundario">O bloqueio não se aplica à Web/PWA. Só altere após homologar o APK assinado e confirmar o link oficial de download.</p>
       </div>
-      <RefreshCw size={16} className={`shrink-0 text-accent-cyan ${enviando ? 'animate-spin' : ''}`} />
-    </button>
+      <label className="mt-3 block text-[11px] font-semibold text-texto-secundario">versionCode mínimo</label>
+      <input inputMode="numeric" type="number" min="1" step="1" value={minima} onChange={(e) => setMinima(e.target.value)} className="mt-1 w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm text-texto" />
+      <label className="mt-3 flex items-center gap-2 text-xs text-texto"><input type="checkbox" checked={revogada} onChange={(e) => setRevogada(e.target.checked)} /> Revogar temporariamente o bloqueio</label>
+      {erro && <p role="alert" className="mt-2 text-xs text-accent-red">{erro}</p>}
+      {feito && <p role="status" className="mt-2 text-xs text-accent-green">Configuração Android salva.</p>}
+      <button onClick={salvar} disabled={enviando} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-accent-cyan px-3 text-xs font-bold text-bg disabled:opacity-60"><Save size={14}/>{enviando ? 'Salvando…' : 'Salvar política de versão'}</button>
+    </section>
   )
 }
 

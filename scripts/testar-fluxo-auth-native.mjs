@@ -16,7 +16,7 @@ function backend(extra={}){
     signUp:async data=>{calls.push({name:'signup',data});return{error:null}},
     resetPasswordForEmail:async(email,options)=>{calls.push({name:'reset',email,options});return{error:null}},
     resend:async data=>{calls.push({name:'resend',data});return{error:null}},
-    exchangeCodeForSession:async code=>{calls.push({name:'exchange',code});return{error:null}},
+    exchangeCodeForSession:async code=>{calls.push({name:'exchange',code});return{data:{},error:null}},
     setSession:async tokens=>{calls.push({name:'session',tokens});return{error:null}},
     signInWithPassword:async data=>{calls.push({name:'password',data});return{data:{user:{id:'user1'}},error:null}},
     signOut:async()=>{calls.push({name:'signout'});return{error:null}},
@@ -51,6 +51,9 @@ function authEnv({native=true,store=storage(),db=backend(),session=null,closed=f
     '@capacitor/browser':{Browser:{open:async({url})=>{opened.push(url);if(browserFails)throw Error('Browser failed')}}},
     '@/lib/supabase':{supabase:db},
     '@/lib/forcarAtualizacao':{forcarAtualizacaoCompleta:()=>{}},
+    '@/lib/notificacoesRemotas':{avisosRemotosAutorizados:()=>false,desvincularAvisosRemotos:async()=>{}},
+    './appConfigState':{manterUltimaAppConfigValida:(_anterior,recebida)=>recebida},
+    './destinoAposLogin':{limparDestino:()=>{}},
   },store)
   return{api:mod.AuthProvider({children:null}).props.value,db,opened,store}
 }
@@ -66,6 +69,7 @@ function nativeEnv({store=storage(),db=backend(),cold=null,closeFails=false}={})
     '@capacitor/core':{Capacitor:{isNativePlatform:()=>true}},
     'react-router-dom':{useNavigate:()=> (path)=>navigations.push(path)},
     '@/lib/supabase':{supabase:db},
+    './destinoAposLogin':{lerDestino:()=>null,limparDestino:()=>{}},
   },store)
   mod.default()
   const flush=async()=>{for(let n=0;n<5;n++)await new Promise(done=>setImmediate(done))}
@@ -208,9 +212,10 @@ test('Rejects token injection using implicit access_token and refresh_token URL 
 test('Protected pages cannot be entered before session or profile validation',()=>{
   function guarded(context,admin=false){
     const exported=compile('src/auth/RotaProtegida.tsx',{
-      react:{},'lucide-react':{Loader2:'Loader2',ShieldAlert:'ShieldAlert'},
-      'react-router-dom':{Navigate:'Navigate'},
+      react:{useEffect:()=>{}},'lucide-react':{Loader2:'Loader2',ShieldAlert:'ShieldAlert',LockKeyhole:'LockKeyhole'},
+      'react-router-dom':{Navigate:'Navigate',Link:'Link',useLocation:()=>({pathname:'/',search:'',hash:''})},
       './AuthContext':{useAuth:()=>context},
+      './destinoAposLogin':{lerDestino:()=>null,limparDestino:()=>{},validarDestino:valor=>valor},
     },storage())
     return admin?exported.RotaAdmin({children:'SECRET'}):exported.RotaProtegida({children:'SECRET'})
   }

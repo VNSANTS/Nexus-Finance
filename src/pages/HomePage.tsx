@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Flame, ChevronRight, RotateCw, Zap, Lock, Radar, Wallet2, Sparkles } from 'lucide-react'
+import { Search, Flame, ChevronRight, RotateCw, Zap, Lock, Radar, Wallet2, Sparkles, BookOpen, Calculator, Palette, MessageSquare, Share2, LockKeyhole } from 'lucide-react'
 import ProgressRing from '@/components/ProgressRing'
 import TrilhaCard from '@/components/TrilhaCard'
 import NexusLogo from '@/components/NexusLogo'
@@ -9,6 +9,7 @@ import { useUserProgress } from '@/hooks/useUserProgress'
 import { TRILHAS, MODULOS } from '@banco-de-dados/modulos'
 import type { Frase } from '@/data/frasesMotivadoras'
 import { gerarInsightDiarioHome } from '@/lib/insightDiarioIA'
+import { useAuth } from '@/auth/AuthContext'
 
 // As 456 frases foram movidas pra @/data/frasesMotivadoras.ts e agora são
 // carregadas sob demanda (import dinâmico logo abaixo), em vez de entrarem
@@ -25,6 +26,7 @@ function getSaudacao() {
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const { ehConvidado } = useAuth()
   const { progress, levelInfo, isModuloCompleto } = useUserProgress()
   const modulosCompletos = Object.values(progress.abasConcluidas).filter((abas) => abas.length === 6).length
   const desafioDisponivel = modulosCompletos >= MODULOS_PARA_DESAFIO
@@ -49,6 +51,7 @@ export default function HomePage() {
 
   const [insightIA, setInsightIA] = useState<string | null>(null)
   useEffect(() => {
+    if (ehConvidado) return
     gerarInsightDiarioHome({
       nome: progress.perfilPessoal.nome,
       nivel: levelInfo.level,
@@ -60,7 +63,7 @@ export default function HomePage() {
       itensRevisaoPendentes: progress.itensRevisao.length,
     }).then(setInsightIA) // se falhar (offline/Gemini fora do ar), fica null e o card some — não trava a Home
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [ehConvidado])
 
   function proximaFrase() {
     if (!frases) return
@@ -72,6 +75,39 @@ export default function HomePage() {
       } while (proximo === atual)
       return proximo
     })
+  }
+
+  if (ehConvidado) {
+    const abertos = [
+      { titulo: 'Primeiro fundamento', texto: 'Prévia: Educação Financeira', rota: '/modulo/educacao-financeira', Icon: BookOpen },
+      { titulo: 'Glossário', texto: 'Consulte conceitos financeiros', rota: '/glossario', Icon: BookOpen },
+      { titulo: 'Calculadora básica', texto: 'Faça contas sem salvar histórico', rota: '/ferramentas', Icon: Calculator },
+      { titulo: 'Gestão Financeira', texto: 'Painel, gráficos e histórico em modo de leitura', rota: '/gestao-financeira', Icon: Wallet2 },
+      { titulo: 'Personalização', texto: 'Ajuste aparência e acessibilidade', rota: '/personalizacao', Icon: Palette },
+      { titulo: 'Acessibilidade', texto: 'Ajuste fonte, contraste e interação', rota: '/gestao-financeira/acessibilidade', Icon: Palette },
+      { titulo: 'Feedback beta', texto: 'Envie uma sugestão ou reporte um problema', rota: '/feedback-beta', Icon: MessageSquare },
+    ]
+    const bloqueados = [
+      ['Aprendizado completo', '/aprender'], ['Busca', '/busca'], ['Biblioteca', '/biblioteca'],
+      ['Mercado', '/mercado'], ['Carteira', '/carteira'], ['Questionários e desafios', '/desafio-diario'],
+      ['Nexus AI', '/nexus-ai'], ['Perfil e progresso', '/perfil'],
+    ]
+    return (
+      <div className="px-4 pt-5 pb-28 flex flex-col gap-4">
+        <div className="flex items-center justify-between"><NexusLogo size={34} /><span className="rounded-full border border-[#00D4FF]/30 bg-[#00D4FF]/10 px-3 py-1 text-xs font-semibold text-[#00D4FF]">Modo convidado</span></div>
+        <div><h1 className="text-lg font-display font-extrabold text-white">Bem-vindo ao Nexus Finance</h1><p className="mt-1 text-xs text-slate-400">Explore uma prévia e conheça as ferramentas disponíveis.</p></div>
+        <div className="grid grid-cols-2 gap-2.5">
+          {abertos.map(({ titulo, texto, rota, Icon }) => <button key={rota} onClick={() => navigate(rota)} className="card-surface rounded-2xl border border-[#00D4FF]/15 p-3 text-left"><Icon size={18} className="text-[#00D4FF]"/><p className="mt-2 text-[12px] font-bold text-white">{titulo}</p><p className="mt-1 text-[10px] leading-snug text-slate-400">{texto}</p></button>)}
+        </div>
+        <section className="rounded-2xl border border-border bg-white/[0.03] p-3">
+          <h2 className="mb-2 text-xs font-bold text-slate-300">Prévia do primeiro fundamento de cada módulo</h2>
+          <div className="grid grid-cols-2 gap-2">{MODULOS.map((modulo) => <button key={modulo.id} onClick={() => navigate(`/modulo/${modulo.id}`)} className="flex min-h-10 items-center gap-2 rounded-xl border border-white/5 px-2 text-left text-[10px] text-slate-300"><BookOpen size={13} className="shrink-0 text-[#00D4FF]"/>{modulo.titulo}</button>)}</div>
+        </section>
+        <button onClick={async () => { const url = 'https://nexus-finance-vn.lovable.app'; try { if (navigator.share) await navigator.share({ title: 'Nexus Finance', url }); else await navigator.clipboard?.writeText(url) } catch { /* compartilhamento cancelado pelo usuário */ } }} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-border text-sm font-semibold text-slate-200"><Share2 size={16}/> Compartilhar Nexus Finance</button>
+        <section className="rounded-2xl border border-border bg-white/[0.03] p-3"><h2 className="mb-2 text-xs font-bold text-slate-300">Outros recursos</h2><div className="grid grid-cols-2 gap-2">{bloqueados.map(([titulo, rota]) => <button key={rota} onClick={() => navigate(rota)} className="flex min-h-10 items-center gap-2 rounded-xl border border-white/5 px-2 text-left text-[10px] text-slate-400"><LockKeyhole size={13} className="shrink-0 text-[#00D4FF]"/>{titulo}</button>)}</div></section>
+        <div className="flex justify-center gap-4 text-xs text-slate-400"><a href={`${import.meta.env.BASE_URL}termos-de-uso.html`} target="_blank" rel="noreferrer">Termos de uso</a><a href={`${import.meta.env.BASE_URL}privacy-policy.html`} target="_blank" rel="noreferrer">Política de privacidade</a></div>
+      </div>
+    )
   }
 
   return (

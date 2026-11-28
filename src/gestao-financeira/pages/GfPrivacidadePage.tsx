@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Lock, EyeOff, HardDrive, Camera, Trash2, AlertTriangle } from 'lucide-react'
 import GfHeader from '../components/GfHeader'
 import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
+import { aoRetomarAndroid, consultarPermissaoNotificacoes, notificacoesLocaisAndroid, pedirPermissaoNotificacoes } from '@/lib/notificacoesDispositivo'
 
 // Tela "Privacidade" (menu Mais → Privacidade). Escopo: o que dá pra
 // controlar de fato dentro do app hoje — ocultar valores, gerenciar as
@@ -28,23 +29,30 @@ export default function GfPrivacidadePage() {
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
   const [avisoPermissao, setAvisoPermissao] = useState<string | null>(null)
 
-  const statusNotificacaoNavegador: 'granted' | 'denied' | 'default' | 'indisponivel' =
-    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'indisponivel'
+  const [statusNotificacoes, setStatusNotificacoes] = useState<Awaited<ReturnType<typeof consultarPermissaoNotificacoes>>>()
+  useEffect(() => {
+    let ativo = true
+    const atualizar = () => void consultarPermissaoNotificacoes().then((status) => {
+      if (ativo) setStatusNotificacoes(status)
+    })
+    atualizar()
+    const removerListenerAndroid = aoRetomarAndroid(atualizar)
+    return () => {
+      ativo = false
+      removerListenerAndroid()
+    }
+  }, [])
 
   async function ativarNotificacaoNavegador() {
-    if (!('Notification' in window)) {
-      setAvisoPermissao('Seu navegador não suporta notificações nativas.')
-      setTimeout(() => setAvisoPermissao(null), 3500)
-      return
-    }
-    const permissao = await Notification.requestPermission()
-    if (permissao === 'granted') {
-      definirPreferenciasNotificacoes({ notificacaoNavegador: true })
-    } else {
-      definirPreferenciasNotificacoes({ notificacaoNavegador: false })
-      setAvisoPermissao('Permissão negada no navegador — pra reverter, é nas configurações do site, não por aqui.')
-      setTimeout(() => setAvisoPermissao(null), 4500)
-    }
+    if (!permissoes.editar) return
+    const permissao = await pedirPermissaoNotificacoes()
+    definirPreferenciasNotificacoes({ notificacaoNavegador: permissao === 'autorizado' })
+    setStatusNotificacoes(await consultarPermissaoNotificacoes())
+    if (permissao === 'autorizado') return setAvisoPermissao(null)
+    setAvisoPermissao(permissao === 'indisponivel'
+      ? 'As notificações do dispositivo estão indisponíveis.'
+      : 'Permissão negada. Você pode habilitá-la nas configurações do dispositivo ou do navegador.')
+    setTimeout(() => setAvisoPermissao(null), 4000)
   }
 
   function aoConfirmarExclusao() {
@@ -131,8 +139,8 @@ export default function GfPrivacidadePage() {
 
           <div className="flex flex-col gap-1.5">
             <LinhaSwitch
-              label="Notificações do navegador"
-              desc="Mostra alerta nativo do sistema mesmo com a aba em segundo plano"
+              label={notificacoesLocaisAndroid ? 'Notificações do dispositivo' : 'Notificações do navegador'}
+              desc={notificacoesLocaisAndroid ? 'Permite agendar lembretes no Android' : 'Mostra alertas enquanto o Nexus Finance está aberto'}
               ativo={notifPrefs.notificacaoNavegador}
               onToggle={() =>
                 notifPrefs.notificacaoNavegador
@@ -140,10 +148,9 @@ export default function GfPrivacidadePage() {
                   : ativarNotificacaoNavegador()
               }
             />
-            {statusNotificacaoNavegador === 'denied' && (
+            {statusNotificacoes === 'denied' && (
               <p className="text-[10px] text-slate-500 leading-relaxed">
-                O navegador está bloqueando notificações pra este site — o app não consegue religar isso sozinho, precisa
-                liberar nas configurações do site no navegador primeiro.
+                {notificacoesLocaisAndroid ? 'Libere as notificações nas configurações do Android.' : 'Libere as notificações nas configurações do site no navegador.'}
               </p>
             )}
           </div>
@@ -156,9 +163,7 @@ export default function GfPrivacidadePage() {
           />
 
           <p className="text-[10.5px] text-slate-500 leading-relaxed">
-            Esses três controlam de verdade o que o app faz. A única coisa que continua fora daqui é a permissão do próprio
-            navegador (o "Permitir/Bloquear" que ele pergunta) — o app não tem como reverter uma negação por conta própria,
-            só pedir de novo ou te avisar quando estiver bloqueada.
+            O Android e o navegador também têm configurações próprias de permissão para notificações.
           </p>
         </div>
 

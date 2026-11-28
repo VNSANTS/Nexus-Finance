@@ -7,6 +7,7 @@
     "dev": "vite",
     "prebuild": "node scripts/gerar-indice-nexus-ai.mjs",
     "build": "tsc && vite build",
+    "postbuild": "node scripts/verificar-bundle-educacional.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -14,6 +15,8 @@
     "@capacitor/app": "^8.1.2",
     "@capacitor/browser": "^8.0.5",
     "@capacitor/core": "^8.5.1",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/push-notifications": "^8.1.3",
     "@supabase/supabase-js": "^2.115.0",
     "framer-motion": "^11.5.4",
     "html2canvas": "^1.4.1",

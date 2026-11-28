@@ -14,7 +14,7 @@ import { iconePorNome } from '../iconMap'
 // com os números financeiros da pessoa. Usa os mesmos dados de sempre
 // (transações + categorias), sem nenhuma fonte nova.
 export default function GfRetrospectivaPage() {
-  const { estado } = useGestaoFinanceira()
+  const { somenteLeitura, estado } = useGestaoFinanceira()
   const [ano, setAno] = useState(new Date().getFullYear())
   const [exportando, setExportando] = useState<'pdf' | 'imagem' | null>(null)
 
@@ -24,6 +24,7 @@ export default function GfRetrospectivaPage() {
   const CategoriaIcone = retro.categoriaTop ? iconePorNome(retro.categoriaTop.categoria.icone) : Sparkles
 
   async function exportarImagem() {
+    if (somenteLeitura) return
     setExportando('imagem')
     try {
       await exportarComoImagem('gf-retrospectiva-conteudo', `nexus-retrospectiva-${ano}`)
@@ -35,6 +36,7 @@ export default function GfRetrospectivaPage() {
   }
 
   async function exportarPdf() {
+    if (somenteLeitura) return
     setExportando('pdf')
     try {
       await exportarComoPdf('gf-retrospectiva-conteudo', `nexus-retrospectiva-${ano}`)
@@ -194,7 +196,7 @@ export default function GfRetrospectivaPage() {
       </div>
       {/* fim da área exportável */}
 
-      {retro.totalLancamentos > 0 && (
+      {!somenteLeitura && retro.totalLancamentos > 0 && (
         <div className="px-4 mt-4 flex gap-2">
           <button
             onClick={exportarImagem}

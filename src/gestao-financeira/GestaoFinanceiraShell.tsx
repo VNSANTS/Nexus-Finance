@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { GestaoFinanceiraProvider, useGestaoFinanceira } from './GestaoFinanceiraContext'
+import { useAuth } from '@/auth/AuthContext'
 import GfBottomNav from './components/GfBottomNav'
 import GfPrivacyOverlay from './components/GfPrivacyOverlay'
 import GfBloqueioOverlay from './components/GfBloqueioOverlay'
@@ -56,6 +57,7 @@ export default function GestaoFinanceiraShell() {
 
 function GestaoFinanceiraConteudo() {
   const { estado, marcarPrimeiroAcesso } = useGestaoFinanceira()
+  const { ehConvidado } = useAuth()
 
   if (!estado.primeiroAcessoFeito) {
     return <GfPrimeiroAcesso aoConcluir={marcarPrimeiroAcesso} />
@@ -63,6 +65,7 @@ function GestaoFinanceiraConteudo() {
 
   return (
     <>
+      {ehConvidado && <div role="status" className="mx-4 mb-2 rounded-xl border border-[#00D4FF]/25 bg-[#00D4FF]/10 px-3 py-2 text-xs text-[#00D4FF]">Modo somente leitura: movimentações e dados financeiros não podem ser alterados.</div>}
       <div className="pb-[80px]">
         <Suspense fallback={<GfCarregando />}>
           <Routes>
@@ -97,7 +100,7 @@ function GestaoFinanceiraConteudo() {
       <GfBottomNav />
       <GfPrivacyOverlay />
       <GfBloqueioOverlay />
-      <NexusAIChat escopo="gestao-financeira" />
+      {!ehConvidado && <NexusAIChat escopo="gestao-financeira" />}
     </>
   )
 }

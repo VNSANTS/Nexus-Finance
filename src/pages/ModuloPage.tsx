@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { lazy, useEffect, useState } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, Clock, CheckCircle2, Circle, Calculator, ArrowRight, BookOpen, Zap, GitCompare, ArrowUpRight } from 'lucide-react'
 import { carregarModulo } from '@banco-de-dados/modulos'
@@ -9,9 +9,19 @@ import type { NomeAba, Modulo, Flashcard, QuizQuestion } from '@/types'
 import FlipCard from '@/components/FlipCard'
 import MindMap from '@/components/MindMap'
 import QuizInline from '@/components/QuizInline'
+import { useAuth } from '@/auth/AuthContext'
 
+const PreviaModuloPage = lazy(() => import('./PreviaModuloPage'))
 export default function ModuloPage() {
+  const { ehConvidado } = useAuth()
+  const { id } = useParams()
+  return ehConvidado ? <PreviaModuloPage /> : <ModuloCompleto key={id} />
+}
+
+function ModuloCompleto() {
   const { id } = useParams<{ id: string }>()
+  const [params] = useSearchParams()
+  const abaSolicitada = TODAS_ABAS.find((aba) => aba === params.get('aba')) || 'Aprender'
   const navigate = useNavigate()
   const {
     progress,
@@ -28,22 +38,28 @@ export default function ModuloPage() {
   const [celebrar, setCelebrar] = useState<{ xp: number; bonus: string | null; completo: boolean } | null>(null)
   // undefined = ainda carregando | null = não existe conteúdo para este id
   const [modulo, setModulo] = useState<Modulo | null | undefined>(undefined)
+  const [erroCarga, setErroCarga] = useState('')
+  const [tentativa, setTentativa] = useState(0)
 
   useEffect(() => {
     if (!id) {
       setModulo(null)
       return
     }
-    let ativo = true
+    const requisicao = new AbortController()
     setModulo(undefined)
-    setTab('Aprender')
-    carregarModulo(id).then((m) => {
-      if (ativo) setModulo(m)
+    setErroCarga('')
+    setTab(abaSolicitada)
+    carregarModulo(id, requisicao.signal).then((m) => {
+      if (!requisicao.signal.aborted) setModulo(m)
+    }).catch((erro) => {
+      if (!requisicao.signal.aborted) {
+        setErroCarga(erro instanceof Error ? erro.message : 'Não foi possível carregar o módulo.')
+        setModulo(null)
+      }
     })
-    return () => {
-      ativo = false
-    }
-  }, [id])
+    return () => requisicao.abort()
+  }, [id, abaSolicitada, tentativa])
 
   // Volta para o topo ao trocar de aba — sem isso, quem estava no fim da aba
   // Aprender caía no meio do quiz ao mudar para Teste.
@@ -66,8 +82,8 @@ export default function ModuloPage() {
   if (!modulo || !id) {
     return (
       <div className="px-4 pt-16 text-center">
-        <p className="text-slate-400 text-sm">Este módulo ainda não tem conteúdo completo.</p>
-        <p className="text-slate-500 text-xs mt-1">Ele chega em breve — siga acompanhando o progresso do projeto.</p>
+        <p className="text-slate-400 text-sm" role={erroCarga ? 'alert' : undefined}>{erroCarga || 'Este módulo ainda não tem conteúdo completo.'}</p>
+        {erroCarga && <button type="button" onClick={() => setTentativa((n) => n + 1)} className="mx-auto mt-3 block rounded-xl border border-accent-cyan px-4 py-2 text-sm text-accent-cyan">Tentar novamente</button>}
         <button onClick={() => navigate('/aprender')} className="mt-6 text-accent-cyan text-sm font-semibold">
           Voltar para Aprender
         </button>

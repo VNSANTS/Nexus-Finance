@@ -155,10 +155,27 @@ html, body {
   text-shadow: none !important;
 }
 
+:root {
+  /* Capacitor returns zero where it has already applied native padding. */
+  --nexus-inset-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --nexus-inset-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --nexus-inset-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --nexus-inset-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --nexus-frame-height: calc(100vh - var(--nexus-inset-top) - var(--nexus-inset-bottom));
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --nexus-frame-height: calc(100dvh - var(--nexus-inset-top) - var(--nexus-inset-bottom));
+  }
+}
+
 body {
   width: 100%;
   margin: 0;
+  min-height: 100vh;
   min-height: 100dvh;
+  padding: var(--nexus-inset-top) var(--nexus-inset-right) var(--nexus-inset-bottom) var(--nexus-inset-left);
   position: relative;
   /* Fundo geral do app controlado por --bg-fundo-app (sólido ou gradiente,
      setado pelo ThemeProvider). O wrapper em App.tsx usa `bg-bg` do
@@ -167,6 +184,10 @@ body {
      custom escolhido aqui. Documentado em PROXIMA_SESSAO.md. */
   background: var(--bg-fundo-app);
 }
+
+/* Full-height screens fill the usable viewport inside the system bars. */
+#root .h-dvh { height: var(--nexus-frame-height); }
+#root .min-h-dvh { min-height: var(--nexus-frame-height); }
 
 ::-webkit-scrollbar {
   width: 4px;

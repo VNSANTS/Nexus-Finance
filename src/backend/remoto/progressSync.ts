@@ -23,12 +23,6 @@ import { supabase } from '@/lib/supabase'
  * hook-dentro-de-módulo-não-React).
  */
 
-let usuarioAtualId: string | null = null
-
-export function setUsuarioAtual(userId: string | null) {
-  usuarioAtualId = userId
-}
-
 // Extrai só os campos que a tabela espelha em colunas próprias (ver SQL) —
 // usados pelo painel admin pra listar/filtrar sem abrir o JSON inteiro.
 function extrairCamposEspelhados(p: UserProgress) {
@@ -44,12 +38,12 @@ function extrairCamposEspelhados(p: UserProgress) {
   }
 }
 
-export async function enviarParaServidor(progress: UserProgress): Promise<void> {
-  if (!usuarioAtualId) return // sem sessão, não há onde sincronizar (app ainda funciona 100% local)
+export async function enviarParaServidor(progress: UserProgress, userId: string): Promise<void> {
+  if (!userId) return // sem sessão ativa, segue só local
 
   const { error } = await supabase.from('user_progress').upsert(
     {
-      user_id: usuarioAtualId,
+      user_id: userId,
       ...extrairCamposEspelhados(progress),
       dados_jsonb: progress,
       ultima_atividade: new Date().toISOString(),
@@ -78,6 +72,7 @@ export async function buscarDoServidor(userId: string): Promise<ProgressoRemoto 
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (error || !data) return null
+  if (error) throw new Error(error.message)
+  if (!data) return null
   return { progresso: data.dados_jsonb as UserProgress, adminEditadoEm: data.admin_editado_em as string | null }
 }

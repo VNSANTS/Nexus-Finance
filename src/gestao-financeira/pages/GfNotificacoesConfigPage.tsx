@@ -25,6 +25,7 @@ import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
 import { tocarSomNotificacao, ESTILOS_SOM } from '../somNotificacao'
 import type { PrioridadeNotificacao } from '../notificacoes'
 import type { AgruparNotificacoesPor, EstiloExibicaoNotificacao, EstiloSomNotificacao } from '../types'
+import { notificacoesLocaisAndroid, pedirPermissaoNotificacoes } from '@/lib/notificacoesDispositivo'
 
 // Tela avançada de configuração da Central de Notificações — cobre a seção
 // "4. Notificações" do documento de projeto: liga/desliga geral, liga/desliga
@@ -43,20 +44,14 @@ export default function GfNotificacoesConfigPage() {
   const podeEditar = permissoes.editar
 
   async function ativarNotificacaoNavegador() {
-    if (!('Notification' in window)) {
-      setAvisoPermissao('Seu navegador não suporta notificações nativas.')
-      setTimeout(() => setAvisoPermissao(null), 3500)
-      return
-    }
-    const permissao = await Notification.requestPermission()
-    if (permissao === 'granted') {
-      definirPreferenciasNotificacoes({ notificacaoNavegador: true })
-      new Notification('Nexus Finance', { body: 'Notificações do navegador ativadas para a Gestão Financeira.' })
-    } else {
-      definirPreferenciasNotificacoes({ notificacaoNavegador: false })
-      setAvisoPermissao('Permissão negada — ative pelas configurações do navegador se mudar de ideia.')
-      setTimeout(() => setAvisoPermissao(null), 4000)
-    }
+    if (!podeEditar) return
+    const permissao = await pedirPermissaoNotificacoes()
+    definirPreferenciasNotificacoes({ notificacaoNavegador: permissao === 'autorizado' })
+    if (permissao === 'autorizado') return setAvisoPermissao(null)
+    setAvisoPermissao(permissao === 'indisponivel'
+      ? 'As notificações do dispositivo estão indisponíveis.'
+      : 'Permissão negada. Você pode habilitá-la nas configurações do dispositivo ou do navegador.')
+    setTimeout(() => setAvisoPermissao(null), 4000)
   }
 
   return (
@@ -86,7 +81,7 @@ export default function GfNotificacoesConfigPage() {
       <div className={`px-4 mt-4 flex flex-col gap-3 ${podeEditar ? '' : 'opacity-50 pointer-events-none select-none'}`}>
         <Secao
           titulo="Geral"
-          desc="Ligar tudo, notificação do navegador e vibração"
+          desc="Alertas, permissão do dispositivo e vibração"
           aberta={secaoAberta === 'geral'}
           onClick={() => setSecaoAberta('geral')}
         >
@@ -98,8 +93,8 @@ export default function GfNotificacoesConfigPage() {
             icone={prefs.ativas ? Bell : BellOff}
           />
           <LinhaSwitch
-            label="Notificações do navegador"
-            desc="Mostra um alerta nativo do sistema, mesmo com a aba em segundo plano"
+            label={notificacoesLocaisAndroid ? 'Notificações do dispositivo' : 'Notificações do navegador'}
+            desc={notificacoesLocaisAndroid ? 'Agenda avisos de vencimento no Android, inclusive com o app fechado' : 'Mostra alertas enquanto o Nexus Finance está aberto'}
             ativo={prefs.notificacaoNavegador}
             onToggle={() => (prefs.notificacaoNavegador ? definirPreferenciasNotificacoes({ notificacaoNavegador: false }) : ativarNotificacaoNavegador())}
             icone={Smartphone}

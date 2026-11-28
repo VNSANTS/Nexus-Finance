@@ -2,19 +2,22 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Check, Gauge, Zap } from 'lucide-react'
 import { MODELOS, ESFORCOS, lerPreferenciasModelo, salvarPreferenciasModelo, type ModeloNexusAI, type EsforcoNexusAI } from './preferenciasModelo'
+import { useAuth } from '@/auth/AuthContext'
 
 export default function NexusAIConfiguracoes({ aberto, onFechar }: { aberto: boolean; onFechar: () => void }) {
-  const [prefs, setPrefs] = useState(lerPreferenciasModelo)
+  const { sessao, guestId } = useAuth()
+  const identity = sessao?.user?.id ? `user:${sessao.user.id}` : guestId ? `guest:${guestId}` : 'anonymous'
+  const [prefs, setPrefs] = useState(() => lerPreferenciasModelo(identity))
 
   function escolherModelo(modelo: ModeloNexusAI) {
     const nova = { ...prefs, modelo }
     setPrefs(nova)
-    salvarPreferenciasModelo(nova)
+    salvarPreferenciasModelo(nova, identity)
   }
   function escolherEsforco(esforco: EsforcoNexusAI) {
     const nova = { ...prefs, esforco }
     setPrefs(nova)
-    salvarPreferenciasModelo(nova)
+    salvarPreferenciasModelo(nova, identity)
   }
 
   return (

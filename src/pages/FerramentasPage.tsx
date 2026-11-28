@@ -1,15 +1,16 @@
 import { useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   ChevronLeft, ChevronRight, Calculator, TrendingDown, PiggyBank, Flag, Percent, Milestone,
   Home, ShieldAlert, CreditCard, Landmark, ArrowLeftRight, ReceiptText, Hourglass,
   BarChart3, PiggyBank as PiggyBankIcon, Coins, Scale, CalendarClock,
-  FileBarChart, Gauge, Scissors, Filter, Radar, History, Trash2, X,
+  FileBarChart, Gauge, Scissors, Filter, Radar, History, Trash2, X, LockKeyhole,
   type LucideIcon,
 } from 'lucide-react'
 import SliderInput from '@/components/SliderInput'
 import { useUserProgress } from '@/hooks/useUserProgress'
+import { useAuth } from '@/auth/AuthContext'
 
 const CALCULADORAS = [
   { id: 'basica', nome: 'Calculadora Básica', desc: 'Soma, subtração, multiplicação e divisão', Icon: Calculator, cor: '#00D4FF' },
@@ -47,15 +48,19 @@ const CALCULADORAS = [
 export default function FerramentasPage() {
   const navigate = useNavigate()
   const { registrarCalculadoraUsada } = useUserProgress()
-  const [ativa, setAtiva] = useState<string | null>(null)
+  const { ehConvidado, sessao, guestId } = useAuth()
+  const identity = sessao?.user?.id ? `user:${sessao.user.id}` : guestId ? `guest:${guestId}` : 'anonymous'
+  const [params, setParams] = useSearchParams()
+  const solicitada = params.get('calc')
+  const ativa = CALCULADORAS.some((c) => c.id === solicitada) && (!ehConvidado || solicitada === 'basica') ? solicitada : null
 
   function abrirCalculadora(id: string) {
-    setAtiva(id)
-    registrarCalculadoraUsada(id)
+    setParams({ calc: id })
+    if (!ehConvidado) registrarCalculadoraUsada(id)
   }
 
   if (ativa) {
-    return <CalculadoraRouter id={ativa} onBack={() => setAtiva(null)} />
+    return <CalculadoraRouter id={ativa} onBack={() => setParams({}, { replace: true })} identity={identity} ehConvidado={ehConvidado} />
   }
 
   return (
@@ -72,7 +77,7 @@ export default function FerramentasPage() {
             key={c.id}
             whileTap={{ scale: 0.98 }}
             onClick={() => abrirCalculadora(c.id)}
-            className="flex items-center gap-3 card-surface rounded-2xl p-3.5 text-left"
+            className={`flex items-center gap-3 card-surface rounded-2xl p-3.5 text-left ${ehConvidado && c.id !== 'basica' ? 'border border-[#00D4FF]/15' : ''}`}
           >
             <div className="w-[42px] h-[42px] rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${c.cor}1A` }}>
               <c.Icon size={19} style={{ color: c.cor }} />
@@ -81,7 +86,7 @@ export default function FerramentasPage() {
               <p className="text-[13.5px] font-bold text-white">{c.nome}</p>
               <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{c.desc}</p>
             </div>
-            <ChevronRight size={17} className="text-slate-500 shrink-0" />
+            {ehConvidado && c.id !== 'basica' ? <LockKeyhole size={16} className="text-[#00D4FF] shrink-0" /> : <ChevronRight size={17} className="text-slate-500 shrink-0" />}
           </motion.button>
         ))}
       </div>
@@ -146,10 +151,10 @@ function ResultCard({ label, value, sub, color }: { label: string; value: string
   )
 }
 
-function CalculadoraRouter({ id, onBack }: { id: string; onBack: () => void }) {
+function CalculadoraRouter({ id, onBack, identity, ehConvidado }: { id: string; onBack: () => void; identity: string; ehConvidado: boolean }) {
   switch (id) {
     case 'basica':
-      return <CalcBasica onBack={onBack} />
+      return <CalcBasica onBack={onBack} identity={identity} ehConvidado={ehConvidado} />
     case 'juros-compostos':
       return <CalcJurosCompostos onBack={onBack} />
     case 'regra-72':
@@ -1194,11 +1199,12 @@ interface HistoricoItemBasica {
   quando: number
 }
 
-const CHAVE_HISTORICO_BASICA = 'nexus-finance-historico-calc-basica'
+const CHAVE_HISTORICO_BASICA = 'nexus-finance-historico-calc-basica:v2'
 
-function carregarHistoricoBasica(): HistoricoItemBasica[] {
+function carregarHistoricoBasica(identity: string, ehConvidado: boolean): HistoricoItemBasica[] {
+  if (ehConvidado) return []
   try {
-    const bruto = localStorage.getItem(CHAVE_HISTORICO_BASICA)
+    const bruto = localStorage.getItem(`${CHAVE_HISTORICO_BASICA}:${encodeURIComponent(identity)}`)
     if (!bruto) return []
     const parsed = JSON.parse(bruto)
     return Array.isArray(parsed) ? parsed : []
@@ -1207,21 +1213,21 @@ function carregarHistoricoBasica(): HistoricoItemBasica[] {
   }
 }
 
-function salvarHistoricoBasica(itens: HistoricoItemBasica[]) {
+function salvarHistoricoBasica(itens: HistoricoItemBasica[], identity: string) {
   try {
-    localStorage.setItem(CHAVE_HISTORICO_BASICA, JSON.stringify(itens.slice(0, 50)))
+    localStorage.setItem(`${CHAVE_HISTORICO_BASICA}:${encodeURIComponent(identity)}`, JSON.stringify(itens.slice(0, 50)))
   } catch {
     // localStorage indisponível — histórico simplesmente não persiste, sem quebrar a calculadora
   }
 }
 
-function CalcBasica({ onBack }: { onBack: () => void }) {
+function CalcBasica({ onBack, identity, ehConvidado }: { onBack: () => void; identity: string; ehConvidado: boolean }) {
   // `partes` é a expressão inteira como sequência de tokens: números (string bruta, com vírgula)
   // alternados com operadores. Ex.: ['20', '+', '20', '+', '20', '+', '7']
   const [partes, setPartes] = useState<string[]>([])
   const [emEdicaoNumero, setEmEdicaoNumero] = useState(false)
   const [resultado, setResultado] = useState<string | null>(null)
-  const [historico, setHistorico] = useState<HistoricoItemBasica[]>(() => carregarHistoricoBasica())
+  const [historico, setHistorico] = useState<HistoricoItemBasica[]>(() => carregarHistoricoBasica(identity, ehConvidado))
   const [mostrarHistorico, setMostrarHistorico] = useState(false)
 
   function paraNumero(str: string): number {
@@ -1316,9 +1322,11 @@ function CalcBasica({ onBack }: { onBack: () => void }) {
 
     if (textoResultado !== 'Erro') {
       const novoItem: HistoricoItemBasica = { expressao: textoExpressao, resultado: textoResultado, quando: Date.now() }
-      const novoHistorico = [novoItem, ...historico].slice(0, 50)
-      setHistorico(novoHistorico)
-      salvarHistoricoBasica(novoHistorico)
+      if (!ehConvidado) {
+        const novoHistorico = [novoItem, ...historico].slice(0, 50)
+        setHistorico(novoHistorico)
+        salvarHistoricoBasica(novoHistorico, identity)
+      }
     }
   }
 
@@ -1364,7 +1372,7 @@ function CalcBasica({ onBack }: { onBack: () => void }) {
 
   function limparHistorico() {
     setHistorico([])
-    salvarHistoricoBasica([])
+    salvarHistoricoBasica([], identity)
   }
 
   function usarResultadoDoHistorico(valorResultado: string) {
@@ -1422,13 +1430,13 @@ function CalcBasica({ onBack }: { onBack: () => void }) {
         <button onClick={onBack} className="flex items-center gap-1 text-slate-400 text-[13px] font-semibold">
           <ChevronLeft size={16} /> Ferramentas
         </button>
-        <button
+        {!ehConvidado && <button
           onClick={() => setMostrarHistorico(true)}
           className="flex items-center gap-1.5 text-[12.5px] font-semibold text-accent-cyan px-3 py-1.5 rounded-full"
           style={{ background: '#00D4FF1A' }}
         >
           <History size={15} /> Histórico
-        </button>
+        </button>}
       </div>
 
       <div className="flex items-center gap-2.5 mb-5">
@@ -1466,7 +1474,7 @@ function CalcBasica({ onBack }: { onBack: () => void }) {
         ))}
       </div>
 
-      {mostrarHistorico && (
+      {!ehConvidado && mostrarHistorico && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setMostrarHistorico(false)}>
           <div
             className="card-surface rounded-t-3xl p-5 max-h-[75vh] flex flex-col"

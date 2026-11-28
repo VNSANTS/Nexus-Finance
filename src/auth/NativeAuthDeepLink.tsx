@@ -4,6 +4,7 @@ import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { lerDestino, limparDestino } from './destinoAposLogin'
 
 const SCHEME = 'com.nexusfinance.app:'
 const HOST = 'auth'
@@ -54,14 +55,17 @@ export default function NativeAuthDeepLink() {
       const erroUrl = callback.searchParams.get('error') || callback.searchParams.get('error_description')
       const code = callback.searchParams.get('code')
       let sucesso = false
+      let recuperacao = false
+      const funcaoDesejada = lerDestino()
 
       try {
         if (erroUrl) throw new Error('OAuth callback returned an error')
         // O app exige PKCE. Não aceitar JWTs diretamente em um deep link
         // personalizado: outro aplicativo poderia injetar uma sessão própria.
         if (!code) throw new Error('Missing PKCE authorization code')
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code)
         if (error) throw error
+        recuperacao = 'redirectType' in data && data.redirectType === 'recovery'
         sucesso = true
       } catch {
         // Erros de rede, código expirado, consentimento negado e JWT inválido
@@ -79,7 +83,9 @@ export default function NativeAuthDeepLink() {
       }
 
       const destinoPendente = resgatarDestinoPendente()
-      const destino = rotaSegura(callback.searchParams.get('next') || destinoPendente)
+      const fluxo = destinoPendente === '/redefinir-senha' ? destinoPendente : rotaSegura(callback.searchParams.get('next') || destinoPendente)
+      const destino = recuperacao || fluxo === '/redefinir-senha' ? '/redefinir-senha' : funcaoDesejada || fluxo
+      if (destino === '/redefinir-senha') limparDestino()
       navigate(destino, { replace: true })
     }
 
