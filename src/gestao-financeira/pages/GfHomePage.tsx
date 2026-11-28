@@ -45,6 +45,7 @@ import GfDonutCategorias from '../components/GfDonutCategorias'
 import GfCalendarioFinanceiro from '../components/GfCalendarioFinanceiro'
 import { gerarNotificacoes } from '../notificacoes'
 import { gerarInsightDiarioGF } from '../insightDiarioGF'
+import { useAuth } from '@/auth/AuthContext'
 
 // Home da Gestão Financeira — versão mobile do dashboard, com todos os
 // blocos que existem na versão desktop (fluxo completo, categorias,
@@ -54,6 +55,7 @@ import { gerarInsightDiarioGF } from '../insightDiarioGF'
 export default function GfHomePage() {
   const navigate = useNavigate()
   const { estado, permissoes } = useGestaoFinanceira()
+  const { ehConvidado } = useAuth()
   const { progress } = useUserProgress()
   // Ponto de partida vem da preferência "Abrir com valores ocultos"
   // (tela Privacidade) — dali em diante o olho na tela funciona normal,
@@ -83,8 +85,9 @@ export default function GfHomePage() {
 
   const [insightIA, setInsightIA] = useState<string | null>(null)
   useEffect(() => {
+    if (ehConvidado) return
     gerarInsightDiarioGF().then(setInsightIA) // falha em silêncio (offline/Gemini fora do ar) — o card simplesmente não aparece
-  }, [])
+  }, [ehConvidado])
 
   const varReceitas = variacaoPercentual(resumoAtual.receitas, resumoAnterior.receitas)
   const varDespesas = variacaoPercentual(resumoAtual.despesas, resumoAnterior.despesas)
@@ -126,7 +129,7 @@ export default function GfHomePage() {
       </div>
 
       {/* Card: dica do Nexus AI (gerada 1x/dia, com base nos dados financeiros reais) */}
-      {insightIA && (
+      {!ehConvidado && insightIA && (
         <div className="px-4 mt-3">
           <div
             className="rounded-[18px] p-3.5 flex items-start gap-2.5"

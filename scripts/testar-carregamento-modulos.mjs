@@ -1,82 +1,72 @@
-// Tests real module loader code, replacing only Vite's compile-time glob import.
-// No external requests or user credentials.
 import assert from 'node:assert/strict'
-import {test} from 'node:test'
-import {readFileSync} from 'node:fs'
-import {Script} from 'node:vm'
-import {transformSync} from 'esbuild'
+import test from 'node:test'
+import { readFileSync } from 'node:fs'
+import { criarGateway } from '../supabase/functions/education-module/handler.ts'
 
-const source=readFileSync('banco-de-dados/modulos/index.ts','utf8')
-const marker="import.meta.glob<Record<string, unknown>>('./m*.ts')"
-assert.ok(source.includes(marker),'Expected Vite module glob is present')
-const prepared=source.replace(marker,'globalThis.__TEST_MODULE_LOADERS__')
-const compiled=transformSync(prepared,{loader:'ts',format:'cjs',target:'es2022'}).code
-
-function load(loaders){
-  const module={exports:{}}
-  const env={
-    module,exports:module.exports,Map,Object,Promise,console,
-    __TEST_MODULE_LOADERS__:loaders,
-    require(name){
-      if(name==='./_indice')return{MODULOS:[],getModulosByTrilha:()=>[]}
-      if(name==='./_trilhas')return{TRILHAS:[]}
-      throw Error('Unexpected dependency: '+name)
+const catalogo = JSON.parse(readFileSync(new URL('../supabase/functions/education-module/catalogo.json', import.meta.url)))
+const previas = JSON.parse(readFileSync(new URL('../banco-de-dados/modulos/previas.json', import.meta.url)))
+const id = Object.keys(catalogo)[0]
+const origem = 'https://nexus-finance-web.pages.dev'
+const uid = '11111111-1111-4111-8111-111111111111'
+function preparar({ anonimo = false, authStatus = 200, status = 'ativo', role = 'user', manutencao = false, falha = false } = {}) {
+  const chamadas = []
+  const consultar = async (url, opcoes) => {
+    chamadas.push(url)
+    assert.equal(opcoes.headers.Authorization, 'Bearer token-de-teste')
+    assert.equal(opcoes.headers.apikey, 'publica-de-teste')
+    if (falha) throw Error('Indisponível')
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: uid, is_anonymous: anonimo }, { status: authStatus })
+    if (url.includes('/rest/v1/profiles?')) {
+      assert.equal(new URL(url).searchParams.get('id'), 'eq.' + uid)
+      return Response.json([{ id: uid, role, status }])
     }
+    if (url.includes('/rest/v1/app_config?')) return Response.json([{ modo_manutencao: manutencao }])
+    throw Error('Consulta inesperada')
   }
-  new Script(compiled,{filename:'banco-de-dados/modulos/index.ts'}).runInNewContext(env)
-  return module.exports
+  return { endpoint: criarGateway(catalogo, { url: 'https://supabase.invalid', chavePublica: 'publica-de-teste', consultar }), chamadas }
 }
+const requisicao = (slug = id, headers = { Authorization: 'Bearer token-de-teste', Origin: origem }) =>
+  new Request('https://edge.invalid/education-module?id=' + encodeURIComponent(slug), { headers })
 
-test('Loads only registered Vite modules and caches the result',async()=>{
-  let calls=0
-  const m={id:'alfabeto',titulo:'Alfabeto'}
-  const registry={
-    './m01-alfabeto.ts':()=>{calls++;return Promise.resolve({module:m})},
-    './m02-beta.ts':()=>Promise.resolve({module:{id:'beta',titulo:'Beta'}})
+test('preflight aceita Cloudflare sem carregar o catálogo e rejeita outra origem', async () => {
+  const { endpoint, chamadas } = preparar()
+  const r = await endpoint(new Request('https://edge.invalid', { method: 'OPTIONS', headers: { Origin: origem } }))
+  assert.equal(r.status, 204)
+  assert.equal(r.headers.get('Access-Control-Allow-Origin'), origem)
+  assert.equal((await endpoint(requisicao(id, { Origin: 'https://example.org' }))).status, 403)
+  assert.equal(chamadas.length, 0)
+})
+test('visitante sem bearer e sessão inválida não recebem o módulo', async () => {
+  const sem = preparar()
+  const r = await sem.endpoint(requisicao(id, {}))
+  assert.equal(r.status, 401)
+  assert.equal(sem.chamadas.length, 0)
+  assert.equal((await preparar({ authStatus: 401 }).endpoint(requisicao())).status, 401)
+})
+test('sessão anônima e perfil bloqueado não recebem o módulo', async () => {
+  const anon = preparar({ anonimo: true })
+  assert.equal((await anon.endpoint(requisicao())).status, 403)
+  assert.equal(anon.chamadas.length, 1)
+  assert.equal((await preparar({ status: 'bloqueado' }).endpoint(requisicao())).status, 403)
+})
+test('manutenção admite somente administrador ativo; indisponibilidade falha fechada', async () => {
+  assert.equal((await preparar({ manutencao: true }).endpoint(requisicao())).status, 503)
+  assert.equal((await preparar({ manutencao: true, role: 'admin' }).endpoint(requisicao())).status, 200)
+  assert.equal((await preparar({ falha: true }).endpoint(requisicao())).status, 503)
+})
+test('chaves inválidas e caminhos arbitrários não resolvem módulos nem propriedades herdadas', async () => {
+  const { endpoint } = preparar()
+  for (const slug of ['__proto__', '../index', '', '*']) assert.equal((await endpoint(requisicao(slug))).status, 400)
+  for (const slug of ['constructor', 'desconhecido']) assert.equal((await endpoint(requisicao(slug))).status, 404)
+})
+test('todas as prévias correspondem ao primeiro fundamento e o gateway entrega apenas o módulo solicitado com no-store', async () => {
+  const { endpoint } = preparar()
+  assert.deepEqual(Object.keys(previas).sort(), Object.keys(catalogo).sort())
+  for (const [slug, modulo] of Object.entries(catalogo)) {
+    assert.equal(previas[slug], modulo.aprender.oQueE)
+    const r = await endpoint(requisicao(slug))
+    assert.equal(r.status, 200)
+    assert.match(r.headers.get('Cache-Control'), /no-store/)
+    assert.deepEqual(await r.json(), modulo)
   }
-  const x=load(registry)
-  assert.equal(x.TOTAL_MODULOS_COMPLETOS,2)
-  assert.deepEqual(Array.from(x.IDS_MODULOS_COMPLETOS),['alfabeto','beta'])
-  assert.equal(x.temConteudoCompleto('alfabeto'),true)
-  assert.equal(await x.carregarModulo('alfabeto'),m)
-  assert.equal(await x.carregarModulo('alfabeto'),m)
-  assert.equal(calls,1)
-})
-
-test('Rejects inherited Object method names with no executable lookup',async()=>{
-  let calls=0
-  const registry={'./m01-alfabeto.ts':()=>{calls++;return Promise.resolve({module:{id:'alfabeto',titulo:'Alfabeto'}})}}
-  const x=load(registry)
-  for(const id of ['constructor','__proto__','prototype','toString','valueOf','hasOwnProperty','isPrototypeOf','propertyIsEnumerable','__defineGetter__','__lookupSetter__']){
-    assert.equal(x.temConteudoCompleto(id),false,id)
-    assert.equal(await x.carregarModulo(id),null,id)
-    x.prefetchModulo(id)
-  }
-  assert.equal(calls,0)
-})
-
-test('Unknown, malformed or missing module never executes a loader',async()=>{
-  const x=load({'./m01-alfabeto.ts':()=>Promise.resolve({module:{id:'alfabeto',titulo:'Alfabeto'}})})
-  for(const id of ['missing','', '../../../admin','non-existent','alfabeto/extra','alfabeto?query=1']){
-    assert.equal(x.temConteudoCompleto(id),false)
-    assert.equal(await x.carregarModulo(id),null)
-  }
-})
-
-test('Catches rejected Vite dynamic imports without crashing route',async()=>{
-  const x=load({'./m01-broken.ts':()=>Promise.reject(Error('asset offline'))})
-  assert.equal(await x.carregarModulo('broken'),null)
-  assert.equal(await x.carregarModulo('broken'),null)
-})
-
-test('Deduplicates simultaneous module fetches and clears in-flight state',async()=>{
-  let calls=0
-  const x=load({'./m01-test.ts':()=>{
-    calls++
-    return new Promise(resolve=>setTimeout(()=>resolve({modulo:{id:'test',titulo:'Test'}}),1))
-  }})
-  const [a,b]=await Promise.all([x.carregarModulo('test'),x.carregarModulo('test')])
-  assert.equal(a.id,'test')
-  assert.equal(b.id,'test')
-  assert.equal(calls,1)
 })

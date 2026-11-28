@@ -35,8 +35,8 @@ async function extrairMensagemDeErro(error: unknown): Promise<string | null> {
 }
 
 const INATIVIDADE_NOVA_SESSAO_MS = 2 * 60 * 1000 // 2 minutos
-const CHAVE_ULTIMA_ATIVIDADE = (escopo: EscopoNexusAI) => `nexus-ai:${escopo}:ultima-atividade`
-const CHAVE_SESSAO_ATUAL = (escopo: EscopoNexusAI) => `nexus-ai:${escopo}:sessao-atual`
+const CHAVE_ULTIMA_ATIVIDADE = (identity: string, escopo: EscopoNexusAI) => `nexus-ai:${encodeURIComponent(identity)}:${escopo}:ultima-atividade`
+const CHAVE_SESSAO_ATUAL = (identity: string, escopo: EscopoNexusAI) => `nexus-ai:${encodeURIComponent(identity)}:${escopo}:sessao-atual`
 
 function gerarUuid(): string {
   // crypto.randomUUID existe em todo navegador moderno (o app já exige
@@ -48,9 +48,9 @@ function gerarUuid(): string {
 // (localStorage) E a última atividade foi há menos de 2 minutos, continua
 // nela. Senão, gera uma sessão nova — é essa checagem de tempo que
 // implementa "depois de 2 min de inatividade, começa um chat novo".
-function obterOuCriarSessaoId(escopo: EscopoNexusAI): { sessaoId: string; ehNova: boolean } {
-  const sessaoSalva = localStorage.getItem(CHAVE_SESSAO_ATUAL(escopo))
-  const ultimaAtividade = Number(localStorage.getItem(CHAVE_ULTIMA_ATIVIDADE(escopo)) ?? 0)
+function obterOuCriarSessaoId(identity: string, escopo: EscopoNexusAI): { sessaoId: string; ehNova: boolean } {
+  const sessaoSalva = localStorage.getItem(CHAVE_SESSAO_ATUAL(identity, escopo))
+  const ultimaAtividade = Number(localStorage.getItem(CHAVE_ULTIMA_ATIVIDADE(identity, escopo)) ?? 0)
   const passouTempo = Date.now() - ultimaAtividade > INATIVIDADE_NOVA_SESSAO_MS
 
   if (sessaoSalva && !passouTempo) {
@@ -58,17 +58,18 @@ function obterOuCriarSessaoId(escopo: EscopoNexusAI): { sessaoId: string; ehNova
   }
 
   const novaSessaoId = gerarUuid()
-  localStorage.setItem(CHAVE_SESSAO_ATUAL(escopo), novaSessaoId)
+  localStorage.setItem(CHAVE_SESSAO_ATUAL(identity, escopo), novaSessaoId)
   return { sessaoId: novaSessaoId, ehNova: true }
 }
 
-function marcarAtividade(escopo: EscopoNexusAI) {
-  localStorage.setItem(CHAVE_ULTIMA_ATIVIDADE(escopo), String(Date.now()))
+function marcarAtividade(identity: string, escopo: EscopoNexusAI) {
+  localStorage.setItem(CHAVE_ULTIMA_ATIVIDADE(identity, escopo), String(Date.now()))
 }
 
 export function useNexusAI(escopo: EscopoNexusAI = 'geral') {
-  const { sessao } = useAuth()
-  const [sessaoId, setSessaoId] = useState<string>(() => obterOuCriarSessaoId(escopo).sessaoId)
+  const { sessao, guestId } = useAuth()
+  const identity = sessao?.user?.id ? `user:${sessao.user.id}` : guestId ? `guest:${guestId}` : 'anonymous'
+  const [sessaoId, setSessaoId] = useState<string>(() => obterOuCriarSessaoId(identity, escopo).sessaoId)
   const [mensagens, setMensagens] = useState<MensagemChat[]>([])
   const [carregandoHistorico, setCarregandoHistorico] = useState(true)
   const [enviando, setEnviando] = useState(false)
@@ -93,16 +94,16 @@ export function useNexusAI(escopo: EscopoNexusAI = 'geral') {
       setMensagens((data ?? []).map((m) => ({ id: String(m.id), papel: m.papel as 'user' | 'model', conteudo: m.conteudo })))
       setCarregandoHistorico(false)
     },
-    [sessao?.user?.id]
+    [sessao?.user?.id, identity]
   )
 
   // Carrega a sessão atual ao montar (ou quando o escopo muda — o chat da
   // GF e o chat geral têm sessões independentes).
   useEffect(() => {
-    const { sessaoId: id } = obterOuCriarSessaoId(escopo)
+    const { sessaoId: id } = obterOuCriarSessaoId(identity, escopo)
     setSessaoId(id)
     carregarMensagensDaSessao(id)
-  }, [escopo, carregarMensagensDaSessao])
+  }, [escopo, carregarMensagensDaSessao, identity])
 
   const enviarMensagem = useCallback(
     async (texto: string, moduloContexto?: string | null) => {
@@ -110,7 +111,7 @@ export function useNexusAI(escopo: EscopoNexusAI = 'geral') {
       if (!textoLimpo || enviando) return
 
       setErro(null)
-      marcarAtividade(escopoRef.current)
+      marcarAtividade(identity, escopoRef.current)
 
       const idOtimista = `local-${Date.now()}`
       setMensagens((prev) => [
@@ -121,7 +122,7 @@ export function useNexusAI(escopo: EscopoNexusAI = 'geral') {
       setEnviando(true)
 
       try {
-        const { modelo, esforco } = lerPreferenciasModelo()
+        const { modelo, esforco } = lerPreferenciasModelo(identity)
         const { data, error } = await supabase.functions.invoke('nexus-ai', {
           body: { mensagem: textoLimpo, sessaoId, escopo: escopoRef.current, moduloContexto: moduloContexto ?? null, modelo, esforco },
         })
@@ -148,28 +149,28 @@ export function useNexusAI(escopo: EscopoNexusAI = 'geral') {
         setEnviando(false)
       }
     },
-    [enviando, sessaoId]
+    [enviando, sessaoId, identity]
   )
 
   // Botão "Novo chat" — força uma sessão nova, mesmo que ainda esteja
   // dentro da janela de 2 minutos.
   const iniciarNovoChat = useCallback(() => {
     const novaSessaoId = gerarUuid()
-    localStorage.setItem(CHAVE_SESSAO_ATUAL(escopoRef.current), novaSessaoId)
+    localStorage.setItem(CHAVE_SESSAO_ATUAL(identity, escopoRef.current), novaSessaoId)
     setSessaoId(novaSessaoId)
     setMensagens([])
     setErro(null)
-  }, [])
+  }, [identity])
 
   // Troca para uma conversa antiga (vindo do painel de Histórico).
   const abrirSessao = useCallback(
     (idSessao: string) => {
-      localStorage.setItem(CHAVE_SESSAO_ATUAL(escopoRef.current), idSessao)
-      marcarAtividade(escopoRef.current) // reabrir uma conversa antiga conta como atividade — evita ela mesma expirar em 2min
+      localStorage.setItem(CHAVE_SESSAO_ATUAL(identity, escopoRef.current), idSessao)
+      marcarAtividade(identity, escopoRef.current) // reabrir uma conversa antiga conta como atividade — evita ela mesma expirar em 2min
       setSessaoId(idSessao)
       carregarMensagensDaSessao(idSessao)
     },
-    [carregarMensagensDaSessao]
+    [carregarMensagensDaSessao, identity]
   )
 
   // Lista as conversas anteriores (agrupadas por sessao_id) do escopo

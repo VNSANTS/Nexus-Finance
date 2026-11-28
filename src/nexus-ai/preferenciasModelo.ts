@@ -21,15 +21,15 @@ export const ESFORCOS: { id: EsforcoNexusAI; label: string; descricao: string }[
   { id: 'alto', label: 'Caprichado', descricao: 'Pensa mais antes de responder — mais lento' },
 ]
 
-const CHAVE = 'nexus-ai:preferencias-modelo'
+const chave = (identity: string) => `nexus-ai:preferencias-modelo:${encodeURIComponent(identity)}`
 // gemini-3.6-flash tem um bug documentado de falhas aleatórias "Invalid
 // Argument" desde o lançamento — o padrão agora é o Flash-Lite (mais
 // maduro/estável e mais rápido), com esforço baixo.
 const PADRAO: { modelo: ModeloNexusAI; esforco: EsforcoNexusAI } = { modelo: 'gemini-3.1-flash-lite', esforco: 'baixo' }
 
-export function lerPreferenciasModelo(): { modelo: ModeloNexusAI; esforco: EsforcoNexusAI } {
+export function lerPreferenciasModelo(identity = 'anonymous'): { modelo: ModeloNexusAI; esforco: EsforcoNexusAI } {
   try {
-    const salvo = localStorage.getItem(CHAVE)
+    const salvo = localStorage.getItem(chave(identity))
     if (!salvo) return PADRAO
     const dados = JSON.parse(salvo)
     const modelo = MODELOS.some((m) => m.id === dados.modelo) ? dados.modelo : PADRAO.modelo
@@ -40,6 +40,6 @@ export function lerPreferenciasModelo(): { modelo: ModeloNexusAI; esforco: Esfor
   }
 }
 
-export function salvarPreferenciasModelo(p: { modelo: ModeloNexusAI; esforco: EsforcoNexusAI }) {
-  localStorage.setItem(CHAVE, JSON.stringify(p))
+export function salvarPreferenciasModelo(p: { modelo: ModeloNexusAI; esforco: EsforcoNexusAI }, identity = 'anonymous') {
+  localStorage.setItem(chave(identity), JSON.stringify(p))
 }

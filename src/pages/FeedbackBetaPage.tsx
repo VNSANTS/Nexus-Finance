@@ -1,18 +1,38 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ClipboardCopy, MessageSquare, Share2 } from 'lucide-react'
+import { Loader2, Send } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/auth/AuthContext'
 
 type Categoria = 'Erro' | 'Sugestão' | 'Dificuldade' | 'Elogio'
 const MAX_DESCRICAO = 2000
+const INSTALLATION_KEY = 'nexus-feedback-installation-id:v1'
+
+function idDaInstalacao(): string | null {
+  try {
+    const atual = localStorage.getItem(INSTALLATION_KEY)
+    if (atual && /^[0-9a-f-]{36}$/i.test(atual)) return atual
+    const novo = crypto.randomUUID()
+    localStorage.setItem(INSTALLATION_KEY, novo)
+    return novo
+  } catch {
+    return null
+  }
+}
 
 export default function FeedbackBetaPage() {
   const navigate = useNavigate()
+  const { ehConvidado } = useAuth()
   const [categoria, setCategoria] = useState<Categoria>('Erro')
   const [tela, setTela] = useState('')
   const [descricao, setDescricao] = useState('')
   const [passos, setPassos] = useState('')
   const [esperado, setEsperado] = useState('')
   const [status, setStatus] = useState('')
+  const [statusErro, setStatusErro] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+  const requestIdRef = useRef<{ fingerprint: string; id: string } | null>(null)
   const valido = descricao.trim().length >= 10
 
   const relato = useMemo(() => [
@@ -27,6 +47,7 @@ export default function FeedbackBetaPage() {
 
   async function copiar() {
     if (!valido) return
+    setStatusErro(false)
     try {
       await navigator.clipboard.writeText(relato)
       setStatus('Relato copiado. Cole no grupo de testes para enviar.')
@@ -46,6 +67,7 @@ export default function FeedbackBetaPage() {
 
   async function compartilhar() {
     if (!valido) return
+    setStatusErro(false)
     if (navigator.share) {
       try {
         await navigator.share({ title: 'Nexus Finance: feedback beta', text: relato })
@@ -58,10 +80,69 @@ export default function FeedbackBetaPage() {
     await copiar()
   }
 
+  async function enviar() {
+    if (!valido || enviando) return
+    setEnviando(true)
+    setStatus('')
+    setStatusErro(false)
+    const installationId = idDaInstalacao()
+    if (!installationId) {
+      setStatusErro(true)
+      setStatus('Não foi possível identificar esta instalação; o feedback não foi enviado.')
+      setEnviando(false)
+      return
+    }
+    const fingerprint = JSON.stringify([categoria, tela.trim(), descricao.trim(), passos.trim(), esperado.trim()])
+    const requestId = requestIdRef.current?.fingerprint === fingerprint
+      ? requestIdRef.current.id
+      : crypto.randomUUID()
+    requestIdRef.current = { fingerprint, id: requestId }
+    try {
+      const { data, error } = await supabase.functions.invoke('feedback-beta', {
+        body: {
+          installationId,
+          requestId,
+          categoria,
+          tela: tela.trim(),
+          descricao: descricao.trim(),
+          passos: passos.trim(),
+          esperado: esperado.trim(),
+        },
+      })
+      let serverError = data?.error as string | undefined
+      if (error && !serverError) {
+        const context = (error as { context?: unknown }).context
+        if (context instanceof Response) {
+          try { serverError = (await context.clone().json())?.error } catch { /* resposta sem JSON */ }
+        }
+      }
+      if (error || data?.ok !== true || data?.accepted !== true) {
+        setStatusErro(true)
+        setStatus(serverError === 'rate_limited'
+          ? 'O servidor recusou o envio pelo limite de feedback. Aguarde e tente novamente.'
+          : serverError === 'idempotency_conflict'
+            ? 'Este relato já foi enviado com outro conteúdo. Edite o texto e tente novamente.'
+            : 'Não foi possível confirmar o envio. O envio pode não ter sido registrado.')
+        if (serverError === 'rate_limited' || serverError === 'idempotency_conflict') requestIdRef.current = null
+        return
+      }
+      requestIdRef.current = null
+      setStatus('Feedback enviado com sucesso. Obrigado por contribuir!')
+      setDescricao('')
+      setPassos('')
+      setEsperado('')
+    } catch {
+      setStatusErro(true)
+      setStatus('Não foi possível confirmar o envio. Tente novamente com o mesmo relato.')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
   return (
     <main className="px-4 pt-5 pb-28 text-texto max-w-[480px] mx-auto">
-      <button type="button" className="flex items-center gap-2 text-sm text-texto-secundario mb-5" onClick={() => navigate('/perfil')}>
-        <ArrowLeft size={18} /> Voltar ao perfil
+      <button type="button" className="flex items-center gap-2 text-sm text-texto-secundario mb-5" onClick={() => navigate(ehConvidado ? '/' : '/perfil')}>
+        <ArrowLeft size={18} /> Voltar
       </button>
       <div className="flex items-center gap-3 mb-3">
         <div className="w-10 h-10 rounded-xl bg-accent-cyan/15 flex items-center justify-center"><MessageSquare size={20} /></div>
@@ -69,9 +150,9 @@ export default function FeedbackBetaPage() {
       </div>
       <p className="text-xs text-texto-secundario leading-relaxed mb-6">
         Informe falhas, dificuldades ou ideias. Não envie senhas, CPF, tokens, valores de contas nem capturas com informações pessoais.
-        Nenhuma informação é enviada automaticamente: você escolhe onde compartilhar.
+        O envio é opcional. O relato será encaminhado ao Nexus Finance somente quando você tocar em “Enviar feedback”.
       </p>
-      <div className="flex flex-col gap-4">
+      <fieldset disabled={enviando} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm">
           Tipo do relato
           <select value={categoria} onChange={(e) => setCategoria(e.target.value as Categoria)} className="w-full rounded-xl bg-bg-card border border-border px-3 py-3">
@@ -98,8 +179,12 @@ export default function FeedbackBetaPage() {
           <button type="button" onClick={copiar} disabled={!valido} className="rounded-xl border border-border px-3 py-3 text-sm flex items-center justify-center gap-2 disabled:opacity-40"><ClipboardCopy size={16} /> Copiar</button>
           <button type="button" onClick={compartilhar} disabled={!valido} className="rounded-xl bg-accent-cyan text-black px-3 py-3 text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-40"><Share2 size={16} /> Compartilhar</button>
         </div>
-        {status && <p role="status" className="text-sm text-accent-green">{status}</p>}
-      </div>
+        <button type="button" onClick={enviar} disabled={!valido || enviando} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent-cyan px-3 py-3 text-sm font-bold text-black disabled:opacity-40">
+          {enviando ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+          {enviando ? 'Enviando…' : 'Enviar feedback'}
+        </button>
+        {status && <p role="status" className={`text-sm ${statusErro ? 'text-accent-red' : 'text-accent-green'}`}>{status}</p>}
+      </fieldset>
     </main>
   )
 }

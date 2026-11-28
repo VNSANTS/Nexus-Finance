@@ -9,7 +9,7 @@ import type { AjusteFoto } from '@/types'
 // financeiro. As duas áreas (app principal e GF) compartilham este mesmo
 // provider, então trocar o tema em Configurações Gerais (dentro de GF)
 // também muda o app principal, e vice-versa se um dia essa tela existir lá.
-const STORAGE_KEY = 'nexus-tema'
+const STORAGE_KEY = 'nexus-tema:v2'
 
 export type ModoTema = 'claro' | 'escuro' | 'automatico'
 
@@ -137,10 +137,10 @@ const PADRAO: PreferenciasTema = {
   imagemFundoAjuste: null,
 }
 
-function carregar(): PreferenciasTema {
+function carregar(identity: string): PreferenciasTema {
   if (typeof window === 'undefined') return PADRAO
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
+    const raw = window.localStorage.getItem(`${STORAGE_KEY}:${encodeURIComponent(identity)}`)
     if (!raw) return PADRAO
     const salvo = JSON.parse(raw) as Partial<PreferenciasTema>
     // Merge raso normal, exceto degradeFundo: é objeto aninhado, então um
@@ -194,8 +194,8 @@ interface ThemeContextValue extends PreferenciasTema {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [prefs, setPrefs] = useState<PreferenciasTema>(carregar)
+export function ThemeProvider({ children, identity = 'anonymous' }: { children: ReactNode; identity?: string }) {
+  const [prefs, setPrefs] = useState<PreferenciasTema>(() => carregar(identity))
   const [sistemaClaro, setSistemaClaro] = useState(prefereClaroDoSistema)
 
   // Acompanha prefers-color-scheme em tempo real só quando o modo é
@@ -287,12 +287,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs))
+      window.localStorage.setItem(`${STORAGE_KEY}:${encodeURIComponent(identity)}`, JSON.stringify(prefs))
     } catch {
       // localStorage indisponível (modo privado/quota) — preferências
       // continuam funcionando nesta sessão, só não persistem.
     }
-  }, [prefs])
+  }, [prefs, identity])
 
   const definirModo = useCallback((modo: ModoTema) => setPrefs((p) => ({ ...p, modo })), [])
   const definirCorPrincipal = useCallback((id: IdCorPrincipal) => setPrefs((p) => ({ ...p, corPrincipal: id })), [])

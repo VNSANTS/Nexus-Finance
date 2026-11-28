@@ -340,9 +340,13 @@ export default function GfBotaoAcaoRapida() {
                 style={{ background: 'var(--cor-overlay)' }}
               />
 
+              {/* O portal usa a viewport inteira. Alinha o menu ao botão dentro da área segura. */}
               <div
-                className="fixed z-[9995] pointer-events-none left-1/2 -translate-x-1/2"
-                style={{ bottom: 'calc(12px + env(safe-area-inset-bottom) + 34px)' }}
+                className="fixed z-[9995] pointer-events-none -translate-x-1/2"
+                style={{
+                  bottom: 'calc(46px + var(--nexus-inset-bottom))',
+                  left: 'calc((100% + var(--nexus-inset-left) - var(--nexus-inset-right)) / 2)',
+                }}
               >
                 {ACOES.map((acao) => {
                   const ativa = acaoAtiva === acao.id

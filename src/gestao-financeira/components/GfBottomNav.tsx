@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
-import { Home, ListChecks, BarChart3, Settings } from 'lucide-react'
+import { Home, ListChecks, BarChart3, Settings, History } from 'lucide-react'
+import { useAuth } from '@/auth/AuthContext'
 import GfBotaoAcaoRapida from './GfBotaoAcaoRapida'
 
 // Barra de navegação própria da Gestão Financeira — não tem nenhuma relação
@@ -20,22 +21,27 @@ const ITEMS_DIREITA = [
 ]
 
 export default function GfBottomNav() {
+  const { ehConvidado } = useAuth()
+  const esquerda = ehConvidado
+    ? [{ to: '/gestao-financeira', label: 'Início', Icon: Home, fim: true }, { to: '/gestao-financeira/movimentacoes', label: 'Histórico', Icon: ListChecks, fim: false }]
+    : ITEMS_ESQUERDA
+  const direita = ehConvidado
+    ? [{ to: '/gestao-financeira/relatorios', label: 'Gráficos', Icon: BarChart3, fim: false }, { to: '/gestao-financeira/retrospectiva', label: 'Retrospectiva', Icon: History, fim: false }]
+    : ITEMS_DIREITA
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[640px] z-50 bottom-[calc(12px+env(safe-area-inset-bottom))]">
+    <div className="fixed bottom-[12px] left-1/2 -translate-x-1/2 w-[calc(100%-24px)] max-w-[640px] z-50">
       <nav
         className="gf-bottom-nav-glass rounded-[28px] border shadow-2xl"
         aria-label="Navegação da Gestão Financeira"
       >
         <ul className="flex items-stretch justify-between px-2">
-          {ITEMS_ESQUERDA.map((item) => (
+          {esquerda.map((item) => (
             <ItemNav key={item.to} {...item} />
           ))}
 
-          <li className="flex-1 flex items-center justify-center">
-            <GfBotaoAcaoRapida />
-          </li>
+          {!ehConvidado && <li className="flex-1 flex items-center justify-center"><GfBotaoAcaoRapida /></li>}
 
-          {ITEMS_DIREITA.map((item) => (
+          {direita.map((item) => (
             <ItemNav key={item.to} {...item} />
           ))}
         </ul>

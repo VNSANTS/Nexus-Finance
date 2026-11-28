@@ -5,13 +5,14 @@ import { CATEGORIAS_PADRAO } from './categoriasPadrao'
 import { novoMembroPrincipal, permissoesAtivas } from './permissoes'
 import { PREFERENCIAS_SEGURANCA_PADRAO } from './seguranca'
 import type { PermissoesMembro } from './types'
-import { buscarGfDoServidor, enviarGfParaServidor, setUsuarioAtualGf } from './backend/gfSync'
+import { buscarGfDoServidor, enviarGfParaServidor } from './backend/gfSync'
 import { useAuth } from '@/auth/AuthContext'
+import { useLembretesFinanceiros } from './useLembretesFinanceiros'
 
 // Estado 100% isolado do useUserProgress: chave própria no localStorage,
 // contexto próprio, nenhum import cruzado. É literalmente "um novo app"
 // vivendo dentro do mesmo bundle, como pedido.
-const STORAGE_KEY = 'nexus-gestao-financeira'
+const STORAGE_KEY = 'nexus-gestao-financeira:v2'
 const STORAGE_VERSION = 1
 const PERSIST_DEBOUNCE_MS = 400
 
@@ -64,17 +65,41 @@ function estadoInicial(): GestaoFinanceiraState {
   }
 }
 
-function carregarEstado(): GestaoFinanceiraState {
+function carregarEstado(identity: string): GestaoFinanceiraState {
+  const key = `${STORAGE_KEY}:${encodeURIComponent(identity)}`
   if (typeof window === 'undefined') return estadoInicial()
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return estadoInicial()
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return { ...estadoInicial(), primeiroAcessoFeito: identity.startsWith('guest:') }
     const salvo = JSON.parse(raw) as Partial<GestaoFinanceiraState>
     if (salvo.versao !== STORAGE_VERSION) return estadoInicial()
     return { ...estadoInicial(), ...salvo }
   } catch {
     return estadoInicial()
   }
+}
+
+function existeEstadoLocal(identity: string): boolean {
+  try { return window.localStorage.getItem(`${STORAGE_KEY}:${encodeURIComponent(identity)}`) !== null }
+  catch { return false }
+}
+
+function mesclarEstadosFinanceiros(local: GestaoFinanceiraState, remoto: GestaoFinanceiraState): GestaoFinanceiraState {
+  const chavesLista = ['membros', 'contas', 'cartoes', 'categorias', 'transacoes', 'dividas', 'metas', 'orcamentos', 'investimentos', 'historicoPatrimonio'] as const
+  const resultado = { ...remoto, ...local } as GestaoFinanceiraState
+  for (const chave of chavesLista) {
+    const listaLocal = local[chave] as Array<{ id?: string }>
+    const listaRemota = remoto[chave] as Array<{ id?: string }>
+    const porId = new Map<string, (typeof listaLocal)[number]>()
+    const chaveItem = (item: { id?: string; data?: string }) => item.id ?? item.data ?? JSON.stringify(item)
+    for (const item of listaRemota) porId.set(chaveItem(item), item)
+    for (const item of listaLocal) porId.set(chaveItem(item), item)
+    ;(resultado[chave] as unknown as Array<unknown>) = [...porId.values()]
+  }
+  resultado.preferenciasNotificacoes = { ...remoto.preferenciasNotificacoes, ...local.preferenciasNotificacoes }
+  resultado.preferenciasPrivacidade = { ...remoto.preferenciasPrivacidade, ...local.preferenciasPrivacidade }
+  resultado.preferenciasSeguranca = { ...remoto.preferenciasSeguranca, ...local.preferenciasSeguranca }
+  return resultado
 }
 
 type Acao =
@@ -276,6 +301,7 @@ function reducer(estado: GestaoFinanceiraState, acao: Acao): GestaoFinanceiraSta
 
 interface GestaoFinanceiraContextValue {
   estado: GestaoFinanceiraState
+  somenteLeitura: boolean
   // Permissões efetivas do perfil ativo agora (deriva de estado.membros +
   // estado.membroAtivoId — ver permissoesAtivas em permissoes.ts). Exposto
   // aqui pra ser a fonte única que telas e componentes consultam antes de
@@ -331,7 +357,16 @@ interface GestaoFinanceiraContextValue {
 const GestaoFinanceiraContext = createContext<GestaoFinanceiraContextValue | null>(null)
 
 export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) {
-  const [estado, dispatch] = useReducer(reducer, undefined, carregarEstado)
+  const auth = useAuth()
+  const identity = auth.sessao?.user?.id ? `user:${auth.sessao.user.id}` : auth.guestId ? `guest:${auth.guestId}` : 'anonymous'
+  const [estado, dispatchRaw] = useReducer(reducer, identity, carregarEstado)
+  const guestRef = useRef(auth.ehConvidado)
+  guestRef.current = auth.ehConvidado
+  const alteradoLocalmenteRef = useRef(false)
+  const sincronizacaoProntaRef = useRef(false)
+  const dispatch = useCallback((acao: Acao) => {
+    if (!guestRef.current) { alteradoLocalmenteRef.current = true; dispatchRaw(acao) }
+  }, [])
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const estadoRef = useRef(estado)
   estadoRef.current = estado
@@ -340,7 +375,7 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     timeoutRef.current = setTimeout(() => {
       try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(estado))
+        window.localStorage.setItem(`${STORAGE_KEY}:${encodeURIComponent(identity)}`, JSON.stringify(estado))
       } catch {
         // localStorage indisponível (modo privado/quota) — segue sem persistir
       }
@@ -348,7 +383,7 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [estado])
+  }, [estado, identity])
 
   // Sincronização com o Supabase — mesmo modelo de useUserProgress.ts
   // (progresso educacional): localStorage responde na hora (efeito acima),
@@ -362,24 +397,38 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
   // supabase/007_gestao_financeira_sync.sql), então não há necessidade de
   // "servidor pode ter valor mais atual que local por edição externa"; a
   // única fonte de mudança é o próprio usuário no próprio aparelho.
-  const auth = useAuth()
-  const userId = auth.sessao?.user?.id ?? null
+  const userId = auth.perfil?.status === 'ativo' ? auth.sessao?.user?.id ?? null : null
+  useLembretesFinanceiros(estado, userId)
   const jaBuscouRef = useRef<string | null>(null)
+  const localExistiaRef = useRef(existeEstadoLocal(identity))
 
   useEffect(() => {
-    setUsuarioAtualGf(userId)
-    if (!userId) return
+    sincronizacaoProntaRef.current = false
+    if (!userId || auth.ehConvidado) return
 
     if (jaBuscouRef.current !== userId) {
       jaBuscouRef.current = userId
-      buscarGfDoServidor(userId).then((remoto) => {
-        // Só aplica se o servidor tiver mais transações que o local — rede
-        // de segurança simples contra perder dados ao trocar de aparelho,
-        // sem sobrescrever à toa um estado local mais avançado.
-        if (remoto && remoto.transacoes.length > estadoRef.current.transacoes.length) {
-          dispatch({ tipo: 'RESTAURAR_BACKUP', payload: remoto })
+      void (async () => {
+        try {
+          const remoto = await buscarGfDoServidor(userId!)
+          if (remoto && !localExistiaRef.current && !alteradoLocalmenteRef.current) {
+            dispatchRaw({ tipo: 'RESTAURAR_BACKUP', payload: remoto })
+            window.localStorage.setItem(`${STORAGE_KEY}:${encodeURIComponent(identity)}`, JSON.stringify(remoto))
+            localExistiaRef.current = true
+          } else if (remoto) {
+            const mesclado = mesclarEstadosFinanceiros(estadoRef.current, remoto)
+            dispatchRaw({ tipo: 'RESTAURAR_BACKUP', payload: mesclado })
+            window.localStorage.setItem(`${STORAGE_KEY}:${encodeURIComponent(identity)}`, JSON.stringify(mesclado))
+          } else if (!remoto && localExistiaRef.current) {
+            await enviarGfParaServidor(estadoRef.current, userId!)
+          }
+          sincronizacaoProntaRef.current = true
+          if (!remoto && alteradoLocalmenteRef.current && !localExistiaRef.current)
+            await enviarGfParaServidor(estadoRef.current, userId!)
+        } catch {
+          // Falha de rede: não fazer upsert até conseguir confirmar o remoto.
         }
-      })
+      })()
     }
 
     const intervalo = setInterval(async () => {
@@ -388,6 +437,7 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
       // servidor, mescla por id antes de reenviar, senão o push abaixo
       // apagaria essa transação sem querer (mesma classe de bug já
       // corrigida pro XP do admin).
+      if (!sincronizacaoProntaRef.current) return
       try {
         const remoto = await buscarGfDoServidor(userId)
         if (remoto) {
@@ -404,17 +454,17 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
       } catch {
         // sem internet / erro momentâneo — segue pro envio normal abaixo
       }
-      enviarGfParaServidor(estadoRef.current).catch(() => {
+      enviarGfParaServidor(estadoRef.current, userId).catch(() => {
         // sem internet momentânea: tenta de novo no próximo ciclo de 30s
       })
     }, 30_000)
 
     return () => clearInterval(intervalo)
-  }, [userId])
+  }, [userId, identity, auth.ehConvidado])
 
   useEffect(() => {
     const flush = () => {
-      enviarGfParaServidor(estadoRef.current).catch(() => {})
+      if (userId && sincronizacaoProntaRef.current) enviarGfParaServidor(estadoRef.current, userId).catch(() => {})
     }
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') flush()
@@ -426,7 +476,7 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
       window.removeEventListener('pagehide', flush)
       flush()
     }
-  }, [])
+  }, [userId])
 
   const adicionarTransacao = useCallback((t: Transacao) => dispatch({ tipo: 'ADICIONAR_TRANSACAO', payload: t }), [])
   const importarTransacoes = useCallback((ts: Transacao[]) => dispatch({ tipo: 'IMPORTAR_TRANSACOES', payload: ts }), [])
@@ -493,6 +543,7 @@ export function GestaoFinanceiraProvider({ children }: { children: ReactNode }) 
 
   const value: GestaoFinanceiraContextValue = {
     estado,
+    somenteLeitura: auth.ehConvidado,
     permissoes,
     adicionarTransacao,
     importarTransacoes,

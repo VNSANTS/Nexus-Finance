@@ -145,11 +145,11 @@ function AppRotas() {
 
 export default function App() {
   const { progress, setOnboardingDone } = useUserProgress()
-  const { sessao, perfil, carregando, carregandoPerfil } = useAuth()
+  const { sessao, perfil, ehConvidado, carregando, carregandoPerfil } = useAuth()
   const location = useLocation()
   const dentroDeGf = location.pathname.startsWith('/gestao-financeira')
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
-  const mostrarChrome = Boolean(sessao && perfil?.status === 'ativo' && !carregando && !carregandoPerfil)
+  const mostrarChrome = Boolean((ehConvidado || (sessao && perfil?.status === 'ativo')) && !carregando && !carregandoPerfil)
 
   useEffect(() => {
     if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0
@@ -162,7 +162,12 @@ export default function App() {
   // e a ressalva sobre agendamento fora do app (sem Service Worker próprio).
   // Precisa ficar ANTES de qualquer return condicional abaixo (regra dos
   // hooks: sempre chamados na mesma ordem, nunca só às vezes).
-  useAgendadorNotificacoesAprender(progress, progress.preferenciasNotificacoesAprender)
+  useAgendadorNotificacoesAprender(
+    progress,
+    progress.preferenciasNotificacoesAprender,
+    Boolean(sessao && perfil?.status === 'ativo'),
+    sessao?.user?.id ? `user:${sessao.user.id}` : 'anonymous'
+  )
 
   // Antes usava `bg-bg` (Tailwind, var(--cor-bg)) aqui — opaco, cobria o
   // `body` por baixo. O `body` já provê o fundo geral do app via
@@ -175,7 +180,7 @@ export default function App() {
 
   // Rotas de autenticação precisam funcionar mesmo antes de concluir o onboarding;
   // especialmente o link de recuperação recebido por e-mail.
-  if (!progress.onboardingDone && !rotaDeAutenticacao) {
+  if (!ehConvidado && !progress.onboardingDone && !rotaDeAutenticacao) {
     return (
       <>
         <FundoPersonalizado />
@@ -214,7 +219,7 @@ export default function App() {
           {mostrarChrome && !rotaSemChrome && <AvisoEmailNaoConfirmado />}
           <AppRotas />
         </div>
-        {mostrarChrome && !dentroDeGf && !rotaSemChrome && <BottomNav />}
+        {mostrarChrome && !dentroDeGf && !rotaSemChrome && <BottomNav ehConvidado={ehConvidado} />}
         {mostrarChrome && !dentroDeGf && !rotaSemChrome && <NexusAIChat />}
       </div>
     </>

@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Home, GraduationCap, LineChart, Wallet, User, BookMarked } from 'lucide-react'
+import { Home, GraduationCap, LineChart, Wallet, User, BookMarked, LockKeyhole } from 'lucide-react'
 
 const ITEMS = [
   { to: '/', label: 'Início', Icon: Home },
@@ -10,11 +10,10 @@ const ITEMS = [
   { to: '/perfil', label: 'Perfil', Icon: User },
 ]
 
-export default function BottomNav() {
+export default function BottomNav({ ehConvidado = false }: { ehConvidado?: boolean }) {
   return (
     <nav
-      className="bottom-nav-glass nexus-bottom-nav fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50
-                 pb-[env(safe-area-inset-bottom)]"
+      className="bottom-nav-glass nexus-bottom-nav fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-50"
       aria-label="Navegação principal"
     >
       <ul className="flex items-stretch justify-between px-1">
@@ -27,11 +26,10 @@ export default function BottomNav() {
             >
               {({ isActive }) => (
                 <>
-                  <Icon
-                    size={19}
-                    strokeWidth={isActive ? 2.4 : 1.8}
-                    className={isActive ? 'text-accent-cyan' : 'text-slate-400'}
-                  />
+                  <span className="relative">
+                    <Icon size={19} strokeWidth={isActive ? 2.4 : 1.8} className={isActive ? 'text-accent-cyan' : 'text-slate-400'} />
+                    {ehConvidado && to !== '/' && <LockKeyhole size={10} className="absolute -right-2 -top-1 text-[#00D4FF]" />}
+                  </span>
                   <span
                     className={`text-[9px] font-medium tracking-wide whitespace-nowrap ${
                       isActive ? 'text-accent-cyan' : 'text-slate-500'

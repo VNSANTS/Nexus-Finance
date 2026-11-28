@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, Mail, Lock, User, LogIn, UserPlus, TrendingUp } from 'lucide-react'
 import { useAuth, type ProvedorOAuth } from './AuthContext'
+import { guardarDestino, lerDestino, limparDestino, validarDestino } from './destinoAposLogin'
 
 // Ícones de marca não fazem parte do lucide-react (é uma biblioteca de
 // ícones genéricos) — SVGs oficiais simplificados, um por provedor.
@@ -30,7 +31,9 @@ const PROVEDORES: { id: ProvedorOAuth; nome: string; icone: () => React.JSX.Elem
 
 export default function LoginPage() {
   const [searchParams] = useSearchParams()
-  const { sessao, carregando, entrar, cadastrar, entrarComOAuth, resetarSenha, reenviarConfirmacaoCadastro, appConfig } = useAuth()
+  const { sessao, carregando, entrar, cadastrar, entrarComOAuth, resetarSenha, reenviarConfirmacaoCadastro, appConfig, continuarComoConvidado } = useAuth()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [modo, setModo] = useState<'entrar' | 'cadastrar' | 'esqueci'>('entrar')
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -49,7 +52,10 @@ export default function LoginPage() {
   }, [searchParams])
 
   // Já logado — não faz sentido mostrar a tela de login de novo.
-  if (!carregando && sessao) return <Navigate to="/" replace />
+  const from = (location.state as { from?: { pathname?: unknown; search?: unknown } } | null)?.from
+  const destinoAtual = typeof from?.pathname === 'string' ? validarDestino(from.pathname + (typeof from.search === 'string' ? from.search : '')) : null
+  const destino = destinoAtual || lerDestino() || '/'
+  if (!carregando && sessao) return <Navigate to={destino} replace />
 
   const cadastroFechado = appConfig?.cadastroFechado ?? false
   const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -67,6 +73,7 @@ export default function LoginPage() {
     setAvisoReset(null)
 
     if (modo === 'esqueci') {
+      limparDestino()
       const resultado = await resetarSenha(email)
       if (resultado.erro) setErro(resultado.erro)
       else setAvisoReset('Se esse e-mail tiver uma conta, enviamos um link pra redefinir a senha. Confira sua caixa de entrada (e o spam).')
@@ -74,6 +81,7 @@ export default function LoginPage() {
       return
     }
 
+    guardarDestino(destino)
     const resultado = modo === 'entrar' ? await entrar(email, senha) : await cadastrar(nome.trim(), email, senha)
 
     if (resultado.erro) {
@@ -102,6 +110,7 @@ export default function LoginPage() {
     if (provedorEnviando) return
     setProvedorEnviando(provedor)
     setErro(null)
+    guardarDestino(destino)
     const resultado = await entrarComOAuth(provedor)
     // Em caso de sucesso, o navegador já saiu da página (redirecionado
     // pro provedor) — só chega aqui de fato se der erro.
@@ -274,6 +283,16 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
+
+          {appConfig?.carregada && !appConfig.modoManutencao && (
+            <button
+              type="button"
+              onClick={() => { if (continuarComoConvidado()) { limparDestino(); navigate('/') } }}
+              className="mt-4 w-full rounded-xl border border-[#00D4FF]/35 bg-white/5 py-3 text-sm font-semibold text-[#00D4FF] backdrop-blur-xl"
+            >
+              Continuar como convidado
+            </button>
+          )}
         </>
       )}
 

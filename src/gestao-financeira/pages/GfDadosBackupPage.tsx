@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { Database, Download, Upload, Clock, AlertTriangle, FileJson, X } from 'lucide-react'
 import GfHeader from '../components/GfHeader'
 import { useGestaoFinanceira } from '../GestaoFinanceiraContext'
+import { useAuth } from '@/auth/AuthContext'
 import type { GestaoFinanceiraState } from '../types'
 
 // Tela "Dados e backup" (menu Mais → Dados e backup). Escopo: backup
@@ -26,9 +27,9 @@ function baixarArquivo(nome: string, conteudo: string, tipo: string) {
   URL.revokeObjectURL(url)
 }
 
-function lerUltimoBackup(): string | null {
+function lerUltimoBackup(identity: string): string | null {
   try {
-    return window.localStorage.getItem(CHAVE_ULTIMO_BACKUP)
+    return window.localStorage.getItem(`${CHAVE_ULTIMO_BACKUP}:${encodeURIComponent(identity)}`)
   } catch {
     return null
   }
@@ -47,9 +48,11 @@ function contarRegistros(estado: Pick<GestaoFinanceiraState, 'transacoes' | 'con
 
 export default function GfDadosBackupPage() {
   const navigate = useNavigate()
+  const { sessao, guestId } = useAuth()
+  const identity = sessao?.user?.id ? `user:${sessao.user.id}` : guestId ? `guest:${guestId}` : 'anonymous'
   const { estado, permissoes, restaurarBackup } = useGestaoFinanceira()
   const inputRef = useRef<HTMLInputElement>(null)
-  const [ultimoBackup, setUltimoBackup] = useState<string | null>(() => lerUltimoBackup())
+  const [ultimoBackup, setUltimoBackup] = useState<string | null>(() => lerUltimoBackup(identity))
   const [erroImportacao, setErroImportacao] = useState<string | null>(null)
   const [pendente, setPendente] = useState<{ arquivo: GestaoFinanceiraState; nomeArquivo: string } | null>(null)
 
@@ -60,7 +63,7 @@ export default function GfDadosBackupPage() {
     const nomeArquivo = `nexus-financeira-backup-${agora.toISOString().slice(0, 10)}.json`
     baixarArquivo(nomeArquivo, JSON.stringify(estado, null, 2), 'application/json')
     try {
-      window.localStorage.setItem(CHAVE_ULTIMO_BACKUP, agora.toISOString())
+      window.localStorage.setItem(`${CHAVE_ULTIMO_BACKUP}:${encodeURIComponent(identity)}`, agora.toISOString())
     } catch {
       // localStorage indisponível — o download em si já aconteceu, só a
       // data "último backup" não fica registrada nesta sessão

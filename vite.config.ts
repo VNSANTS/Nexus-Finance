@@ -7,6 +7,9 @@ const publicBase = process.env.GITHUB_PAGES === 'true' ? '/Nexus-Finance/' : '/'
 
 export default defineConfig({
   base: publicBase,
+  server: {
+    fs: { deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/supabase/**', '**/banco-de-dados/modulos/m[0-9]*.ts'] },
+  },
   // Sem este alias o `@/...` só funcionava no editor (via tsconfig paths):
   // `vite dev` e `vite build` não resolviam nenhum import e o projeto não subia.
   resolve: {
@@ -41,6 +44,7 @@ export default defineConfig({
       injectRegister: false,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'icon-512-maskable.png'],
       workbox: {
+        importScripts: ['web-push.js'],
         // Força o novo Service Worker a assumir imediatamente (sem esperar
         // todas as abas antigas fecharem) e a tomar controle das páginas já
         // abertas na hora — sem isso, o PWA pode continuar servindo uma
@@ -53,9 +57,7 @@ export default defineConfig({
         // um SVG de badge) conseguir ficar "preso" no cache do navegador
         // depois de uma atualização.
         cleanupOutdatedCaches: true,
-        // O conteúdo dos módulos é dividido em dezenas de chunks pequenos.
-        // Precachear todos deixaria a instalação do PWA lenta demais, então
-        // eles entram no cache conforme o usuário abre cada módulo.
+        // O catálogo completo é servido pela Edge Function e não entra nos caches do app.
         globPatterns: ['**/*.{css,html,svg,png,ico,webmanifest}', 'assets/index-*.js', 'assets/react-*.js'],
         runtimeCaching: [
           {

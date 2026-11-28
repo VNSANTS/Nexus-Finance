@@ -20,6 +20,7 @@ android/app/build/
 android/build/
 android/.gradle/
 android/local.properties
+android/app/google-services.json
 android/*.iml
 android/app/release/
 android/app/src/main/assets/public/

@@ -29,7 +29,7 @@ const LABEL_FORMA: Record<string, string> = {
 export default function GfDetalheMovimentacaoPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { estado, permissoes, excluirTransacao } = useGestaoFinanceira()
+  const { estado, permissoes, somenteLeitura, excluirTransacao } = useGestaoFinanceira()
   const [editando, setEditando] = useState(false)
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
 
@@ -66,6 +66,7 @@ export default function GfDetalheMovimentacaoPage() {
   const transacaoId = t.id
 
   function confirmarExclusao() {
+    if (somenteLeitura) return
     excluirTransacao(transacaoId)
     navigate('/gestao-financeira/movimentacoes', { replace: true })
   }
@@ -155,7 +156,7 @@ export default function GfDetalheMovimentacaoPage() {
       </div>
 
       {/* Ações — cada botão só existe se o perfil ativo tem a permissão */}
-      {(permissoes.editar || permissoes.excluir) && (
+      {!somenteLeitura && (permissoes.editar || permissoes.excluir) && (
         <div className="px-4 mt-4 flex gap-2.5">
           {permissoes.editar && (
             <button

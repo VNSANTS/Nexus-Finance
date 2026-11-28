@@ -34,7 +34,6 @@ type LinhaProfile = {
   created_at: string
   last_seen_at: string | null
 }
-
 type LinhaProgresso = {
   user_id: string
   xp: number
@@ -321,49 +320,36 @@ export async function excluirUsuario(id: string): Promise<void> {
 export interface AppConfigAdmin {
   cadastroFechado: boolean
   modoManutencao: boolean
-  forcarAtualizacaoEm: string | null
+  androidMinVersionCode: number
+  androidUpdateRevoked: boolean
 }
+
+const APP_CONFIG_ADMIN_FIELDS = 'cadastro_fechado, modo_manutencao, android_min_version_code, android_update_revoked'
 
 export async function buscarAppConfig(): Promise<AppConfigAdmin> {
   const { data, error } = await supabase
     .from('app_config')
-    .select('cadastro_fechado, modo_manutencao, forcar_atualizacao_em')
+    .select(APP_CONFIG_ADMIN_FIELDS)
     .eq('id', true)
     .single()
   if (error) throw new Error(error.message)
-  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao, forcarAtualizacaoEm: data.forcar_atualizacao_em }
+  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao, androidMinVersionCode: data.android_min_version_code, androidUpdateRevoked: data.android_update_revoked }
 }
 
-export async function atualizarAppConfig(dados: Partial<Omit<AppConfigAdmin, 'forcarAtualizacaoEm'>>): Promise<AppConfigAdmin> {
-  const patch: Record<string, boolean> = {}
+export async function atualizarAppConfig(dados: Partial<AppConfigAdmin>): Promise<AppConfigAdmin> {
+  const patch: Record<string, boolean | number> = {}
   if (dados.cadastroFechado !== undefined) patch.cadastro_fechado = dados.cadastroFechado
   if (dados.modoManutencao !== undefined) patch.modo_manutencao = dados.modoManutencao
+  if (dados.androidMinVersionCode !== undefined) patch.android_min_version_code = dados.androidMinVersionCode
+  if (dados.androidUpdateRevoked !== undefined) patch.android_update_revoked = dados.androidUpdateRevoked
 
   const { data, error } = await supabase
     .from('app_config')
     .update(patch)
     .eq('id', true)
-    .select('cadastro_fechado, modo_manutencao, forcar_atualizacao_em')
+    .select(APP_CONFIG_ADMIN_FIELDS)
     .single()
 
   if (error) throw new Error(error.message)
-  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao, forcarAtualizacaoEm: data.forcar_atualizacao_em }
-}
-
-// Força todo mundo com o app aberto (ou que abrir daqui a pouco) a
-// recarregar com a versão mais nova — cada aparelho detecta esse timestamp
-// mudando via polling em AuthContext.tsx (mesmo padrão do modo manutenção)
-// e roda um reset completo do Service Worker + caches sozinho, sem precisar
-// que a pessoa faça nada. Resolve o PWA instalado que "não pega" a
-// atualização mesmo depois de várias tentativas manuais.
-export async function forcarAtualizacaoTodos(): Promise<AppConfigAdmin> {
-  const { data, error } = await supabase
-    .from('app_config')
-    .update({ forcar_atualizacao_em: new Date().toISOString() })
-    .eq('id', true)
-    .select('cadastro_fechado, modo_manutencao, forcar_atualizacao_em')
-    .single()
-
-  if (error) throw new Error(error.message)
-  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao, forcarAtualizacaoEm: data.forcar_atualizacao_em }
+  return { cadastroFechado: data.cadastro_fechado, modoManutencao: data.modo_manutencao, androidMinVersionCode: data.android_min_version_code, androidUpdateRevoked: data.android_update_revoked }
 }

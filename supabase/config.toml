@@ -11,3 +11,17 @@
 # que é o jeito certo de confirmar que quem chamou foi a Meta de verdade.
 [functions.whatsapp-webhook]
 verify_jwt = false
+
+[functions.feedback-beta]
+verify_jwt = false
+
+# A função valida o bearer com Auth e confere o perfil no servidor.
+[functions.notifications-device]
+verify_jwt = false
+
+[functions.notifications-admin]
+verify_jwt = false
+
+# education-module autentica o bearer em /auth/v1/user antes de ler o catálogo.
+[functions.education-module]
+verify_jwt = false

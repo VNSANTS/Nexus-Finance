@@ -10,18 +10,12 @@ import { supabase } from '@/lib/supabase'
  * roda por cima, em segundo plano, sem nunca bloquear a UI.
  */
 
-let usuarioAtualId: string | null = null
-
-export function setUsuarioAtualGf(userId: string | null) {
-  usuarioAtualId = userId
-}
-
-export async function enviarGfParaServidor(estado: GestaoFinanceiraState): Promise<void> {
-  if (!usuarioAtualId) return // sem sessão, segue só local
+export async function enviarGfParaServidor(estado: GestaoFinanceiraState, userId: string): Promise<void> {
+  if (!userId) return // sem sessão ativa, segue só local
 
   const { error } = await supabase
     .from('gestao_financeira_estado')
-    .upsert({ user_id: usuarioAtualId, dados_jsonb: estado }, { onConflict: 'user_id' })
+    .upsert({ user_id: userId, dados_jsonb: estado }, { onConflict: 'user_id' })
 
   if (error) throw new Error(error.message)
 }
@@ -33,6 +27,7 @@ export async function buscarGfDoServidor(userId: string): Promise<GestaoFinancei
     .eq('user_id', userId)
     .maybeSingle()
 
-  if (error || !data) return null
+  if (error) throw new Error(error.message)
+  if (!data) return null
   return data.dados_jsonb as GestaoFinanceiraState
 }

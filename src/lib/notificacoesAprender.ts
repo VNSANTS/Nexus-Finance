@@ -3,6 +3,7 @@ import type { UserProgress, PreferenciasNotificacoesAprender } from '@/types'
 import { todayStr } from '@/hooks/useUserProgress'
 import { tocarSomAprender } from './som'
 import { BADGES } from '@/data/badges'
+import { aoRetomarAndroid, mostrarLembreteAndroid, mostrarNotificacaoWeb, notificacoesLocaisAndroid, sincronizarLembretesAndroid, type LembreteDispositivo } from './notificacoesDispositivo'
 
 export type TipoNotificacaoAprender = 'streak' | 'desafio-diario' | 'revisao' | 'conquista' | 'modulo-parado' | 'motivacional'
 
@@ -55,16 +56,16 @@ export function dentroDeNaoPerturbe(prefs: PreferenciasNotificacoesAprender, ago
 // Fica fora do UserProgress de propósito: é estado de agendamento, não
 // progresso do usuário, e não precisa entrar no backup/export de progresso.
 // ---------------------------------------------------------------------------
-const LOG_KEY = 'nexus-notificacoes-aprender-log'
+const LOG_KEY = 'nexus-notificacoes-aprender-log:v2'
 
 interface LogNotificacoes {
   disparadasEm: Record<string, string> // chave da categoria -> marcador da janela (dia ou semana) já disparada
   badgesConhecidos: string[] // badges já notificados, pra "conquistas" só notificar as novas
 }
 
-function lerLog(): LogNotificacoes {
+function lerLog(identity: string): LogNotificacoes {
   try {
-    const raw = localStorage.getItem(LOG_KEY)
+    const raw = localStorage.getItem(`${LOG_KEY}:${encodeURIComponent(identity)}`)
     if (!raw) return { disparadasEm: {}, badgesConhecidos: [] }
     const parsed = JSON.parse(raw)
     return {
@@ -76,9 +77,9 @@ function lerLog(): LogNotificacoes {
   }
 }
 
-function salvarLog(log: LogNotificacoes) {
+function salvarLog(log: LogNotificacoes, identity: string) {
   try {
-    localStorage.setItem(LOG_KEY, JSON.stringify(log))
+    localStorage.setItem(`${LOG_KEY}:${encodeURIComponent(identity)}`, JSON.stringify(log))
   } catch {
     // modo privado / cota cheia: sem dedupe nesta sessão, não é crítico
   }
@@ -215,14 +216,53 @@ export function calcularNotificacoesDevidas({ progress, prefs, agora = new Date(
 // ---------------------------------------------------------------------------
 // Efeitos colaterais: notificação nativa do navegador + som + vibração.
 // ---------------------------------------------------------------------------
-function dispararEfeitos(n: NotificacaoAprender, prefs: PreferenciasNotificacoesAprender) {
-  if (prefs.notificacaoNavegador && 'Notification' in window && Notification.permission === 'granted') {
-    try {
-      new Notification(n.titulo, { body: n.mensagem, tag: n.id })
-    } catch {
-      // navegador pode recusar em background sem Service Worker — não é crítico
+function preferenciasDoDispositivo(prefs: PreferenciasNotificacoesAprender) {
+  return { som: prefs.som.ativo && prefs.som.estilo !== 'nenhum' && prefs.som.volume > 0, vibrar: prefs.vibrar }
+}
+
+function horarioPermitido(dia: Date, horario: string, prefs: PreferenciasNotificacoesAprender) {
+  const data = new Date(dia)
+  const minutos = minutosDoDia(horario)
+  data.setHours(Math.floor(minutos / 60), minutos % 60, 0, 0)
+  if (!dentroDeNaoPerturbe(prefs, data)) return data
+  const fim = minutosDoDia(prefs.naoPerturbe.fim)
+  if (fim <= minutos) return null
+  data.setHours(Math.floor(fim / 60), fim % 60, 0, 0)
+  return data
+}
+
+function planejarLembretesAprender(progress: UserProgress, prefs: PreferenciasNotificacoesAprender) {
+  const lembretes: LembreteDispositivo[] = []
+  if (!prefs.ativas || !prefs.notificacaoNavegador) return lembretes
+  const hoje = new Date()
+  const categorias = [
+    ['streak', prefs.lembreteStreak.horario],
+    ['desafio-diario', prefs.desafioDiario.horario],
+    ['revisao', '12:00'],
+    ['modulo-parado', '12:00'],
+  ] as const
+  for (let offset = 0; offset < 7; offset++) {
+    const dia = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + offset)
+    for (const [tipo, hora] of categorias) {
+      const horario = horarioPermitido(dia, hora, prefs)
+      if (!horario) continue
+      const evento = calcularNotificacoesDevidas({ progress, prefs, agora: horario }).find((item) => item.tipo === tipo)
+      if (evento) lembretes.push({ chave: evento.id, titulo: evento.titulo, mensagem: evento.mensagem, rota: evento.rota, horario })
+    }
+    if (prefs.motivacional.ativa && (prefs.motivacional.frequencia === 'diaria' || dia.getDay() === 1)) {
+      const horario = horarioPermitido(dia, '12:00', prefs)
+      if (horario) lembretes.push({ chave: `motivacional-${todayStr(dia)}`, titulo: 'Nexus Finance 💡', mensagem: 'Que tal reservar alguns minutos para avançar nos seus estudos?', rota: '/', horario })
     }
   }
+  return lembretes
+}
+
+function dispararEfeitos(n: NotificacaoAprender, prefs: PreferenciasNotificacoesAprender, conta: string | null) {
+  if (prefs.notificacaoNavegador && notificacoesLocaisAndroid && conta) {
+    mostrarLembreteAndroid(conta, 'aprender', { chave: n.id, titulo: n.titulo, mensagem: n.mensagem, rota: n.rota }, preferenciasDoDispositivo(prefs))
+    return
+  }
+  if (prefs.notificacaoNavegador) void mostrarNotificacaoWeb(n.titulo, { body: n.mensagem, tag: n.id }, conta)
   if (prefs.som.ativo && prefs.som.estilo !== 'nenhum') {
     tocarSomAprender(prefs.som.estilo, 'padrao', prefs.som.volume)
   }
@@ -235,18 +275,6 @@ function dispararEfeitos(n: NotificacaoAprender, prefs: PreferenciasNotificacoes
   }
 }
 
-// Feature-detect de sincronização em segundo plano (Service Worker +
-// periodicSync). Hoje o app usa o Service Worker autogerado pelo
-// vite-plugin-pwa (estratégia generateSW) e não tem um Service Worker
-// próprio pra registrar handlers de periodicSync — isso exigiria migrar
-// pra injectManifest, fora do escopo desta tarefa (ver "Fora de escopo").
-// Por isso, o suporte é só detectado (pra eventualmente informar o usuário
-// nos ajustes), e o agendamento real continua 100% client-side, com o app
-// aberto, via checagem periódica abaixo.
-export function suportaAgendamentoEmSegundoPlano(): boolean {
-  return typeof window !== 'undefined' && 'serviceWorker' in navigator && 'periodicSync' in (window as unknown as Record<string, unknown>)
-}
-
 const INTERVALO_CHECAGEM_MS = 60 * 1000
 
 /**
@@ -255,22 +283,31 @@ const INTERVALO_CHECAGEM_MS = 60 * 1000
  * efeitos (notificação nativa, som, vibração) para cada notificação devida
  * ainda não registrada no log de dedupe local.
  */
-export function useAgendadorNotificacoesAprender(progress: UserProgress, prefs: PreferenciasNotificacoesAprender) {
+export function useAgendadorNotificacoesAprender(progress: UserProgress, prefs: PreferenciasNotificacoesAprender, enabled = true, identity = 'anonymous') {
+  const conta = identity.startsWith('user:') ? identity.slice(5) : null
   const progressRef = useRef(progress)
   const prefsRef = useRef(prefs)
   progressRef.current = progress
   prefsRef.current = prefs
 
   useEffect(() => {
+    if (!enabled || !conta || !notificacoesLocaisAndroid) return
+    sincronizarLembretesAndroid(conta, 'aprender', planejarLembretesAprender(progress, prefs), preferenciasDoDispositivo(prefs))
+  }, [conta, enabled, prefs, progress])
+
+  useEffect(() => {
+    if (!enabled) return
+    let ativo = true
     function checar() {
       const p = progressRef.current
       const cfg = prefsRef.current
       if (!cfg.ativas) return
       const agora = new Date()
+      if (dentroDeNaoPerturbe(cfg, agora)) return
       const devidas = calcularNotificacoesDevidas({ progress: p, prefs: cfg, agora })
-      if (devidas.length === 0) return
+      const usaAgendados = notificacoesLocaisAndroid && cfg.notificacaoNavegador
 
-      const log = lerLog()
+      const log = lerLog(identity)
       const hoje = todayStr(agora)
       const semana = numeroDaSemana(agora)
       let mudou = false
@@ -281,44 +318,55 @@ export function useAgendadorNotificacoesAprender(progress: UserProgress, prefs: 
           if (log.badgesConhecidos.includes(badgeId)) continue
           log.badgesConhecidos = [...log.badgesConhecidos, badgeId]
           mudou = true
-          dispararEfeitos(n, cfg)
+          dispararEfeitos(n, cfg, conta)
           continue
         }
 
+        if (usaAgendados) continue
         const janela = n.tipo === 'motivacional' ? semana : hoje
         if (log.disparadasEm[n.id] === janela) continue
         log.disparadasEm[n.id] = janela
         mudou = true
-        dispararEfeitos(n, cfg)
+        dispararEfeitos(n, cfg, conta)
       }
 
       // Motivacional é assíncrona (busca frase por import dinâmico) e não
       // depende de progress/badges — tratada à parte, com sua própria janela.
-      if (cfg.motivacional.ativa) {
+      if (cfg.motivacional.ativa && !usaAgendados) {
         const janelaMotivacional = cfg.motivacional.frequencia === 'semanal' ? semana : hoje
         const chave = 'motivacional'
         if (log.disparadasEm[chave] !== janelaMotivacional) {
           log.disparadasEm[chave] = janelaMotivacional
           mudou = true
           void sortearFraseMotivadora().then((frase) => {
-            if (!frase) return
-            dispararEfeitos({ id: `motivacional-${janelaMotivacional}`, tipo: 'motivacional', titulo: 'Nexus Finance 💡', mensagem: frase, rota: '/' }, cfg)
+            if (!ativo || !frase || !prefsRef.current.ativas || !prefsRef.current.motivacional.ativa) return
+            dispararEfeitos({ id: `motivacional-${janelaMotivacional}`, tipo: 'motivacional', titulo: 'Nexus Finance 💡', mensagem: frase, rota: '/' }, prefsRef.current, conta)
           })
         }
       }
 
-      if (mudou) salvarLog(log)
+      if (mudou) salvarLog(log, identity)
     }
 
     checar()
     const intervalo = setInterval(checar, INTERVALO_CHECAGEM_MS)
-    const onVisibilidade = () => {
-      if (document.visibilityState === 'visible') checar()
+    const retomar = () => {
+      if (conta && notificacoesLocaisAndroid) {
+        const cfg = prefsRef.current
+        sincronizarLembretesAndroid(conta, 'aprender', planejarLembretesAprender(progressRef.current, cfg), preferenciasDoDispositivo(cfg))
+      }
+      checar()
     }
-    document.addEventListener('visibilitychange', onVisibilidade)
+    const onVisibilidade = () => {
+      if (document.visibilityState === 'visible') retomar()
+    }
+    const removerListenerAndroid = aoRetomarAndroid(retomar)
+    if (!notificacoesLocaisAndroid) document.addEventListener('visibilitychange', onVisibilidade)
     return () => {
+      ativo = false
       clearInterval(intervalo)
+      removerListenerAndroid()
       document.removeEventListener('visibilitychange', onVisibilidade)
     }
-  }, [])
+  }, [conta, enabled, identity])
 }

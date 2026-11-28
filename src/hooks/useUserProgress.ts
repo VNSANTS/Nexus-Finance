@@ -3,7 +3,8 @@ import type { ReactNode } from 'react'
 import type { UserProgress, ItemRevisao, Flashcard, QuizQuestion, NomeAba, PerguntaDesafio } from '@/types'
 import { TODAS_ABAS, XP_POR_ABA } from '@/types'
 import { defaultProgress, carregarProgressoSincrono, salvarProgresso } from '@/backend'
-import { buscarDoServidor, enviarParaServidor, setUsuarioAtual } from '@/backend/remoto/progressSync'
+import { existeProgressoLocal } from '@/backend/local/progressStore'
+import { buscarDoServidor, enviarParaServidor } from '@/backend/remoto/progressSync'
 import { useAuth } from '@/auth/AuthContext'
 
 const PERSIST_DEBOUNCE_MS = 400
@@ -17,6 +18,34 @@ const LEVELS = [
   { min: 4000, name: 'Tubarão' },
   { min: 8000, name: 'Nexus Master' },
 ]
+
+function mesclarProgresso(local: UserProgress, remoto: UserProgress): UserProgress {
+  const dominante = remoto.xp > local.xp ? remoto : local
+  const listasUnicas = <T,>(a: T[], b: T[]) => Array.from(new Set([...a, ...b]))
+  const abasConcluidas = { ...remoto.abasConcluidas }
+  for (const [id, abas] of Object.entries(local.abasConcluidas))
+    abasConcluidas[id] = listasUnicas(abasConcluidas[id] ?? [], abas)
+  const historicoXpRecente = [...remoto.historicoXpRecente, ...local.historicoXpRecente]
+    .filter((item, index, itens) => itens.findIndex((x) => x.timestamp === item.timestamp && x.xp === item.xp) === index)
+  return {
+    ...remoto,
+    ...local,
+    xp: Math.max(local.xp, remoto.xp),
+    level: dominante.level,
+    levelName: dominante.levelName,
+    streak: Math.max(local.streak, remoto.streak),
+    activeDates: listasUnicas(local.activeDates, remoto.activeDates).sort().slice(-90),
+    abasConcluidas,
+    quizScores: { ...remoto.quizScores, ...local.quizScores },
+    badges: listasUnicas(local.badges, remoto.badges),
+    goals: [...remoto.goals, ...local.goals.filter((g) => !remoto.goals.some((r) => r.id === g.id))],
+    itensRevisao: [...remoto.itensRevisao, ...local.itensRevisao.filter((g) => !remoto.itensRevisao.some((r) => r.id === g.id))],
+    historicoXpRecente,
+    livrosAbertos: listasUnicas(local.livrosAbertos, remoto.livrosAbertos),
+    calculadorasUsadas: listasUnicas(local.calculadorasUsadas, remoto.calculadorasUsadas),
+    perfisCarteiraVistos: listasUnicas(local.perfisCarteiraVistos, remoto.perfisCarteiraVistos),
+  }
+}
 
 function getLevelInfo(xp: number) {
   let levelIndex = 0
@@ -106,16 +135,23 @@ function daysBetween(a: string, b: string) {
 // acontece dentro do updater do setState (que roda duas vezes em StrictMode e
 // não tem garantia de execução síncrona).
 // ---------------------------------------------------------------------------
-function useProgressStore() {
+function useProgressStore(identity: string) {
+  const auth = useAuth()
+  const ehConvidado = auth.ehConvidado
+  const userId = auth.perfil?.status === 'ativo' ? auth.sessao?.user?.id ?? null : null
   const stateRef = useRef<UserProgress | null>(null)
-  if (stateRef.current === null) stateRef.current = carregarProgressoSincrono()
+  if (stateRef.current === null) stateRef.current = carregarProgressoSincrono(identity)
   const [, notificar] = useReducer((n: number) => n + 1, 0)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sincronizacaoProntaRef = useRef(false)
+  const progressoLocalExistiaRef = useRef(existeProgressoLocal(identity))
+  const alteradoLocalmenteRef = useRef(false)
 
   const persistir = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     timerRef.current = null
-    salvarProgresso(stateRef.current!).catch(() => {
+    if (ehConvidado) return
+    salvarProgresso(stateRef.current!, identity).catch(() => {
       // modo privado / cota cheia: o app continua funcionando em memória
     })
     // Envio ao Supabase NÃO acontece aqui — isso salvava a cada mudança
@@ -123,13 +159,15 @@ function useProgressStore() {
     // banco. Em vez disso, roda num timer próprio de 30s (ver useEffect
     // "sincronizarComServidorPeriodicamente" abaixo), mandando o estado
     // mais recente de uma vez só.
-  }, [])
+  }, [identity, ehConvidado])
 
   const update = useCallback(
     (fn: (p: UserProgress) => UserProgress) => {
       const atual = stateRef.current!
+      if (ehConvidado) return atual
       const proximo = fn(atual)
       if (proximo === atual) return atual
+      alteradoLocalmenteRef.current = true
       stateRef.current = proximo
       notificar()
       // Escrita agrupada: sem isso o app serializava o progresso inteiro
@@ -138,7 +176,7 @@ function useProgressStore() {
       timerRef.current = setTimeout(persistir, PERSIST_DEBOUNCE_MS)
       return proximo
     },
-    [persistir]
+    [persistir, ehConvidado]
   )
 
   // Sincronização com o Supabase.
@@ -159,8 +197,6 @@ function useProgressStore() {
   // Isso roda por cima do salvamento local (que continua instantâneo, no
   // debounce curto de sempre) — a tela nunca espera essa parte pra
   // responder.
-  const auth = useAuth()
-  const userId = auth.sessao?.user?.id ?? null
   const ultimoUserIdSincronizadoRef = useRef<string | null>(null)
 
   // Última edição do ADMIN que este aparelho já aplicou (localStorage,
@@ -172,8 +208,8 @@ function useProgressStore() {
   const chaveMarcadorAdmin = (uid: string) => `nexus-admin-editado-em:${uid}`
 
   useEffect(() => {
-    setUsuarioAtual(userId)
-    if (!userId) return
+    sincronizacaoProntaRef.current = false
+    if (!userId || ehConvidado) return
 
     async function verificarEdicaoAdmin(): Promise<boolean> {
       const remoto = await buscarDoServidor(userId!)
@@ -192,7 +228,12 @@ function useProgressStore() {
         return true
       }
 
-      if (remoto.progresso.xp > stateRef.current!.xp) {
+      if (!progressoLocalExistiaRef.current) {
+        stateRef.current = remoto.progresso
+        salvarProgresso(remoto.progresso, identity).catch(() => {})
+        progressoLocalExistiaRef.current = true
+        notificar()
+      } else if (remoto.progresso.xp > stateRef.current!.xp) {
         // Sem edição de admin nova — mantém a rede de segurança original
         // (só aplica se o servidor tiver MAIS xp, ex: progresso feito em
         // outro aparelho).
@@ -202,9 +243,33 @@ function useProgressStore() {
       return false
     }
 
+    const prepararSincronizacao = async () => {
+      try {
+        const remoto = await buscarDoServidor(userId!)
+        if (remoto && !progressoLocalExistiaRef.current && !alteradoLocalmenteRef.current) {
+          stateRef.current = remoto.progresso
+          salvarProgresso(remoto.progresso, identity).catch(() => {})
+          progressoLocalExistiaRef.current = true
+          notificar()
+        } else if (remoto) {
+          const mesclado = mesclarProgresso(stateRef.current!, remoto.progresso)
+          stateRef.current = mesclado
+          salvarProgresso(mesclado, identity).catch(() => {})
+          notificar()
+        } else if (!remoto && progressoLocalExistiaRef.current) {
+          await enviarParaServidor(stateRef.current!, userId!)
+        }
+      } catch {
+        return // Indisponibilidade remota: manter a gravação local e não sobrescrever.
+      }
+      sincronizacaoProntaRef.current = true
+      if (!progressoLocalExistiaRef.current && alteradoLocalmenteRef.current)
+        enviarParaServidor(stateRef.current!, userId!).catch(() => {})
+    }
+
     if (ultimoUserIdSincronizadoRef.current !== userId) {
       ultimoUserIdSincronizadoRef.current = userId
-      verificarEdicaoAdmin()
+      void prepararSincronizacao()
     }
 
     const intervalo = setInterval(() => {
@@ -212,9 +277,10 @@ function useProgressStore() {
       // aparelho olhou — se sim, aplica e PULA o envio deste ciclo (senão
       // reenviaria o valor antigo por cima da edição que acabou de chegar).
       // Senão, segue o fluxo normal: envia o progresso local pro servidor.
+      if (!sincronizacaoProntaRef.current) return
       verificarEdicaoAdmin().then((aplicouEdicaoAdmin) => {
         if (aplicouEdicaoAdmin) return
-        enviarParaServidor(stateRef.current!).catch(() => {
+        enviarParaServidor(stateRef.current!, userId!).catch(() => {
           // sem internet momentânea: tenta de novo no próximo ciclo de 30s,
           // localStorage já garantiu que nada se perde localmente
         })
@@ -222,7 +288,7 @@ function useProgressStore() {
     }, 30_000)
 
     return () => clearInterval(intervalo)
-  }, [userId])
+  }, [userId, ehConvidado, identity])
 
   // Sincronização manual, sob demanda — botão "Sincronizar agora" no
   // Perfil. Igual à checagem automática de edição do admin (aplica o que
@@ -230,7 +296,7 @@ function useProgressStore() {
   // pessoa em vez de esperar o próximo ciclo de 30s.
   const [sincronizando, setSincronizando] = useState(false)
   const sincronizarAgora = useCallback(async (): Promise<{ ok: boolean; erro?: string }> => {
-    if (!userId) return { ok: false, erro: 'Você precisa estar logado para sincronizar.' }
+    if (!userId || !sincronizacaoProntaRef.current) return { ok: false, erro: 'A sincronização ainda não está pronta. Tente novamente.' }
     setSincronizando(true)
     try {
       const remoto = await buscarDoServidor(userId)
@@ -256,7 +322,7 @@ function useProgressStore() {
   useEffect(() => {
     const flush = () => {
       if (timerRef.current) persistir()
-      enviarParaServidor(stateRef.current!).catch(() => {})
+      if (userId && sincronizacaoProntaRef.current) enviarParaServidor(stateRef.current!, userId).catch(() => {})
     }
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') flush()
@@ -268,10 +334,11 @@ function useProgressStore() {
       window.removeEventListener('pagehide', flush)
       flush()
     }
-  }, [persistir])
+  }, [persistir, userId])
 
   // Registra a visita de hoje e recalcula o streak, uma única vez.
   useEffect(() => {
+    if (ehConvidado) return
     const today = todayStr()
     update((prev) => {
       if (prev.lastActiveDate === today) return prev
@@ -287,7 +354,7 @@ function useProgressStore() {
         : [...prev.activeDates, today].slice(-90)
       return { ...prev, streak: newStreak, lastActiveDate: today, activeDates }
     })
-  }, [update])
+  }, [update, ehConvidado])
 
   const ganharXp = useCallback(
     (xpBase: number): ResultadoXp => {
@@ -656,8 +723,8 @@ export type ProgressStore = ReturnType<typeof useProgressStore>
 
 const ProgressContext = createContext<ProgressStore | null>(null)
 
-export function ProgressProvider({ children }: { children: ReactNode }) {
-  const store = useProgressStore()
+export function ProgressProvider({ children, identity = 'anonymous' }: { children: ReactNode; identity?: string }) {
+  const store = useProgressStore(identity)
   return createElement(ProgressContext.Provider, { value: store }, children)
 }
 

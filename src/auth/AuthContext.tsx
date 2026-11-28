@@ -3,27 +3,22 @@ import type { Session } from '@supabase/supabase-js'
 import { Capacitor } from '@capacitor/core'
 import { Browser } from '@capacitor/browser'
 import { supabase } from '@/lib/supabase'
-import { forcarAtualizacaoCompleta } from '@/lib/forcarAtualizacao'
+import { avisosRemotosAutorizados, desvincularAvisosRemotos } from '@/lib/notificacoesRemotas'
+import { limparDestino } from './destinoAposLogin'
+import { manterUltimaAppConfigValida, type AppConfig } from './appConfigState'
 import type { Perfil } from './types'
 
-const CHAVE_MARCADOR_ATUALIZACAO = 'nexus-forcar-atualizacao-em'
-
-interface AppConfig {
-  cadastroFechado: boolean
-  modoManutencao: boolean
-  // Quando o admin força uma atualização geral (ver AdminUsuariosPage) —
-  // todo aparelho com o app aberto detecta que esse timestamp é mais novo
-  // que o último que viu (ver efeito abaixo) e recarrega sozinho com a
-  // versão mais nova, sem precisar que a pessoa toque em nada.
-  forcarAtualizacaoEm: string | null
-}
 
 interface AuthContextValor {
   sessao: Session | null
+  guestId: string | null
+  ehConvidado: boolean
   perfil: Perfil | null
   carregando: boolean // true só durante o carregamento inicial da sessão
   carregandoPerfil: boolean // bloqueia rotas até validar status e papel do usuário
   appConfig: AppConfig | null
+  recarregarAppConfig: () => Promise<void>
+  continuarComoConvidado: () => boolean
   entrar: (email: string, senha: string) => Promise<{ erro: string | null }>
   cadastrar: (nome: string, email: string, senha: string) => Promise<{ erro: string | null }>
   entrarComOAuth: (provedor: ProvedorOAuth) => Promise<{ erro: string | null }>
@@ -48,6 +43,15 @@ const REDIRECT_NATIVE = 'com.nexusfinance.app://auth/callback'
 // Este endereço deve corresponder exatamente à allowlist do Supabase.
 // Anexar ?next= à URL pode fazê-la cair na Site URL (Vercel).
 const CHAVE_DESTINO_AUTH_NATIVO = 'nexus-finance-auth-native-next'
+const CHAVE_CONVIDADO_INSTALACAO = 'nexus-finance-guest-installation-v1'
+
+function lerIdConvidado(): string | null {
+  try { return localStorage.getItem(CHAVE_CONVIDADO_INSTALACAO) } catch { return null }
+}
+
+function novoIdConvidado(): string {
+  return crypto.randomUUID()
+}
 
 function redirectAuth(next: '/login' | '/redefinir-senha' | '/'): string {
   if (Capacitor.isNativePlatform()) {
@@ -75,9 +79,9 @@ async function buscarPerfil(userId: string): Promise<Perfil | null> {
 }
 
 async function buscarAppConfig(): Promise<AppConfig> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('app_config')
-    .select('cadastro_fechado, modo_manutencao, forcar_atualizacao_em')
+    .select('cadastro_fechado, modo_manutencao, android_min_version_code, android_update_revoked, android_apk_download_url')
     .eq('id', true)
     .maybeSingle()
   // Se a linha não existir ainda (SQL 005 não rodado) ou a leitura falhar,
@@ -85,22 +89,45 @@ async function buscarAppConfig(): Promise<AppConfig> {
   return {
     cadastroFechado: data?.cadastro_fechado ?? false,
     modoManutencao: data?.modo_manutencao ?? false,
-    forcarAtualizacaoEm: data?.forcar_atualizacao_em ?? null,
+    carregada: !error && Boolean(data),
+    androidMinVersionCode: data?.android_min_version_code ?? 1,
+    androidUpdateRevoked: data?.android_update_revoked ?? false,
+    androidApkDownloadUrl: data?.android_apk_download_url ?? 'https://nexus-finance-vn.lovable.app',
   }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [sessao, setSessao] = useState<Session | null>(null)
+  const [guestId, setGuestId] = useState<string | null>(lerIdConvidado)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
   const [carregando, setCarregando] = useState(true)
   const [carregandoPerfil, setCarregandoPerfil] = useState(false)
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null)
   const [versaoConsultaPerfil, setVersaoConsultaPerfil] = useState(0)
+  const aplicarAppConfig = useCallback((recebida: AppConfig) => {
+    setAppConfig((anterior) => manterUltimaAppConfigValida(anterior, recebida))
+  }, [])
+  const recarregarAppConfig = useCallback(async () => {
+    const config = await buscarAppConfig()
+    aplicarAppConfig(config)
+  }, [aplicarAppConfig])
+
+  const continuarComoConvidado = useCallback(() => {
+    if (!appConfig?.carregada || appConfig.modoManutencao || sessao) return false
+    try {
+      const id = guestId ?? novoIdConvidado()
+      localStorage.setItem(CHAVE_CONVIDADO_INSTALACAO, id)
+      setGuestId(id)
+      return true
+    } catch {
+      return false
+    }
+  }, [appConfig, guestId, sessao])
 
   useEffect(() => {
     let ativo = true
     buscarAppConfig().then((config) => {
-      if (ativo) setAppConfig(config)
+      if (ativo) aplicarAppConfig(config)
     })
 
     // O Supabase emite INITIAL_SESSION quando lê a sessão salva.
@@ -118,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ativo = false
       listener.subscription.unsubscribe()
     }
-  }, [])
+  }, [aplicarAppConfig])
 
   // Busca o perfil FORA do callback de autenticação. Revalida nos eventos
   // de auth (inclusive SIGNED_IN e TOKEN_REFRESHED) e descarta resultados
@@ -155,35 +182,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const intervalo = setInterval(async () => {
       const configAtual = await buscarAppConfig()
-      setAppConfig(configAtual)
+      aplicarAppConfig(configAtual)
     }, 25_000)
     return () => clearInterval(intervalo)
-  }, [])
+  }, [aplicarAppConfig])
 
   useEffect(() => {
     if (appConfig?.modoManutencao && sessao && perfil && perfil.role !== 'admin') {
       supabase.auth.signOut({ scope: 'local' })
     }
   }, [appConfig, sessao, perfil])
-
-  // Atualização forçada pelo admin (ver AdminUsuariosPage): compara o
-  // timestamp mais recente vindo do servidor com o último que este
-  // aparelho já viu (localStorage). Só age se for genuinamente mais novo
-  // E já existia um marcador antes — evita forçar um recarregamento
-  // desnecessário logo no primeiro carregamento de um aparelho novo, que
-  // nunca tinha marcador nenhum ainda.
-  useEffect(() => {
-    if (!appConfig?.forcarAtualizacaoEm) return
-    const marcador = localStorage.getItem(CHAVE_MARCADOR_ATUALIZACAO)
-    if (marcador === null) {
-      localStorage.setItem(CHAVE_MARCADOR_ATUALIZACAO, appConfig.forcarAtualizacaoEm)
-      return
-    }
-    if (appConfig.forcarAtualizacaoEm !== marcador) {
-      localStorage.setItem(CHAVE_MARCADOR_ATUALIZACAO, appConfig.forcarAtualizacaoEm)
-      forcarAtualizacaoCompleta()
-    }
-  }, [appConfig])
 
   const entrar = useCallback(async (email: string, senha: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha })
@@ -193,7 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // do login (não dá pra saber o role antes de autenticar), e desloga na
     // hora se a pessoa não for admin — a sessão nunca fica "meio aberta".
     const configAtual = await buscarAppConfig()
-    setAppConfig(configAtual)
+    aplicarAppConfig(configAtual)
     if (configAtual.modoManutencao && data.user) {
       const p = await buscarPerfil(data.user.id)
       if (p?.role !== 'admin') {
@@ -203,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     return { erro: null }
-  }, [])
+  }, [aplicarAppConfig])
 
   const cadastrar = useCallback(async (nome: string, email: string, senha: string) => {
     const { error } = await supabase.auth.signUp({
@@ -223,7 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // de quem já existe. A restrição a NOVAS contas é imposta no trigger
     // de auth.users; bloquear antes de chamar OAuth impediria o login legítimo.
     const configAtual = await buscarAppConfig()
-    setAppConfig(configAtual)
+    aplicarAppConfig(configAtual)
 
     // redirectTo garante que, depois de autorizar no Google/GitHub/etc.,
     // a pessoa volta pro app (e não pra localhost, mesmo problema que
@@ -252,12 +260,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // habilitado no Supabase, bloqueador de pop-up, etc.).
     if (error) return { erro: traduzirErro(error.message) }
     return { erro: null }
-  }, [])
+  }, [aplicarAppConfig])
 
   const sair = useCallback(async () => {
+    limparDestino()
+    const conta = sessao?.user.id
+    if (conta && avisosRemotosAutorizados(conta)) await desvincularAvisosRemotos(conta).catch(() => {})
     // Sair deste aparelho não deve derrubar as sessões de outros dispositivos.
     await supabase.auth.signOut({ scope: 'local' })
-  }, [])
+  }, [sessao?.user.id])
 
   const excluirPropriaConta = useCallback(async () => {
     const userId = sessao?.user?.id
@@ -345,10 +356,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider
       value={{
         sessao,
+        guestId,
+        ehConvidado: !sessao && Boolean(guestId),
         perfil,
         carregando,
         carregandoPerfil,
         appConfig,
+        recarregarAppConfig,
+        continuarComoConvidado,
         entrar,
         cadastrar,
         entrarComOAuth,

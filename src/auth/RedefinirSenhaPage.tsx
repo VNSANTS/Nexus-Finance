@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Loader2, Lock, ShieldCheck, TrendingUp } from 'lucide-react'
 import { useAuth } from './AuthContext'
+import { limparDestino } from './destinoAposLogin'
 
 /**
  * Tela aberta pelo link do e-mail de "esqueci minha senha"
@@ -11,6 +12,7 @@ import { useAuth } from './AuthContext'
  * pra trocar a senha de fato.
  */
 export default function RedefinirSenhaPage() {
+  useEffect(limparDestino, [])
   const { sessao, carregando, atualizarSenha, sair } = useAuth()
   const [senha, setSenha] = useState('')
   const [confirmarSenha, setConfirmarSenha] = useState('')

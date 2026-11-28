@@ -1,91 +1,24 @@
 import type { Modulo, Trilha } from '@/types'
-
-// Índice leve de todos os módulos (id, trilha, ícone, ordem) e a lista das
-// 10 trilhas — carregados sempre, ao contrário do conteúdo completo dos
-// módulos abaixo, que é sob demanda. Ficam em arquivos com "_" na frente
-// para não serem capturados pelo glob `./m*.ts` que varre o conteúdo.
+import { MODULOS } from './_indice'
 export { MODULOS, getModulosByTrilha } from './_indice'
 export type { ModuloMeta } from './_indice'
 export { TRILHAS } from './_trilhas'
 export type { Trilha }
 
-/**
- * Registro de conteúdo dos módulos — carregado sob demanda.
- *
- * Antes este arquivo importava os 60 módulos de forma estática. Como cada um
- * tem entre 8 KB e 24 KB de texto, os ~1,2 MB de conteúdo entravam inteiros no
- * bundle inicial: quem abria o app na Home baixava os 60 módulos antes de ver
- * a primeira tela. Agora o Vite gera um chunk por módulo e só o que o usuário
- * abrir é baixado.
- *
- * Bônus: o mapa é montado a partir dos nomes dos arquivos, então adicionar um
- * módulo novo é só criar o arquivo. Não precisa mais editar este index em três
- * lugares (import, entrada do mapa, contagem) — que era onde o registro
- * costumava sair de sincronia com a pasta.
- *
- * Convenção: `mNN-<slug>.ts` → o id do módulo é o `<slug>`.
- */
-const carregadores = import.meta.glob<Record<string, unknown>>('./m*.ts')
-
-// Mapa criado somente com os importadores conhecidos do Vite. Diferente de
-// um objeto {}, não herda constructor, toString, __proto__ ou outros métodos
-// que um ID fornecido pela rota poderia acessar e executar indevidamente.
-const porId = new Map<string, () => Promise<Record<string, unknown>>>()
-for (const [caminho, carregar] of Object.entries(carregadores)) {
-  const arquivo = caminho.replace('./', '').replace(/\.ts$/, '')
-  const id = arquivo.replace(/^m\d+-/, '')
-  porId.set(id, carregar)
-}
-
-export const IDS_MODULOS_COMPLETOS = Array.from(porId.keys()).sort()
+export const IDS_MODULOS_COMPLETOS = MODULOS.filter((m) => m.temConteudoCompleto).map((m) => m.id).sort()
 export const TOTAL_MODULOS_COMPLETOS = IDS_MODULOS_COMPLETOS.length
+const ids = new Set(IDS_MODULOS_COMPLETOS)
+export function temConteudoCompleto(id: string): boolean { return ids.has(id) }
 
-/** Checagem síncrona e barata: dá para marcar o card sem baixar o conteúdo. */
-export function temConteudoCompleto(id: string): boolean {
-  return porId.has(id)
-}
-
-const cache = new Map<string, Modulo>()
-const emVoo = new Map<string, Promise<Modulo | null>>()
-
-function extrairModulo(mod: Record<string, unknown>): Modulo | null {
-  // Os arquivos exportam com nomes variados (moduloRendaFixa, opcoes, esg...),
-  // então procuramos o export que tem cara de Modulo em vez de fixar um nome.
-  for (const valor of Object.values(mod)) {
-    if (valor && typeof valor === 'object' && 'id' in valor && 'titulo' in valor) {
-      return valor as Modulo
-    }
-  }
-  return null
-}
-
-/** Carrega o conteúdo de um módulo. Resolve para null se o módulo não existe. */
-export function carregarModulo(id: string): Promise<Modulo | null> {
-  const emCache = cache.get(id)
-  if (emCache) return Promise.resolve(emCache)
-
-  const jaPedido = emVoo.get(id)
-  if (jaPedido) return jaPedido
-
-  const carregar = porId.get(id)
-  if (!carregar) return Promise.resolve(null)
-
-  const promessa = carregar()
-    .then((mod) => {
-      const modulo = extrairModulo(mod)
-      if (modulo) cache.set(id, modulo)
-      return modulo
-    })
-    .catch(() => null)
-    .finally(() => {
-      emVoo.delete(id)
-    })
-
-  emVoo.set(id, promessa)
-  return promessa
-}
-
-/** Pré-carrega em segundo plano — bom para o hover/toque no card do módulo. */
-export function prefetchModulo(id: string): void {
-  if (!cache.has(id)) void carregarModulo(id)
+export async function carregarModulo(id: string, signal?: AbortSignal): Promise<Modulo | null> {
+  if (!temConteudoCompleto(id)) return null
+  const { supabase } = await import('@/lib/supabase')
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session || session.user.is_anonymous) throw Error('Entre com uma conta ativa para abrir este módulo.')
+  const { data, error } = await supabase.functions.invoke<Modulo>('education-module?id=' + encodeURIComponent(id), {
+    method: 'GET', signal, timeout: 15000, headers: { Authorization: 'Bearer ' + session.access_token },
+  })
+  if (error || data?.id !== id) throw Error('Não foi possível carregar o módulo. Verifique sua conexão e o acesso da conta.')
+  if ((await supabase.auth.getSession()).data.session?.user.id !== session.user.id) throw Error('A conta mudou. Abra o módulo novamente.')
+  return data
 }

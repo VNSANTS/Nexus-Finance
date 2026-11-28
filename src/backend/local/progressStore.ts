@@ -24,8 +24,15 @@ import { TODAS_ABAS } from '@/types'
  * ainda não foi feito, fica para quando o backend em si for criado.
  */
 
-const STORAGE_KEY = 'nexus-finance-progress'
+const STORAGE_KEY = 'nexus-finance-progress:v3'
 const STORAGE_VERSION = 2
+
+function storageKey(identity: string): string {
+  // Identity is supplied by AuthContext (user UUID or installation-scoped
+  // guest UUID). Keep the legacy unscoped key untouched: it has no provable
+  // owner and must never be attributed to whichever account logs in first.
+  return `${STORAGE_KEY}:${encodeURIComponent(identity)}`
+}
 
 interface DadosSalvos {
   v: number
@@ -112,10 +119,10 @@ function migrar(bruto: unknown): Partial<UserProgress> {
   return migrado as Partial<UserProgress>
 }
 
-function lerLocal(): UserProgress {
+function lerLocal(identity: string): UserProgress {
   const base = defaultProgress()
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(storageKey(identity))
     if (!raw) return base
     const merged = { ...base, ...migrar(JSON.parse(raw)) }
     // Blindagem: um campo corrompido não pode derrubar o app inteiro.
@@ -168,20 +175,29 @@ function lerLocal(): UserProgress {
 }
 
 /** Lê o progresso salvo. Hoje é síncrono por baixo (localStorage), mas já expõe como Promise. */
-export function carregarProgresso(): Promise<UserProgress> {
-  return Promise.resolve(lerLocal())
+export function carregarProgresso(identity = 'anonymous'): Promise<UserProgress> {
+  return Promise.resolve(lerLocal(identity))
 }
 
 /** Versão síncrona, usada só no primeiro render do hook (ver aviso no topo do arquivo). */
-export function carregarProgressoSincrono(): UserProgress {
-  return lerLocal()
+export function carregarProgressoSincrono(identity = 'anonymous'): UserProgress {
+  return lerLocal(identity)
+}
+
+/** Indica se esta identidade já possui um snapshot local recuperável. */
+export function existeProgressoLocal(identity = 'anonymous'): boolean {
+  try {
+    return localStorage.getItem(storageKey(identity)) !== null
+  } catch {
+    return false
+  }
 }
 
 /** Salva o progresso. Resolve/rejeita como uma chamada de API resolveria. */
-export function salvarProgresso(data: UserProgress): Promise<void> {
+export function salvarProgresso(data: UserProgress, identity = 'anonymous'): Promise<void> {
   try {
     const envelope: DadosSalvos = { v: STORAGE_VERSION, data }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(envelope))
+    localStorage.setItem(storageKey(identity), JSON.stringify(envelope))
     return Promise.resolve()
   } catch (erro) {
     // modo privado / cota cheia: o app continua funcionando em memória

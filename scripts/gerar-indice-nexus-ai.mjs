@@ -16,6 +16,7 @@
 import { readFileSync, writeFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import path from 'path'
+import './gerar-previas-modulos.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const raizProjeto = path.resolve(__dirname, '..')

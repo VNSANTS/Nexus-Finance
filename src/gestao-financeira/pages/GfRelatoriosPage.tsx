@@ -57,7 +57,7 @@ function baixarArquivo(nome: string, conteudo: string, tipo: string) {
 
 export default function GfRelatoriosPage() {
   const navigate = useNavigate()
-  const { estado, permissoes } = useGestaoFinanceira()
+  const { estado, permissoes, somenteLeitura } = useGestaoFinanceira()
   const [valoresVisiveis, setValoresVisiveis] = useState(true)
   const [periodo, setPeriodo] = useState<PeriodoRelatorio>(
     () => periodosPreDefinidos().find((p) => p.id === 'este-mes') ?? periodosPreDefinidos()[0]
@@ -136,11 +136,13 @@ export default function GfRelatoriosPage() {
   const pctEntrou = movimentoTotal > 0 ? (resumo.receitas / movimentoTotal) * 100 : 50
 
   function exportarCsv() {
+    if (somenteLeitura) return
     const csv = gerarCsvTransacoes(estado.transacoes, estado.categorias, periodo)
     baixarArquivo(`nexus-relatorio-${periodo.de}_a_${periodo.ate}.csv`, csv, 'text/csv;charset=utf-8')
   }
 
   async function exportarImagem() {
+    if (somenteLeitura) return
     setExportando('imagem')
     try {
       await exportarComoImagem('gf-relatorio-conteudo', `nexus-relatorio-${periodo.de}_a_${periodo.ate}`)
@@ -152,6 +154,7 @@ export default function GfRelatoriosPage() {
   }
 
   async function exportarPdf() {
+    if (somenteLeitura) return
     setExportando('pdf')
     try {
       await exportarComoPdf('gf-relatorio-conteudo', `nexus-relatorio-${periodo.de}_a_${periodo.ate}`)
@@ -528,7 +531,7 @@ export default function GfRelatoriosPage() {
         </button>
       </div>
 
-      <div className="px-4 mt-4 flex flex-col gap-2">
+      {!somenteLeitura && <div className="px-4 mt-4 flex flex-col gap-2">
         <button
           onClick={exportarCsv}
           className="w-full flex items-center justify-center gap-2 card-surface rounded-2xl py-3 text-[13px] font-semibold text-slate-300"
@@ -551,7 +554,7 @@ export default function GfRelatoriosPage() {
             <FileText size={15} /> {exportando === 'pdf' ? 'Gerando...' : 'PDF'}
           </button>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

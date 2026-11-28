@@ -1,6 +1,6 @@
 apply plugin: 'com.android.application'
 
-def betaVersionCode = providers.environmentVariable('GITHUB_RUN_NUMBER').orElse('1').get().toInteger()
+def betaVersionCode = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger() + 5
 
 android {
     namespace = "com.nexusfinance.app"
@@ -9,8 +9,7 @@ android {
         applicationId "com.nexusfinance.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        // GitHub Actions run numbers make every signed beta update installable
-        // over its predecessor. Local builds keep the initial development code.
+        // Release run numbers start above the published APK (versionCode 5). Local builds use 6.
         versionCode betaVersionCode
         versionName "1.0.${betaVersionCode}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
